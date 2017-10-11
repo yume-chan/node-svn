@@ -161,10 +161,12 @@
   <ItemGroup>
     <ClInclude Include="src\cpp\client.hpp" />
     <ClInclude Include="src\node\client.hpp" />
+    <ClInclude Include="src\node\v8.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp" />
     <ClCompile Include="src\node\client.cpp" />
+    <ClCompile Include="src\node\test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -7,7 +7,7 @@ class client;
 }
 
 namespace node {
-class __declspec(dllexport) client {
+class client {
   public:
     explicit client();
     client(const client&) = delete;
@@ -15,16 +15,28 @@ class __declspec(dllexport) client {
 
     ~client();
 
-    void add_to_changelist(v8::Local<v8::String>& path,
-                           v8::Local<v8::String>& changelist,
-                           v8::Local<v8::Number>& depth       = v8::Local<v8::Number>(),
-                           v8::Local<v8::Array>&  changelists = v8::Local<v8::Array>());
-    void add_to_changelist(v8::Local<v8::Array>&  paths,
-                           v8::Local<v8::String>& changelist,
-                           v8::Local<v8::Number>& depth       = v8::Local<v8::Number>(),
-                           v8::Local<v8::Array>&  changelists = v8::Local<v8::Array>());
+    void add_to_changelist(const v8::Local<v8::String>& path,
+                           const v8::Local<v8::String>& changelist,
+                           const v8::Local<v8::Number>& depth       = v8::Local<v8::Number>(),
+                           const v8::Local<v8::Array>&  changelists = v8::Local<v8::Array>()) const;
+    void add_to_changelist(const v8::Local<v8::Array>&  paths,
+                           const v8::Local<v8::String>& changelist,
+                           const v8::Local<v8::Number>& depth       = v8::Local<v8::Number>(),
+                           const v8::Local<v8::Array>&  changelists = v8::Local<v8::Array>()) const;
+
+    void get_changelists(const v8::Local<v8::String>&   path,
+                         const v8::Local<v8::Function>& callback,
+                         const v8::Local<v8::Array>&    changelists = v8::Local<v8::Array>(),
+                         const v8::Local<v8::Number>&   depth       = v8::Local<v8::Number>()) const;
+
+    void remove_from_changelists(const v8::Local<v8::String>& path,
+                                 const v8::Local<v8::Number>& depth       = v8::Local<v8::Number>(),
+                                 const v8::Local<v8::Array>&  changelists = v8::Local<v8::Array>()) const;
+    void remove_from_changelists(const v8::Local<v8::Array>&  paths,
+                                 const v8::Local<v8::Number>& depth       = v8::Local<v8::Number>(),
+                                 const v8::Local<v8::Array>&  changelists = v8::Local<v8::Array>()) const;
 
   private:
-    svn::client* _client;
+    std::unique_ptr<svn::client> _client;
 };
 } // namespace node

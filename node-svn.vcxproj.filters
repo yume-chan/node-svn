@@ -33,12 +33,18 @@
     <ClInclude Include="src\node\client.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
+    <ClInclude Include="src\node\v8.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp">
       <Filter>Source Files\cpp</Filter>
     </ClCompile>
     <ClCompile Include="src\node\client.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node\test.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
   </ItemGroup>
