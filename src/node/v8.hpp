@@ -16,6 +16,7 @@ using v8::Context;
 using v8::Exception;
 using v8::External;
 using v8::Function;
+using v8::FunctionCallback;
 using v8::FunctionCallbackInfo;
 using v8::FunctionTemplate;
 using v8::HandleScope;
@@ -35,7 +36,7 @@ using v8::Undefined;
 using v8::Value;
 
 namespace {
-template <typename T>
+template <class T>
 struct Factory;
 
 template <>
@@ -86,32 +87,51 @@ struct Factory<Array> {
 
 template <>
 struct Factory<Function> {
-    static inline Local<Function> New(Local<Context>&      context,
-                                      v8::FunctionCallback callback,
-                                      Local<Value>         data   = Local<Value>(),
-                                      int                  length = 0) {
+    static inline Local<Function> New(Local<Context>&  context,
+                                      FunctionCallback callback,
+                                      Local<Value>     data   = Local<Value>(),
+                                      int              length = 0) {
         return Function::New(context, callback, data, length).ToLocalChecked();
+    }
+};
+
+template <>
+struct Factory<FunctionTemplate> {
+    static inline Local<FunctionTemplate> New(Isolate*             isolate,
+                                              FunctionCallback     callback,
+                                              Local<Value>         data      = Local<Value>(),
+                                              Local<v8::Signature> signature = Local<v8::Signature>(),
+                                              int                  length    = 0) {
+        return FunctionTemplate::New(isolate, callback, data, signature, length);
+    }
+};
+
+template <class T>
+struct Factory<Persistent<T>> {
+    static inline Local<Persistent<T>> New(Isolate* isolate,
+                                           Local<T> value) {
+        return Persistent<T>(isolate, value);
     }
 };
 }; // namespace
 
 namespace v8 {
-template <typename T, typename A0>
+template <class T, class A0>
 inline Local<T> New(A0 a0) {
     return Factory<T>::New(a0);
 }
 
-template <typename T, typename A0, typename A1>
+template <class T, class A0, class A1>
 inline Local<T> New(A0 a0, A1 a1) {
     return Factory<T>::New(a0, a1);
 }
 
-template <typename T, typename A0, typename A1, typename A2>
+template <class T, class A0, class A1, class A2>
 inline Local<T> New(A0 a0, A1 a1, A2 a2) {
     return Factory<T>::New(a0, a1, a2);
 }
 
-template <typename T, typename A0, typename A1, typename A2, typename A3>
+template <class T, class A0, class A1, class A2, class A3>
 inline Local<T> New(A0 a0, A1 a1, A2 a2, A3 a3) {
     return Factory<T>::New(a0, a1, a2, a3);
 }

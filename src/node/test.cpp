@@ -12,10 +12,6 @@ int main() {
 
     auto client = new node::client();
 
-    client->add_to_changelist(str, str, v8::Local<v8::Number>(), arr);
-    client->add_to_changelist(arr, str, v8::Local<v8::Number>(), arr);
-
-    client->get_changelists(str, func, arr);
 
     delete client;
 

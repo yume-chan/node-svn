@@ -47,5 +47,8 @@
     <ClCompile Include="src\node\test.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
+    <ClCompile Include="src\node\export.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

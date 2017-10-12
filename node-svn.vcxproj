@@ -78,7 +78,7 @@
     <IncludePath>$(ProjectDir)include\svn;$(ProjectDir)include\apr;$(ProjectDir)include\node;$(ProjectDir)src;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>bin\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -88,7 +88,7 @@
     <IncludePath>$(ProjectDir)include\svn;$(ProjectDir)include\apr;$(ProjectDir)include\node;$(ProjectDir)src;$(IncludePath)</IncludePath>
     <LibraryPath>$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)bin\$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>bin\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>obj\$(Platform)\$(Configuration)\</IntDir>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -161,6 +161,7 @@
   <ItemGroup>
     <ClInclude Include="src\cpp\client.hpp" />
     <ClInclude Include="src\node\client.hpp" />
+    <ClCompile Include="src\node\export.cpp" />
     <ClInclude Include="src\node\v8.hpp" />
   </ItemGroup>
   <ItemGroup>
