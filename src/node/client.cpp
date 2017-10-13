@@ -33,6 +33,7 @@ static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value,
 
         auto isolate = v8::Isolate::GetCurrent();
         isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, "")));
+        throw std::exception();
     }
 
     if (value->IsString()) {

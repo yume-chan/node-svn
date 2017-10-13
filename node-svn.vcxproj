@@ -23,7 +23,7 @@
     <ProjectGuid>{63DC081B-3FA1-4CE8-97A9-B7BFFC4FA80C}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>nodesvn</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.15063.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -160,7 +160,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="src\cpp\client.hpp" />
+    <ClInclude Include="src\cpp\svn_error.hpp" />
     <ClInclude Include="src\node\client.hpp" />
+    <ClCompile Include="src\cpp\svn_error.cpp" />
     <ClCompile Include="src\node\export.cpp" />
     <ClInclude Include="src\node\v8.hpp" />
   </ItemGroup>

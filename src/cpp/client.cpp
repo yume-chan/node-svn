@@ -5,42 +5,44 @@
 #include <svn_client.h>
 #include <svn_path.h>
 
-static svn_error_t* copy_error(svn_error_t* error) {
-    auto result = new svn_error_t();
+#include "svn_error.hpp"
 
-    result->apr_err = error->apr_err;
-    result->file    = strdup(error->file);
-    result->line    = error->line;
-    result->message = strdup(error->message);
-
-    if (error->child != nullptr)
-        result->child = copy_error(error->child);
-
+static void throw_error(svn_error_t* error) {
+    auto pointer = copy_error(error);
+    auto result  = *pointer;
     svn_error_clear(error);
+    delete pointer;
+    throw result;
+}
 
-    return result;
+static svn::svn_error* copy_error(svn_error_t* error) {
+    return new svn::svn_error(error->apr_err,
+                              error->message,
+                              error->child ? copy_error(error->child) : nullptr,
+                              error->file ? std::string(error->file) : std::string(),
+                              error->line);
 }
 
 static void check_result(apr_status_t status) {
     if (status != 0)
-        throw copy_error(svn_error_create(status, nullptr, nullptr));
+        throw_error(svn_error_create(status, nullptr, nullptr));
 }
 
 static void check_result(svn_error_t* result) {
     if (result != nullptr)
-        throw copy_error(result);
+        throw_error(result);
 }
 
 static svn_error_t* throw_on_malfunction(svn_boolean_t can_return,
                                          const char*   file,
                                          int           line,
                                          const char*   expr) {
-    throw copy_error(svn_error_raise_on_malfunction(true, file, line, expr));
+    throw_error(svn_error_raise_on_malfunction(true, file, line, expr));
 }
 
 static void check_string(const std::string& value) {
     if (value.find('\0') != std::string::npos)
-        throw std::invalid_argument("Value connot contain null bytes");
+        throw std::runtime_error("Value connot contain null bytes");
 }
 
 static const char* convert_string(const std::string& value) {
