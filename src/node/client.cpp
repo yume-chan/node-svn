@@ -1,10 +1,12 @@
 #include "client.hpp"
 
-#include <node/v8.hpp>
+#include <node_buffer.h>
 #include <node_object_wrap.h>
 
 #include <cpp/client.hpp>
 #include <cpp/svn_error.hpp>
+
+#include <node/v8.hpp>
 
 static std::string convert_string(const v8::Local<v8::Value>& value) {
     if (value.IsEmpty()) {
@@ -107,11 +109,15 @@ void client::init(v8::Local<v8::Object> exports, v8::Isolate* isolate, v8::Local
     client->InstanceTemplate()->SetInternalFieldCount(1);
 
     auto prototype = client->PrototypeTemplate();
-    SetPrototypeMethod(signature, prototype, "addToChangelist", add_to_changelist, 2);
-    SetPrototypeMethod(signature, prototype, "getChangelist", get_changelists, 2);
-    SetPrototypeMethod(signature, prototype, "removeFromChangelists", remove_from_changelists, 2);
+    SetPrototypeMethod(signature, prototype, "add_to_changelist", add_to_changelist, 2);
+    SetPrototypeMethod(signature, prototype, "get_changelists", get_changelists, 2);
+    SetPrototypeMethod(signature, prototype, "remove_from_changelists", remove_from_changelists, 2);
 
-    SetPrototypeMethod(signature, prototype, "add", add, 2);
+    SetPrototypeMethod(signature, prototype, "add", add, 1);
+    SetPrototypeMethod(signature, prototype, "cat", cat, 1);
+    SetPrototypeMethod(signature, prototype, "checkout", checkout, 2);
+    SetPrototypeMethod(signature, prototype, "commit", commit, 3);
+    SetPrototypeMethod(signature, prototype, "info", info, 2);
 
     SetReadOnly(exports, "Client", client->GetFunction());
 }
@@ -137,7 +143,7 @@ void client::add_to_changelist(const v8::FunctionCallbackInfo<v8::Value>& args) 
 
         _this->_client->add_to_changelist(raw_paths, raw_changelist);
     } catch (svn::svn_error& error) {
-        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what())));
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
         return;
     } catch (std::exception&) {
         return;
@@ -168,7 +174,7 @@ void client::get_changelists(const v8::FunctionCallbackInfo<v8::Value>& args) {
 
         _this->_client->get_changelists(raw_path, raw_callback);
     } catch (svn::svn_error& error) {
-        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what())));
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
         return;
     } catch (std::exception&) {
         return;
@@ -184,7 +190,7 @@ void client::remove_from_changelists(const v8::FunctionCallbackInfo<v8::Value>& 
 
         _this->_client->remove_from_changelists(raw_paths);
     } catch (svn::svn_error& error) {
-        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what())));
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
         return;
     } catch (std::exception&) {
         return;
@@ -199,12 +205,124 @@ void client::add(const v8::FunctionCallbackInfo<v8::Value>& args) {
         auto raw_path = convert_string(args[0]);
 
         _this->_client->add(raw_path);
-    }
-    catch (svn::svn_error& error) {
-        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what())));
+    } catch (svn::svn_error& error) {
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
+        return;
+    } catch (std::exception&) {
         return;
     }
-    catch (std::exception&) {
+}
+
+void free_cat_buffer(char*, void* hint) {
+    delete static_cast<std::vector<char>*>(hint);
+}
+
+void client::cat(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    try {
+        auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+
+        auto raw_path = convert_string(args[0]);
+
+        auto buffer   = new std::vector<char>();
+        auto callback = [buffer](const char* data, size_t length) -> void {
+            auto end = data + length;
+            buffer->insert(buffer->end(), data, end);
+        };
+
+        _this->_client->cat(raw_path, callback);
+
+        args.GetReturnValue().Set(node::Buffer::New(isolate, buffer->data(), buffer->size(), free_cat_buffer, buffer).ToLocalChecked());
+    } catch (svn::svn_error& error) {
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
+        return;
+    } catch (std::exception&) {
+        return;
+    }
+}
+
+void client::checkout(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    try {
+        auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+
+        auto raw_url  = convert_string(args[0]);
+        auto raw_path = convert_string(args[1]);
+
+        _this->_client->checkout(raw_url, raw_path);
+    } catch (svn::svn_error& error) {
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
+        return;
+    } catch (std::exception&) {
+        return;
+    }
+}
+
+void client::commit(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    try {
+        auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+
+        auto raw_paths   = convert_array(args[0], false);
+        auto raw_message = convert_string(args[1]);
+
+        if (!args[2]->IsFunction()) {
+            isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, "")));
+            throw std::exception();
+        }
+
+        auto callback     = args[2].As<Function>();
+        auto raw_callback = [isolate, &callback](const svn_commit_info_t* raw_info) -> void {
+            const auto argc = 1;
+            auto       info = v8::New<Object>(isolate);
+            info->Set(InternalizedString("author"), v8::New<v8::String>(isolate, raw_info->author));
+            info->Set(InternalizedString("date"), v8::New<v8::String>(isolate, raw_info->date));
+            info->Set(InternalizedString("post_commit_err"), v8::New<v8::String>(isolate, raw_info->post_commit_err));
+            info->Set(InternalizedString("repos_root"), v8::New<v8::String>(isolate, raw_info->repos_root));
+            info->Set(InternalizedString("revision"), v8::New<v8::Integer>(isolate, raw_info->revision));
+            Local<Value> argv[argc] = {info};
+
+            callback->Call(v8::Undefined(isolate), argc, argv);
+        };
+
+        _this->_client->commit(raw_paths, raw_message, raw_callback);
+    } catch (svn::svn_error& error) {
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
+        return;
+    } catch (std::exception&) {
+        return;
+    }
+}
+
+void client::info(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    try {
+        auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+
+        auto raw_path = convert_string(args[0]);
+
+        if (!args[1]->IsFunction()) {
+            isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, "")));
+            throw std::exception();
+        }
+
+        auto callback     = args[1].As<Function>();
+        auto raw_callback = [isolate, &callback](const char* path, const svn::client_info* raw_info) -> void {
+            const auto   argc       = 2;
+            auto         info       = v8::New<Object>(isolate);
+            info->Set(InternalizedString("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
+            Local<Value> argv[argc] = {
+                v8::New<v8::String>(isolate, path),
+                info};
+
+            callback->Call(v8::Undefined(isolate), argc, argv);
+        };
+
+        _this->_client->info(raw_path, raw_callback);
+    } catch (svn::svn_error& error) {
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
+        return;
+    } catch (std::exception&) {
         return;
     }
 }

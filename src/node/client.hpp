@@ -19,6 +19,10 @@ class client : public node::ObjectWrap {
     static void remove_from_changelists(const v8::FunctionCallbackInfo<v8::Value>& args);
 
     static void add(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void cat(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void checkout(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void commit(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void info(const v8::FunctionCallbackInfo<v8::Value>& args);
 
     explicit client();
     client(const client&) = delete;

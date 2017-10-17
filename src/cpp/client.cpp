@@ -436,7 +436,7 @@ static svn_error_t* invoke_info(void*                     raw_baton,
                                 const svn_client_info2_t* info,
                                 apr_pool_t*               raw_scratch_pool) {
     auto callback_baton = static_cast<baton_wrapper<client::info_callback>*>(raw_baton);
-    callback_baton->value(path, info);
+    callback_baton->value(path, reinterpret_cast<const client_info*>(info));
     return nullptr;
 }
 
