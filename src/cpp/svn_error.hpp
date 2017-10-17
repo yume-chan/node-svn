@@ -16,10 +16,8 @@ class svn_error : public std::runtime_error {
     ~svn_error();
 
     apr_status_t code;
-
-    svn_error* child;
-
-    std::string file;
-    long        line;
+    svn_error*   child;
+    std::string  file;
+    long         line;
 };
 } // namespace svn

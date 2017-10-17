@@ -7,20 +7,26 @@
 
 #include "svn_error.hpp"
 
+static svn::svn_error* copy_error(svn_error_t* error) {
+    error = svn_error_purge_tracing(error);
+
+    const auto buffer_size = 100;
+    char       buffer[buffer_size];
+    auto       message = svn_err_best_message(error, buffer, buffer_size);
+
+    return new svn::svn_error(error->apr_err,
+                              message,
+                              error->child ? copy_error(error->child) : nullptr,
+                              error->file ? std::string(error->file) : std::string(),
+                              error->line);
+}
+
 static void throw_error(svn_error_t* error) {
     auto pointer = copy_error(error);
     auto result  = *pointer;
     svn_error_clear(error);
     delete pointer;
     throw result;
-}
-
-static svn::svn_error* copy_error(svn_error_t* error) {
-    return new svn::svn_error(error->apr_err,
-                              error->message,
-                              error->child ? copy_error(error->child) : nullptr,
-                              error->file ? std::string(error->file) : std::string(),
-                              error->line);
 }
 
 static void check_result(apr_status_t status) {
@@ -38,6 +44,7 @@ static svn_error_t* throw_on_malfunction(svn_boolean_t can_return,
                                          int           line,
                                          const char*   expr) {
     throw_error(svn_error_raise_on_malfunction(true, file, line, expr));
+    return nullptr;
 }
 
 static void check_string(const std::string& value) {
@@ -62,7 +69,7 @@ static const char* convert_path(const std::string& value,
 
 static const apr_array_header_t* convert_vector(const std::vector<std::string>& value,
                                                 apr_pool_t*                     pool) {
-    auto result = apr_array_make(pool, value.size(), sizeof(const char*));
+    auto result = apr_array_make(pool, static_cast<int>(value.size()), sizeof(const char*));
 
     for (auto item = value.begin(); item != value.end(); item++)
         APR_ARRAY_PUSH(result, const char*) = convert_string(*item);
@@ -82,7 +89,7 @@ static const apr_array_header_t* convert_paths(const std::string& value,
 
 static const apr_array_header_t* convert_paths(const std::vector<std::string>& value,
                                                apr_pool_t*                     pool) {
-    auto result = apr_array_make(pool, value.size(), sizeof(const char*));
+    auto result = apr_array_make(pool, static_cast<int>(value.size()), sizeof(const char*));
 
     for (auto item = value.begin(); item != value.end(); item++)
         APR_ARRAY_PUSH(result, const char*) = convert_path(*item, pool);
@@ -130,9 +137,29 @@ client::client() {
     _context->log_msg_func3 = get_commit_message;
 }
 
+client::client(client&& other)
+    : _pool(std::exchange(other._pool, nullptr))
+    , _context(std::exchange(other._context, nullptr)) {
+}
+
+client& client::operator=(client&& other) {
+    if (this != &other) {
+        if (_pool != nullptr) {
+            apr_pool_destroy(_pool);
+            apr_terminate();
+        }
+
+        _pool    = std::exchange(other._pool, nullptr);
+        _context = std::exchange(other._context, nullptr);
+    }
+    return *this;
+}
+
 client::~client() {
-    apr_pool_destroy(_pool);
-    apr_terminate();
+    if (_pool != nullptr) {
+        apr_pool_destroy(_pool);
+        apr_terminate();
+    }
 }
 
 void client::add_to_changelist(const std::string&              path,

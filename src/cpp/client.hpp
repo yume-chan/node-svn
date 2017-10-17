@@ -23,8 +23,11 @@ class client : public std::enable_shared_from_this<client> {
     using status_callback          = std::function<void(const char*, const svn_client_status_t*)>;
 
     explicit client();
+    client(client&&);
     client(const client&) = delete;
-    client(client&&)      = delete;
+
+    client& operator=(client&&);
+    client& operator=(const client&) = delete;
 
     ~client();
 

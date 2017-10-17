@@ -1,5 +1,4 @@
-#ifndef NODE_SVN_V8_H
-#define NODE_SVN_V8_H
+#pragma once
 
 #include <string>
 
@@ -143,5 +142,3 @@ inline Local<T> New(A0 a0, A1 a1, A2 a2, A3 a3) {
         auto isolate = args.GetIsolate(); \
         auto context = isolate->GetCurrentContext();
 #define V8_METHOD_END }
-
-#endif
