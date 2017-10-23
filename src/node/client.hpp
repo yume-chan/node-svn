@@ -23,6 +23,12 @@ class client : public node::ObjectWrap {
     static void checkout(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void commit(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void info(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void remove(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void revert(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void status(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void update(const v8::FunctionCallbackInfo<v8::Value>& args);
+
+    static void get_working_copy_root(const v8::FunctionCallbackInfo<v8::Value>& args);
 
     explicit client();
     client(const client&) = delete;

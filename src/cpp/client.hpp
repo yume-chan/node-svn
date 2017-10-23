@@ -182,7 +182,7 @@ class client : public std::enable_shared_from_this<client> {
                         const std::vector<std::string>& changelists        = std::vector<std::string>()) const;
 
     svn_revnum_t              update(const std::string&        path,
-                                     const svn_opt_revision_t& revision                 = svn_opt_revision_t{svn_opt_revision_working},
+                                     const svn_opt_revision_t& revision                 = svn_opt_revision_t{svn_opt_revision_head},
                                      svn_depth_t               depth                    = svn_depth_infinity,
                                      bool                      depth_is_sticky          = false,
                                      bool                      ignore_externals         = false,
@@ -190,13 +190,15 @@ class client : public std::enable_shared_from_this<client> {
                                      bool                      adds_as_modification     = false,
                                      bool                      make_parents             = true) const;
     std::vector<svn_revnum_t> update(const std::vector<std::string>& paths,
-                                     const svn_opt_revision_t&       revision                 = svn_opt_revision_t{svn_opt_revision_working},
+                                     const svn_opt_revision_t&       revision                 = svn_opt_revision_t{svn_opt_revision_head},
                                      svn_depth_t                     depth                    = svn_depth_infinity,
                                      bool                            depth_is_sticky          = false,
                                      bool                            ignore_externals         = false,
                                      bool                            allow_unver_obstructions = false,
                                      bool                            adds_as_modification     = false,
                                      bool                            make_parents             = true) const;
+
+    std::string get_working_copy_root(const std::string& path) const;
 
   private:
     apr_pool_t*       _pool;

@@ -39,15 +39,15 @@
     <ClInclude Include="src\cpp\svn_error.hpp">
       <Filter>Header Files\cpp</Filter>
     </ClInclude>
+    <ClInclude Include="src\cpp\svn_type_error.hpp">
+      <Filter>Header Files\cpp</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp">
       <Filter>Source Files\cpp</Filter>
     </ClCompile>
     <ClCompile Include="src\node\client.cpp">
-      <Filter>Source Files\node</Filter>
-    </ClCompile>
-    <ClCompile Include="src\node\test.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="src\node\export.cpp">

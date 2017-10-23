@@ -5,11 +5,9 @@
 #include <svn_client.h>
 #include <svn_path.h>
 
-#include "svn_error.hpp"
+#include "svn_type_error.hpp"
 
 static svn::svn_error* copy_error(svn_error_t* error) {
-    error = svn_error_purge_tracing(error);
-
     const auto buffer_size = 100;
     char       buffer[buffer_size];
     auto       message = svn_err_best_message(error, buffer, buffer_size);
@@ -22,7 +20,8 @@ static svn::svn_error* copy_error(svn_error_t* error) {
 }
 
 static void throw_error(svn_error_t* error) {
-    auto pointer = copy_error(error);
+    auto purged  = svn_error_purge_tracing(error);
+    auto pointer = copy_error(purged);
     auto result  = *pointer;
     svn_error_clear(error);
     delete pointer;
@@ -48,8 +47,11 @@ static svn_error_t* throw_on_malfunction(svn_boolean_t can_return,
 }
 
 static void check_string(const std::string& value) {
+    if (value.size() == 0)
+        throw svn::svn_type_error("Value cannot be null");
+
     if (value.find('\0') != std::string::npos)
-        throw std::runtime_error("Value connot contain null bytes");
+        throw svn::svn_type_error("Value connot contain null bytes");
 }
 
 static const char* convert_string(const std::string& value) {
@@ -69,6 +71,9 @@ static const char* convert_path(const std::string& value,
 
 static const apr_array_header_t* convert_vector(const std::vector<std::string>& value,
                                                 apr_pool_t*                     pool) {
+    if (value.size() == 0)
+        return nullptr;
+
     auto result = apr_array_make(pool, static_cast<int>(value.size()), sizeof(const char*));
 
     for (auto item = value.begin(); item != value.end(); item++)
@@ -89,6 +94,9 @@ static const apr_array_header_t* convert_paths(const std::string& value,
 
 static const apr_array_header_t* convert_paths(const std::vector<std::string>& value,
                                                apr_pool_t*                     pool) {
+    if (value.size() == 0)
+        throw svn::svn_type_error("Argument cannot be null");
+
     auto result = apr_array_make(pool, static_cast<int>(value.size()), sizeof(const char*));
 
     for (auto item = value.begin(); item != value.end(); item++)
@@ -640,8 +648,7 @@ std::vector<svn_revnum_t> client::update(const std::vector<std::string>& paths,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths = convert_paths(paths, pool);
-
+    auto                raw_paths = convert_paths(paths, pool);
     apr_array_header_t* raw_result_revs;
 
     check_result(svn_client_update4(&raw_result_revs,
@@ -660,5 +667,17 @@ std::vector<svn_revnum_t> client::update(const std::vector<std::string>& paths,
     for (int i = 0; i < raw_result_revs->nelts; i++)
         result.push_back(APR_ARRAY_IDX(raw_result_revs, i, svn_revnum_t));
     return result;
+}
+
+std::string client::get_working_copy_root(const std::string& path) const {
+    auto pool_ptr = create_pool(_pool);
+    auto pool     = pool_ptr.get();
+
+    auto        raw_path = convert_path(path, pool);
+    const char* raw_result;
+
+    check_result(svn_client_get_wc_root(&raw_result, raw_path, _context, pool, pool));
+
+    return std::string(raw_result);
 }
 } // namespace svn

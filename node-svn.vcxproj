@@ -163,6 +163,7 @@
   <ItemGroup>
     <ClInclude Include="src\cpp\client.hpp" />
     <ClInclude Include="src\cpp\svn_error.hpp" />
+    <ClInclude Include="src\cpp\svn_type_error.hpp" />
     <ClInclude Include="src\node\client.hpp" />
     <ClCompile Include="src\cpp\svn_error.cpp" />
     <ClCompile Include="src\node\export.cpp" />
@@ -171,7 +172,6 @@
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp" />
     <ClCompile Include="src\node\client.cpp" />
-    <ClCompile Include="src\node\test.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
