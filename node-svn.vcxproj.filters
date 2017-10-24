@@ -42,6 +42,9 @@
     <ClInclude Include="src\cpp\svn_type_error.hpp">
       <Filter>Header Files\cpp</Filter>
     </ClInclude>
+    <ClInclude Include="src\node\async_client.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp">
@@ -55,6 +58,9 @@
     </ClCompile>
     <ClCompile Include="src\cpp\svn_error.cpp">
       <Filter>Source Files\cpp</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node\async_client.cpp">
+      <Filter>Source Files\node</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

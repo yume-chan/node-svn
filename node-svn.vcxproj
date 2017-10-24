@@ -164,8 +164,10 @@
     <ClInclude Include="src\cpp\client.hpp" />
     <ClInclude Include="src\cpp\svn_error.hpp" />
     <ClInclude Include="src\cpp\svn_type_error.hpp" />
+    <ClInclude Include="src\node\async_client.hpp" />
     <ClInclude Include="src\node\client.hpp" />
     <ClCompile Include="src\cpp\svn_error.cpp" />
+    <ClCompile Include="src\node\async_client.cpp" />
     <ClCompile Include="src\node\export.cpp" />
     <ClInclude Include="src\node\v8.hpp" />
   </ItemGroup>

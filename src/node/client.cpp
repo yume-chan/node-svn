@@ -106,6 +106,8 @@ void client::init(v8::Local<v8::Object> exports, v8::Isolate* isolate, v8::Local
     SetPrototypeMethod(signature, prototype, "status", status, 2);
     SetPrototypeMethod(signature, prototype, "update", update, 1);
 
+    SetPrototypeMethod(signature, prototype, "get_working_copy_root", get_working_copy_root, 1);
+
     SetReadOnly(exports, "Client", client->GetFunction());
 }
 
@@ -340,9 +342,58 @@ void client::status(const v8::FunctionCallbackInfo<v8::Value>& args) {
     try {
         auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
 
-        auto raw_paths = convert_array(args[0], false);
+        auto raw_path = convert_string(args[0]);
 
-        _this->_client->revert(raw_paths);
+        if (!args[1]->IsFunction())
+            throw svn::svn_type_error("");
+
+        auto callback     = args[1].As<Function>();
+        auto raw_callback = [isolate, &callback](const char* path, const svn_client_status_t* raw_info) -> void {
+            const auto   argc       = 2;
+            auto         info       = v8::New<Object>(isolate);
+            Local<Value> argv[argc] = {
+                v8::New<v8::String>(isolate, path),
+                info};
+
+            callback->Call(v8::Undefined(isolate), argc, argv);
+        };
+
+        _this->_client->status(raw_path,
+                               raw_callback);
+    } catch (svn::svn_type_error& error) {
+        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what())));
+    } catch (svn::svn_error& error) {
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
+    }
+}
+
+void client::update(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    try {
+        auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+
+        auto raw_path = convert_string(args[0]);
+
+        auto raw_result = _this->_client->update(raw_path);
+        auto result     = v8::New<Integer>(isolate, raw_result);
+        args.GetReturnValue().Set(result);
+    } catch (svn::svn_type_error& error) {
+        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what())));
+    } catch (svn::svn_error& error) {
+        isolate->ThrowException(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));
+    }
+}
+
+void client::get_working_copy_root(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    try {
+        auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+
+        auto raw_path = convert_string(args[0]);
+
+        auto raw_result = _this->_client->get_working_copy_root(raw_path);
+        auto result     = v8::New<String>(isolate, raw_result);
+        args.GetReturnValue().Set(result);
     } catch (svn::svn_type_error& error) {
         isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what())));
     } catch (svn::svn_error& error) {
