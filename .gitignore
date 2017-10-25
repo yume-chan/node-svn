@@ -1,4 +1,7 @@
 .vs
 
-obj
 bin
+obj
+
+build
+node_modules

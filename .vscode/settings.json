@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "*.cfg": "javascript",
+        "list": "cpp",
+        "xlocale": "cpp"
+    }
+}
