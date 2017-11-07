@@ -15,15 +15,14 @@
                 "src\\cpp\\client.cpp",
                 "src\\cpp\\svn_error.cpp",
                 "src\\node\\async_client.cpp",
-                "src\\node\\client.cpp",
-                "src\\node\\export.cpp"
+                "src\\node\\export.cpp",
+                "src\\node\\node_client.cpp"
             ],
             "configurations": {
                 "Release": {
                     "msvs_settings": {
                         "VCCLCompilerTool": {
-                            "ExceptionHandling": 1,
-                            "ObjectFile": "$(IntDir)%(RelativeDir)"
+                            "ExceptionHandling": 1
                         }
                     }
                 }

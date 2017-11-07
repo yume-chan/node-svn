@@ -33,7 +33,6 @@ const configuration = {
                     msvs_settings: {
                         VCCLCompilerTool: {
                             ExceptionHandling: 1,
-                            ObjectFile: "$(IntDir)%(RelativeDir)"
                         }
                     }
                 }

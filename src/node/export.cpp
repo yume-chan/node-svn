@@ -3,7 +3,7 @@
 #include <svn_client.h>
 #include <svn_version.h>
 
-#include <node/client.hpp>
+#include <node/node_client.hpp>
 #include <node/v8.hpp>
 
 #define ReadOnlyDontDelete (PropertyAttribute)(PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete)
