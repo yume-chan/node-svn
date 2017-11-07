@@ -1,7 +1,6 @@
 #include "node_client.hpp"
 
 #include <node_buffer.h>
-#include <node_object_wrap.h>
 
 #include <cpp/client.hpp>
 #include <cpp/svn_type_error.hpp>
@@ -82,7 +81,9 @@ static svn_depth_t convert_depth(const v8::Local<v8::Value>& value, svn_depth_t 
     }
 
 namespace node {
-void client::init(v8::Local<v8::Object> exports, v8::Isolate* isolate, v8::Local<v8::Context>& context) {
+void client::init(v8::Local<v8::Object>   exports,
+                  v8::Isolate*            isolate,
+                  v8::Local<v8::Context>& context) {
     auto client    = v8::New<v8::FunctionTemplate>(isolate, create_instance);
     auto signature = v8::Signature::New(isolate, client);
 

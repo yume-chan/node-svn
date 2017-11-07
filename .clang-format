@@ -27,7 +27,4 @@ ColumnLimit: 0
 SortUsingDeclarations: true
 
 Standard: Cpp11
-
-MacroBlockBegin: "V8_METHOD_BEGIN|SVN_CLIENT_METHOD_BEGIN"
-MacroBlockEnd: "V8_METHOD_END|SVN_CLIENT_METHOD_END"
 ---

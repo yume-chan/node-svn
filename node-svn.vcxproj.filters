@@ -30,9 +30,6 @@
     <ClInclude Include="src\cpp\client.hpp">
       <Filter>Header Files\cpp</Filter>
     </ClInclude>
-    <ClInclude Include="src\node\client.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="src\node\v8.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
@@ -45,13 +42,13 @@
     <ClInclude Include="src\node\async_client.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
+    <ClInclude Include="src\node\node_client.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp">
       <Filter>Source Files\cpp</Filter>
-    </ClCompile>
-    <ClCompile Include="src\node\client.cpp">
-      <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="src\node\export.cpp">
       <Filter>Source Files\node</Filter>
@@ -60,6 +57,9 @@
       <Filter>Source Files\cpp</Filter>
     </ClCompile>
     <ClCompile Include="src\node\async_client.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node\node_client.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
   </ItemGroup>

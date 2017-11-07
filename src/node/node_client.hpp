@@ -1,7 +1,6 @@
 #pragma once
 
 #include <node_object_wrap.h>
-#include <v8.h>
 
 namespace svn {
 class client;
