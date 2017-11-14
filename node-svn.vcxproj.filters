@@ -54,6 +54,9 @@
     <ClInclude Include="src\node\working_copy_status.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
+    <ClInclude Include="src\node\revision_kind.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp">
@@ -81,6 +84,9 @@
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="src\node\working_copy_status.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node\revision_kind.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
   </ItemGroup>
