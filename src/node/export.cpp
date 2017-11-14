@@ -7,6 +7,7 @@
 #include <node/depth.hpp>
 #include <node/node_client.hpp>
 #include <node/node_kind.hpp>
+#include <node/revision_kind.hpp>
 #include <node/v8.hpp>
 #include <node/working_copy_status.hpp>
 
@@ -64,8 +65,9 @@ void init(v8::Local<v8::Object> exports) {
     async_client::init(exports, isolate, context);
     client::init(exports, isolate, context);
 
-    node_kind::init(exports, isolate, context);
     depth::init(exports, isolate, context);
+    node_kind::init(exports, isolate, context);
+    revision_kind::init(exports, isolate, context);
     working_copy_status::init(exports, isolate, context);
     //SvnError::Init(exports, isolate, context);
 }

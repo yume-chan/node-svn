@@ -54,6 +54,14 @@ export class AsyncClient {
     get_working_copy_root(path: string): Promise<string>;
 }
 
+export enum Depth {
+    unknown,
+    empty,
+    files,
+    immediates,
+    infinity,
+}
+
 export enum NodeKind {
     none,
     file,
@@ -61,12 +69,15 @@ export enum NodeKind {
     unknown,
 }
 
-export enum Depth {
-    unknown,
-    empty,
-    files,
-    immediates,
-    infinity,
+export enum RevisionKind {
+    unspecified,
+    number,
+    date,
+    committed,
+    previous,
+    base,
+    working,
+    head,
 }
 
 export enum WorkingCopyStatus {
