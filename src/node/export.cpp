@@ -4,8 +4,11 @@
 #include <svn_version.h>
 
 #include <node/async_client.hpp>
+#include <node/depth.hpp>
 #include <node/node_client.hpp>
+#include <node/node_kind.hpp>
 #include <node/v8.hpp>
+#include <node/working_copy_status.hpp>
 
 #define InternalizedString(value) v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
 
@@ -60,6 +63,10 @@ void init(v8::Local<v8::Object> exports) {
 
     async_client::init(exports, isolate, context);
     client::init(exports, isolate, context);
+
+    node_kind::init(exports, isolate, context);
+    depth::init(exports, isolate, context);
+    working_copy_status::init(exports, isolate, context);
     //SvnError::Init(exports, isolate, context);
 }
 

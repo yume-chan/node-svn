@@ -48,6 +48,12 @@
     <ClInclude Include="src\node\client_template.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
+    <ClInclude Include="src\node\depth.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="src\node\working_copy_status.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp">
@@ -63,6 +69,18 @@
       <Filter>Source Files\node</Filter>
     </ClCompile>
     <ClCompile Include="src\node\node_client.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node\node_kind.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node\node_kind.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node\depth.cpp">
+      <Filter>Source Files\node</Filter>
+    </ClCompile>
+    <ClCompile Include="src\node\working_copy_status.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
   </ItemGroup>

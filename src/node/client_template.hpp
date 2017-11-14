@@ -70,7 +70,8 @@ static v8::Local<v8::Object> buffer_from_vector(v8::Isolate* isolate, std::vecto
 #define STRINGIFY_INTERNAL(X) #X
 #define STRINGIFY(X) STRINGIFY_INTERNAL(X)
 
-#define InternalizedString(value) v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
+#define InternalizedString(value) \
+    v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
 
 #define SetReadOnly(object, name, value)                  \
     (object)->DefineOwnProperty(context,                  \

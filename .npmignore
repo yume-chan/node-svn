@@ -22,3 +22,6 @@ node-svn.sln
 node-svn.vcxproj
 node-svn.vcxproj.filters
 node-svn.vcxproj.user
+
+# Tests
+tests

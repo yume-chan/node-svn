@@ -1,31 +1,32 @@
 {
-    "name": "node-svn",
-    "version": "0.0.1",
+    "author": "Simon Chan",
+    "bugs": {
+        "url": "https://github.com/yume-chan/node-svn/issues"
+    },
     "description": "",
-    "main": "scripts/index.js",
+    "devDependencies": {
+        "@types/node": "^8.0.46"
+    },
     "directories": {
         "test": "tests"
     },
-    "scripts": {
-        "preinstall": "node scripts/preinstall.js",
-        "install": "node-gyp rebuild",
-        "postinstall": "node scripts/postinstall.js",
-        "test": "mocha"
-    },
+    "homepage": "https://github.com/yume-chan/node-svn#readme",
+    "keywords": [
+        "SVN"
+    ],
+    "license": "MIT",
+    "main": "scripts/index.js",
+    "name": "node-svn",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/yume-chan/node-svn.git"
     },
-    "keywords": [
-        "SVN"
-    ],
-    "author": "Simon Chan",
-    "license": "MIT",
-    "bugs": {
-        "url": "https://github.com/yume-chan/node-svn/issues"
+    "scripts": {
+        "install": "node-gyp rebuild",
+        "postinstall": "node scripts/postinstall.js",
+        "preinstall": "node scripts/preinstall.js",
+        "test": "mocha"
     },
-    "homepage": "https://github.com/yume-chan/node-svn#readme",
-    "devDependencies": {
-        "@types/node": "^8.0.46"
-    }
+    "types": "scripts/index.d.ts",
+    "version": "0.0.1"
 }

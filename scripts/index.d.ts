@@ -29,6 +29,7 @@ declare module svn {
         revert(path: string | string[]): void;
         status(path: string, callback: (path: string, info: NodeStatus) => void): void;
         update(path: string): number;
+        update(path: string[]): number[];
 
         get_working_copy_root(path: string): string;
     }
@@ -49,7 +50,39 @@ declare module svn {
         revert(path: string | string[]): Promise<void>;
         status(path: string, callback: (path: string, info: NodeStatus) => void): Promise<void>;
         update(path: string): Promise<number>;
+        update(path: string[]): Promise<number[]>;
 
         get_working_copy_root(path: string): Promise<string>;
+    }
+
+    enum NodeKind {
+        none,
+        file,
+        dir,
+        unknown,
+    }
+
+    enum Depth {
+        unknown,
+        empty,
+        files,
+        immediates,
+        infinity,
+    }
+
+    enum WorkingCopyStatus {
+        none,
+        unversioned,
+        normal,
+        added,
+        missing,
+        deleted,
+        replaced,
+        modified,
+        conflicted,
+        ignored,
+        obstructed,
+        external,
+        incomplete,
     }
 }
