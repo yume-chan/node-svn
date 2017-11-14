@@ -19,12 +19,22 @@ static svn::svn_error* copy_error(svn_error_t* error) {
                               error->line);
 }
 
+static svn::svn_error copy_error(svn_error_t& error) {
+    const auto buffer_size = 100;
+    char       buffer[buffer_size];
+    auto       message = svn_err_best_message(&error, buffer, buffer_size);
+
+    return svn::svn_error(error.apr_err,
+                          message,
+                          error.child ? copy_error(error.child) : nullptr,
+                          error.file ? std::string(error.file) : std::string(),
+                          error.line);
+}
+
 static void throw_error(svn_error_t* error) {
-    auto purged  = svn_error_purge_tracing(error);
-    auto pointer = copy_error(purged);
-    auto result  = *pointer;
+    auto purged = svn_error_purge_tracing(error);
+    auto result = copy_error(*purged);
     svn_error_clear(error);
-    delete pointer;
     throw result;
 }
 
@@ -48,10 +58,10 @@ static svn_error_t* throw_on_malfunction(svn_boolean_t can_return,
 
 static void check_string(const std::string& value) {
     if (value.size() == 0)
-        throw svn::svn_type_error("Value cannot be null");
+        throw svn::svn_type_error("");
 
     if (value.find('\0') != std::string::npos)
-        throw svn::svn_type_error("Value connot contain null bytes");
+        throw svn::svn_type_error("");
 }
 
 static const char* convert_string(const std::string& value) {
@@ -70,37 +80,32 @@ static const char* convert_path(const std::string& value,
 }
 
 static const apr_array_header_t* convert_vector(const std::vector<std::string>& value,
-                                                apr_pool_t*                     pool) {
-    if (value.size() == 0)
-        return nullptr;
+                                                apr_pool_t*                     pool,
+                                                bool                            allowEmpty,
+                                                bool                            isPath) {
+    if (value.size() == 0) {
+        if (allowEmpty)
+            return nullptr;
+        else
+            throw svn::svn_type_error("");
+    }
 
     auto result = apr_array_make(pool, static_cast<int>(value.size()), sizeof(const char*));
 
-    for (auto item = value.begin(); item != value.end(); item++)
-        APR_ARRAY_PUSH(result, const char*) = convert_string(*item);
+    for (auto item : value) {
+        auto converted                      = isPath ? convert_path(item, pool) : convert_string(item);
+        APR_ARRAY_PUSH(result, const char*) = converted;
+    }
 
     return result;
 }
 
-static const apr_array_header_t* convert_paths(const std::string& value,
-                                               apr_pool_t*        pool) {
+static const apr_array_header_t* convert_vector(const std::string& value,
+                                                apr_pool_t*        pool) {
     auto result = apr_array_make(pool, 1, sizeof(const char*));
 
     auto raw_path                       = convert_path(value, pool);
     APR_ARRAY_PUSH(result, std::string) = raw_path;
-
-    return result;
-}
-
-static const apr_array_header_t* convert_paths(const std::vector<std::string>& value,
-                                               apr_pool_t*                     pool) {
-    if (value.size() == 0)
-        throw svn::svn_type_error("Argument cannot be null");
-
-    auto result = apr_array_make(pool, static_cast<int>(value.size()), sizeof(const char*));
-
-    for (auto item = value.begin(); item != value.end(); item++)
-        APR_ARRAY_PUSH(result, const char*) = convert_path(*item, pool);
 
     return result;
 }
@@ -177,9 +182,9 @@ void client::add_to_changelist(const std::string&              path,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths       = convert_paths(path, pool);
+    auto raw_paths       = convert_vector(path, pool);
     auto raw_changelist  = convert_string(changelist);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
 
     check_result(svn_client_add_to_changelist(raw_paths,
                                               raw_changelist,
@@ -196,9 +201,9 @@ void client::add_to_changelist(const std::vector<std::string>& paths,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths       = convert_paths(paths, pool);
+    auto raw_paths       = convert_vector(paths, pool, false, true);
     auto raw_changelist  = convert_string(changelist);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
 
     check_result(svn_client_add_to_changelist(raw_paths,
                                               raw_changelist,
@@ -225,7 +230,7 @@ void client::get_changelists(const std::string&              path,
     auto pool     = pool_ptr.get();
 
     auto raw_path        = convert_path(path, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
     auto callback_baton  = std::make_unique<baton_wrapper<get_changelists_callback>>(callback);
 
     check_result(svn_client_get_changelists(raw_path,
@@ -243,8 +248,8 @@ void client::remove_from_changelists(const std::string&              path,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths       = convert_paths(path, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_paths       = convert_vector(path, pool);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
 
     check_result(svn_client_remove_from_changelists(raw_paths,
                                                     depth,
@@ -259,8 +264,8 @@ void client::remove_from_changelists(const std::vector<std::string>& paths,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths       = convert_paths(paths, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_paths       = convert_vector(paths, pool, false, true);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
 
     check_result(svn_client_remove_from_changelists(raw_paths,
                                                     depth,
@@ -328,6 +333,22 @@ void client::cat(const std::string&        path,
                                  scratch_pool));
 }
 
+std::vector<char> client::cat(const std::string&        path,
+                              apr_hash_t**              props,
+                              const svn_opt_revision_t& peg_revision,
+                              const svn_opt_revision_t& revision,
+                              bool                      expand_keywords) const {
+    auto buffer   = std::vector<char>();
+    auto callback = [&buffer](const char* data, size_t length) -> void {
+        auto end = data + length;
+        buffer.insert(buffer.end(), data, end);
+    };
+
+    cat(path, callback, props, peg_revision, revision, expand_keywords);
+
+    return buffer;
+}
+
 svn_revnum_t client::checkout(const std::string&        url,
                               const std::string&        path,
                               const svn_opt_revision_t& peg_revision,
@@ -383,8 +404,8 @@ void client::commit(const std::string&              path,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths       = convert_paths(path, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_paths       = convert_vector(path, pool);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
     auto callback_baton  = std::make_unique<baton_wrapper<commit_callback>>(callback);
 
     check_result(svn_client_commit6(raw_paths,
@@ -420,8 +441,8 @@ void client::commit(const std::vector<std::string>& paths,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths       = convert_paths(paths, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_paths       = convert_vector(paths, pool, false, true);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
     auto callback_baton  = std::make_unique<baton_wrapper<commit_callback>>(callback);
 
     check_result(svn_client_commit6(raw_paths,
@@ -461,7 +482,7 @@ void client::info(const std::string&              path,
     auto pool     = pool_ptr.get();
 
     auto raw_path        = convert_path(path, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
     auto callback_baton  = std::make_unique<baton_wrapper<info_callback>>(callback);
 
     check_result(svn_client_info4(raw_path,
@@ -486,7 +507,7 @@ void client::remove(const std::string&     path,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths      = convert_paths(path, pool);
+    auto raw_paths      = convert_vector(path, pool);
     auto callback_baton = std::make_unique<baton_wrapper<remove_callback>>(callback);
 
     check_result(svn_client_delete4(raw_paths,
@@ -507,7 +528,7 @@ void client::remove(const std::vector<std::string>& paths,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths      = convert_paths(paths, pool);
+    auto raw_paths      = convert_vector(paths, pool, false, true);
     auto callback_baton = std::make_unique<baton_wrapper<remove_callback>>(callback);
 
     check_result(svn_client_delete4(raw_paths,
@@ -528,8 +549,8 @@ void client::revert(const std::string&              path,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths       = convert_paths(path, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_paths       = convert_vector(path, pool);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
 
     check_result(svn_client_revert3(raw_paths,
                                     depth,
@@ -548,8 +569,8 @@ void client::revert(const std::vector<std::string>& paths,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths       = convert_paths(paths, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_paths       = convert_vector(paths, pool, false, true);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
 
     check_result(svn_client_revert3(raw_paths,
                                     depth,
@@ -585,7 +606,7 @@ svn_revnum_t client::status(const std::string&              path,
 
     auto result_rev      = 0L;
     auto raw_path        = convert_path(path, pool);
-    auto raw_changelists = convert_vector(changelists, pool);
+    auto raw_changelists = convert_vector(changelists, pool, true, false);
     auto callback_baton  = std::make_unique<baton_wrapper<status_callback>>(callback);
 
     check_result(svn_client_status6(&result_rev,
@@ -618,7 +639,7 @@ svn_revnum_t client::update(const std::string&        path,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_paths = convert_paths(path, pool);
+    auto raw_paths = convert_vector(path, pool);
 
     apr_array_header_t* raw_result_revs;
 
@@ -648,7 +669,7 @@ std::vector<svn_revnum_t> client::update(const std::vector<std::string>& paths,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto                raw_paths = convert_paths(paths, pool);
+    auto                raw_paths = convert_vector(paths, pool, false, true);
     apr_array_header_t* raw_result_revs;
 
     check_result(svn_client_update4(&raw_result_revs,

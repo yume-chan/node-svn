@@ -1,29 +1,29 @@
 {
-  "name": "node-svn",
-  "version": "0.0.1",
-  "description": "",
-  "main": "scripts/index.js",
-  "directories": {
-    "test": "tests"
-  },
-  "scripts": {
-    "configure": "node scripts/configure.js",
-    "test": "mocha"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/yume-chan/node-svn.git"
-  },
-  "keywords": [
-    "SVN"
-  ],
-  "author": "Simon Chan",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/yume-chan/node-svn/issues"
-  },
-  "homepage": "https://github.com/yume-chan/node-svn#readme",
-  "devDependencies": {
-    "@types/node": "^8.0.46"
-  }
+    "name": "node-svn",
+    "version": "0.0.1",
+    "description": "",
+    "main": "scripts/index.js",
+    "directories": {
+        "test": "tests"
+    },
+    "scripts": {
+        "configure": "node scripts/configure.js",
+        "test": "mocha"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/yume-chan/node-svn.git"
+    },
+    "keywords": [
+        "SVN"
+    ],
+    "author": "Simon Chan",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/yume-chan/node-svn/issues"
+    },
+    "homepage": "https://github.com/yume-chan/node-svn#readme",
+    "devDependencies": {
+        "@types/node": "^8.0.46"
+    }
 }

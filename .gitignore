@@ -1,7 +1,12 @@
+# Visual Studio Cache
 .vs
 
+# Visual Studio Output
 bin
 obj
 
+# Node-gyp Output
 build
+
+# Node Modules
 node_modules

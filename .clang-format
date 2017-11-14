@@ -27,4 +27,8 @@ ColumnLimit: 0
 SortUsingDeclarations: true
 
 Standard: Cpp11
+
+MacroBlockBegin: METHOD_BEGIN|ASYNC_BEGIN
+MacroBlockEnd: METHOD_END|ASYNC_END
 ---
+

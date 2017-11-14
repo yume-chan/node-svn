@@ -99,12 +99,17 @@ class client : public std::enable_shared_from_this<client> {
              bool               no_autoprops = false,
              bool               add_parents  = true) const;
 
-    void cat(const std::string&        path,
-             const cat_callback&       callback,
-             apr_hash_t**              props           = nullptr,
-             const svn_opt_revision_t& peg_revision    = svn_opt_revision_t{svn_opt_revision_working},
-             const svn_opt_revision_t& revision        = svn_opt_revision_t{svn_opt_revision_working},
-             bool                      expand_keywords = true) const;
+    void              cat(const std::string&        path,
+                          const cat_callback&       callback,
+                          apr_hash_t**              props           = nullptr,
+                          const svn_opt_revision_t& peg_revision    = svn_opt_revision_t{svn_opt_revision_working},
+                          const svn_opt_revision_t& revision        = svn_opt_revision_t{svn_opt_revision_working},
+                          bool                      expand_keywords = true) const;
+    std::vector<char> cat(const std::string&        path,
+                          apr_hash_t**              props           = nullptr,
+                          const svn_opt_revision_t& peg_revision    = svn_opt_revision_t{svn_opt_revision_working},
+                          const svn_opt_revision_t& revision        = svn_opt_revision_t{svn_opt_revision_working},
+                          bool                      expand_keywords = true) const;
 
     svn_revnum_t checkout(const std::string&        url,
                           const std::string&        path,

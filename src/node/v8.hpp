@@ -8,108 +8,81 @@ using std::to_string;
 #include <uv.h>
 #include <v8.h>
 
-using v8::AccessControl;
-using v8::Array;
-using v8::Boolean;
-using v8::Context;
-using v8::Exception;
-using v8::External;
-using v8::Function;
-using v8::FunctionCallback;
-using v8::FunctionCallbackInfo;
-using v8::FunctionTemplate;
-using v8::HandleScope;
-using v8::Integer;
-using v8::Isolate;
-using v8::Local;
-using v8::MaybeLocal;
-using v8::Name;
-using v8::NewStringType;
-using v8::Object;
-using v8::Persistent;
-using v8::Promise;
-using v8::PropertyAttribute;
-using v8::PropertyCallbackInfo;
-using v8::String;
-using v8::Undefined;
-using v8::Value;
-
 namespace {
 template <class T>
 struct Factory;
 
 template <>
-struct Factory<Object> {
-    static inline Local<Object> New(Isolate* isolate) {
-        return Object::New(isolate);
+struct Factory<v8::Object> {
+    static inline v8::Local<v8::Object> New(v8::Isolate* isolate) {
+        return v8::Object::New(isolate);
     }
 };
 
 template <>
-struct Factory<String> {
-    static inline Local<String> New(Isolate* isolate, const char* value, NewStringType type = NewStringType::kNormal, size_t length = -1) {
-        return String::NewFromUtf8(isolate, value, type, static_cast<int>(length)).ToLocalChecked();
+struct Factory<v8::String> {
+    static inline v8::Local<v8::String> New(v8::Isolate*      isolate,
+                                            const char*       value,
+                                            v8::NewStringType type   = v8::NewStringType::kNormal,
+                                            size_t            length = -1) {
+        return v8::String::NewFromUtf8(isolate, value, type, static_cast<int>(length)).ToLocalChecked();
     }
 
-    static inline Local<String> New(Isolate* isolate, string value, NewStringType type = NewStringType::kNormal) {
-        return String::NewFromUtf8(isolate, value.c_str(), type, static_cast<int>(value.length())).ToLocalChecked();
-    }
-};
-
-template <>
-struct Factory<Integer> {
-    static inline Local<Integer> New(Isolate* isolate, int32_t value) {
-        return Integer::New(isolate, value);
+    static inline v8::Local<v8::String> New(v8::Isolate*      isolate,
+                                            string            value,
+                                            v8::NewStringType type = v8::NewStringType::kNormal) {
+        return v8::String::NewFromUtf8(isolate, value.c_str(), type, static_cast<int>(value.length())).ToLocalChecked();
     }
 };
 
 template <>
-struct Factory<External> {
-    static inline Local<External> New(Isolate* isolate, void* value) {
-        return External::New(isolate, value);
+struct Factory<v8::Integer> {
+    static inline v8::Local<v8::Integer> New(v8::Isolate* isolate,
+                                             int32_t      value) {
+        return v8::Integer::New(isolate, value);
     }
 };
 
 template <>
-struct Factory<Promise::Resolver> {
-    static inline Local<Promise::Resolver> New(Local<Context>& context) {
-        return Promise::Resolver::New(context).ToLocalChecked();
+struct Factory<v8::External> {
+    static inline v8::Local<v8::External> New(v8::Isolate* isolate,
+                                              void*        value) {
+        return v8::External::New(isolate, value);
     }
 };
 
 template <>
-struct Factory<Array> {
-    static inline Local<Array> New(Isolate* isolate, int length = 0) {
-        return Array::New(isolate, length);
+struct Factory<v8::Promise::Resolver> {
+    static inline v8::Local<v8::Promise::Resolver> New(v8::Local<v8::Context>& context) {
+        return v8::Promise::Resolver::New(context).ToLocalChecked();
     }
 };
 
 template <>
-struct Factory<Function> {
-    static inline Local<Function> New(Local<Context>&  context,
-                                      FunctionCallback callback,
-                                      Local<Value>     data   = Local<Value>(),
-                                      int              length = 0) {
-        return Function::New(context, callback, data, length).ToLocalChecked();
+struct Factory<v8::Array> {
+    static inline v8::Local<v8::Array> New(v8::Isolate* isolate, int length = 0) {
+        return v8::Array::New(isolate, length);
     }
 };
 
 template <>
-struct Factory<FunctionTemplate> {
-    static inline Local<FunctionTemplate> New(Isolate*             isolate,
-                                              FunctionCallback     callback,
-                                              Local<Value>         data      = Local<Value>(),
-                                              Local<v8::Signature> signature = Local<v8::Signature>(),
-                                              int                  length    = 0) {
-        return FunctionTemplate::New(isolate, callback, data, signature, length);
+struct Factory<v8::Function> {
+    static inline v8::Local<v8::Function> New(v8::Local<v8::Context>& context,
+                                              v8::FunctionCallback    callback,
+                                              v8::Local<v8::Value>    data   = v8::Local<v8::Value>(),
+                                              int                     length = 0) {
+        return v8::Function::New(context, callback, data, length).ToLocalChecked();
     }
 };
 
-template <class T>
-struct Factory<Persistent<T>> {
-    static inline Local<Persistent<T>> New(Isolate* isolate,
-                                           Local<T> value) {
-        return Persistent<T>(isolate, value);
+template <>
+struct Factory<v8::FunctionTemplate> {
+    static inline v8::Local<v8::FunctionTemplate> New(v8::Isolate*             isolate,
+                                                      v8::FunctionCallback     callback,
+                                                      v8::Local<v8::Value>     data      = v8::Local<v8::Value>(),
+                                                      v8::Local<v8::Signature> signature = v8::Local<v8::Signature>(),
+                                                      int                      length    = 0) {
+        return v8::FunctionTemplate::New(isolate, callback, data, signature, length);
     }
 };
 }; // namespace
@@ -134,11 +107,15 @@ template <class T, class A0, class A1, class A2, class A3>
 inline Local<T> New(A0 a0, A1 a1, A2 a2, A3 a3) {
     return Factory<T>::New(a0, a1, a2, a3);
 }
-} // namespace v8
 
-#define V8_METHOD_DECLARE(name) void name(const FunctionCallbackInfo<Value>& args)
-#define V8_METHOD_BEGIN(name)             \
-    V8_METHOD_DECLARE(name) {             \
-        auto isolate = args.GetIsolate(); \
-        auto context = isolate->GetCurrentContext();
-#define V8_METHOD_END }
+struct PropertyAttributeEx {
+    static const PropertyAttribute None               = PropertyAttribute::None;
+    static const PropertyAttribute ReadOnly           = PropertyAttribute::ReadOnly;
+    static const PropertyAttribute DontEnum           = PropertyAttribute::DontEnum;
+    static const PropertyAttribute DontDelete         = PropertyAttribute::DontDelete;
+    static const PropertyAttribute ReadOnlyDontEnum   = static_cast<PropertyAttribute>(ReadOnly | DontEnum);
+    static const PropertyAttribute ReadOnlyDontDelete = static_cast<PropertyAttribute>(ReadOnly | DontDelete);
+    static const PropertyAttribute DontEnumDontDelete = static_cast<PropertyAttribute>(DontEnum | DontDelete);
+    static const PropertyAttribute All                = static_cast<PropertyAttribute>(ReadOnly | DontEnum | DontDelete);
+};
+} // namespace v8

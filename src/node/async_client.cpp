@@ -1,119 +1,142 @@
 #include "async_client.hpp"
 
-#include <cpp/client.hpp>
+#include <future>
+#include <uv.h>
 
-#include <node/v8.hpp>
+#define CLASS_NAME async_client
+#define EXPORT_NAME "AsyncClient"
 
-#define ReadOnlyDontDelete static_cast<PropertyAttribute>(PropertyAttribute::ReadOnly | PropertyAttribute::DontDelete)
+#define METHOD_BEGIN(name)                                                             \
+    void async_client::name(const v8::FunctionCallbackInfo<v8::Value>& args) {         \
+        auto isolate = args.GetIsolate();                                              \
+        auto context = isolate->GetCurrentContext();                                   \
+                                                                                       \
+        auto resolver  = v8::New<v8::Promise::Resolver>(context);                      \
+        auto _resolver = new v8::Persistent<v8::Promise::Resolver>(isolate, resolver); \
+                                                                                       \
+        args.GetReturnValue().Set(resolver);                                           \
+                                                                                       \
+        auto _this = node::ObjectWrap::Unwrap<async_client>(args.Holder());
 
-#define InternalizedString(value) v8::New<String>(isolate, value, NewStringType::kInternalized, sizeof(value) - 1)
+#define EXPAND(x) x
 
-#define SetReadOnly(object, name, value)                  \
-    (object)->DefineOwnProperty(context,                  \
-                                InternalizedString(name), \
-                                value,                    \
-                                ReadOnlyDontDelete)
+#define NUM_ARGS_COUNT(x0, x1, x2, x3, n, ...) n
+#define NUM_ARGS_PAD(...) 0, __VA_ARGS__
+#define NUM_ARGS_EXPAND(...) EXPAND(NUM_ARGS_COUNT(__VA_ARGS__, 3, 2, 1, 0))
+#define NUM_ARGS(...) NUM_ARGS_EXPAND(NUM_ARGS_PAD(__VA_ARGS__))
 
-#define SetPrototypeMethod(signature, prototype, name, callback, length)                  \
-    /* Add a scope to hide extra variables */                                             \
-    {                                                                                     \
-        auto function = v8::FunctionTemplate::New(isolate,                /* isolate */   \
-                                                  callback,               /* callback */  \
-                                                  v8::Local<v8::Value>(), /* data */      \
-                                                  signature,              /* signature */ \
-                                                  length);                /* length */    \
-        function->RemovePrototype();                                                      \
-        prototype->Set(InternalizedString(name), function, PropertyAttribute::DontEnum);  \
+#define CAPTURE_0() _this
+#define CAPTURE_1(x) x = std::move(x), _this
+#define CAPTURE_2(x, ...) x = std::move(x), CAPTURE_1(__VA_ARGS__)
+#define CAPTURE_3(x, ...) x = std::move(x), EXPAND(CAPTURE_2(__VA_ARGS__))
+#define CAPTURE_N(n, ...) EXPAND(CAPTURE_##n(__VA_ARGS__))
+#define CAPTURE_EXPEND(n, ...) CAPTURE_N(n, __VA_ARGS__)
+#define CAPTURE(...) CAPTURE_EXPEND(NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
+
+#define ASYNC_BEGIN(result, ...) \
+    auto work = [CAPTURE(__VA_ARGS__)]() -> result {
+
+#define ASYNC_VOID(value) \
+    value;
+
+#define ASYNC_RETURN(value) \
+    return value;
+
+#define ASYNC_END \
+    }             \
+    ;             \
+                  \
+    auto after_work = [isolate, args, _resolver](std::future<decltype(work())> future) -> void {\
+        v8::HandleScope scope(isolate);\
+        auto resolver = _resolver->Get(isolate);\
+        try {
+
+#define ASYNC_RESULT \
+    future.get()
+
+#define METHOD_RETURN(value) \
+    resolver->Resolve(value);
+
+template <class T>
+struct data_t {
+    explicit data_t(std::function<T(void)>&&              work,
+                    std::function<void(std::future<T>)>&& after_work)
+        : work(work)
+        , after_work(after_work)
+        , promise() {}
+
+    const std::function<T(void)>              work;
+    const std::function<void(std::future<T>)> after_work;
+
+    std::promise<T> promise;
+};
+
+template <class T>
+static void queue_work(std::function<T(void)> work, std::function<void(std::future<T>)> after_work) {
+    auto uv_work  = new uv_work_t();
+    auto data     = new data_t<T>(std::move(work), std::move(after_work));
+    uv_work->data = data;
+
+    auto invoke_work = [](uv_work_t* req) -> void {
+        auto data = static_cast<data_t<T>*>(req->data);
+        try {
+            auto result = data->work();
+            data->promise.set_value(result);
+        } catch (...) {
+            data->promise.set_exception(std::current_exception());
+        }
+    };
+
+    auto invoke_after_work = [](uv_work_t* req, int status) -> void {
+        auto data   = static_cast<data_t<T>*>(req->data);
+        auto future = data->promise.get_future();
+        data->after_work(std::move(future));
+
+        delete data;
+        delete static_cast<uv_work_t*>(req);
+    };
+
+    uv_queue_work(uv_default_loop(), uv_work, invoke_work, invoke_after_work);
+}
+
+template <>
+static void queue_work<void>(std::function<void(void)> work, std::function<void(std::future<void>)> after_work) {
+    auto uv_work  = new uv_work_t();
+    uv_work->data = new data_t<void>(std::move(work), std::move(after_work));
+
+    auto invoke_work = [](uv_work_t* req) -> void {
+        auto data = static_cast<data_t<void>*>(req->data);
+        try {
+            data->work();
+            data->promise.set_value();
+        } catch (...) {
+            data->promise.set_exception(std::current_exception());
+        }
+    };
+
+    auto invoke_after_work = [](uv_work_t* req, int status) -> void {
+        auto data = static_cast<data_t<void>*>(req->data);
+        data->after_work(data->promise.get_future());
+
+        delete data;
+        delete static_cast<uv_work_t*>(req);
+    };
+
+    uv_queue_work(uv_default_loop(), uv_work, invoke_work, invoke_after_work);
+}
+
+#define METHOD_END                                                                              \
+    }                                                                                           \
+    catch (svn::svn_type_error & error) {                                                       \
+        resolver->Reject(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what()))); \
+    }                                                                                           \
+    catch (svn::svn_error & error) {                                                            \
+        resolver->Reject(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));     \
+    }                                                                                           \
+    }                                                                                           \
+    ;                                                                                           \
+                                                                                                \
+    queue_work<decltype(work())>(work, after_work);                                             \
     }
 
-namespace node {
-void async_client::init(v8::Local<v8::Object>   exports,
-                        v8::Isolate*            isolate,
-                        v8::Local<v8::Context>& context) {
-    auto client    = v8::New<v8::FunctionTemplate>(isolate, create_instance);
-    auto signature = v8::Signature::New(isolate, client);
-
-    client->SetClassName(InternalizedString("AsyncClient"));
-    client->ReadOnlyPrototype();
-
-    client->InstanceTemplate()->SetInternalFieldCount(1);
-
-    auto prototype = client->PrototypeTemplate();
-    SetPrototypeMethod(signature, prototype, "add_to_changelist", add_to_changelist, 2);
-    SetPrototypeMethod(signature, prototype, "get_changelists", get_changelists, 2);
-    SetPrototypeMethod(signature, prototype, "remove_from_changelists", remove_from_changelists, 2);
-
-    SetPrototypeMethod(signature, prototype, "add", add, 1);
-    SetPrototypeMethod(signature, prototype, "cat", cat, 1);
-    SetPrototypeMethod(signature, prototype, "checkout", checkout, 2);
-    SetPrototypeMethod(signature, prototype, "commit", commit, 3);
-    SetPrototypeMethod(signature, prototype, "info", info, 2);
-    SetPrototypeMethod(signature, prototype, "remove", remove, 2);
-    SetPrototypeMethod(signature, prototype, "revert", revert, 1);
-    SetPrototypeMethod(signature, prototype, "status", status, 2);
-    SetPrototypeMethod(signature, prototype, "update", update, 1);
-
-    SetPrototypeMethod(signature, prototype, "get_working_copy_root", get_working_copy_root, 1);
-
-    SetReadOnly(exports, "AsyncClient", client->GetFunction());
-}
-
-void async_client::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    if (!args.IsConstructCall()) {
-        auto isolate = args.GetIsolate();
-        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, "Class constructor AsyncClient cannot be invoked without 'new'")));
-        return;
-    }
-
-    auto result = new async_client();
-    result->Wrap(args.This());
-}
-
-void async_client::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::add_to_changelist(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::get_changelists(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::remove_from_changelists(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::add(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::cat(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::checkout(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::commit(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::info(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::remove(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::revert(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::status(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::update(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-void async_client::get_working_copy_root(const v8::FunctionCallbackInfo<v8::Value>& args) {
-}
-
-async_client::async_client()
-    : _client(new svn::client()) {}
-
-async_client::~async_client() {}
-
-} // namespace node
+#include "client_template.hpp"

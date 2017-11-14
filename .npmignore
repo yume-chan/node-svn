@@ -1,0 +1,24 @@
+# Visual Studio Cache
+.vs
+
+# Visual Studio Output
+bin
+obj
+
+# Node-gyp Output
+build
+
+# (include) Node Modules
+# node_modules
+
+# Visual Studio Code Config
+.vscode
+
+# Clang Formatter Config
+.clang-format
+
+# Visual Studio Project Files
+node-svn.sln
+node-svn.vcxproj
+node-svn.vcxproj.filters
+node-svn.vcxproj.user

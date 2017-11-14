@@ -45,6 +45,9 @@
     <ClInclude Include="src\node\node_client.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
+    <ClInclude Include="src\node\client_template.hpp">
+      <Filter>Header Files\node</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp">
