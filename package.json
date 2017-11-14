@@ -8,6 +8,7 @@
     },
     "scripts": {
         "configure": "node scripts/configure.js",
+        "postinstall": "node scripts/postinstall.js",
         "test": "mocha"
     },
     "repository": {

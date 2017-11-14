@@ -1,6 +1,6 @@
 const list = [
-    "../bin/x64/Debug/node-svn.node",
-    "../bin/x64/Release/node-svn.node",
+    "../build/Debug/svn.node",
+    "../build/Release/svn.node",
 ];
 
 for (const item of list) {

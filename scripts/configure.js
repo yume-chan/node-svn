@@ -27,7 +27,7 @@ const configuration = {
                 "<(module_root_dir)/lib/libapr_tsvn.lib",
                 "<(module_root_dir)/lib/libsvn_tsvn.lib"
             ],
-            sources: find("src").map(x => path.relative(".", x)),
+            sources: find("src").map(x => path.relative(".", x).replace(/\\/g, "/")),
             configurations: {
                 Release: {
                     msvs_settings: {
