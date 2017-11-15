@@ -2,5 +2,7 @@
     "files.associations": {
         "list": "cpp",
         "xlocale": "cpp"
-    }
+    },
+    "editor.detectIndentation": false,
+    "editor.tabSize": 4
 }
