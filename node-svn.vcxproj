@@ -167,7 +167,7 @@
     <ClCompile Include="src\node\node_client.cpp" />
     <ClCompile Include="src\node\node_kind.cpp" />
     <ClCompile Include="src\node\revision_kind.cpp" />
-    <ClCompile Include="src\node\working_copy_status.cpp" />
+    <ClCompile Include="src\node\status_kind.cpp" />
     <ClInclude Include="src\cpp\types.hpp" />
     <ClInclude Include="src\node\depth.hpp" />
     <ClInclude Include="src\node\node_kind.hpp" />
@@ -182,7 +182,7 @@
     <ClInclude Include="src\node\client_template.hpp" />
     <ClInclude Include="src\node\revision_kind.hpp" />
     <ClInclude Include="src\node\v8.hpp" />
-    <ClInclude Include="src\node\working_copy_status.hpp" />
+    <ClInclude Include="src\node\status_kind.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\cpp\client.cpp" />

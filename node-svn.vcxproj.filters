@@ -51,9 +51,6 @@
     <ClInclude Include="src\node\depth.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="src\node\working_copy_status.hpp">
-      <Filter>Header Files\node</Filter>
-    </ClInclude>
     <ClInclude Include="src\node\revision_kind.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
@@ -62,6 +59,9 @@
     </ClInclude>
     <ClInclude Include="src\cpp\types.hpp">
       <Filter>Header Files\cpp</Filter>
+    </ClInclude>
+    <ClInclude Include="src\node\status_kind.hpp">
+      <Filter>Header Files\node</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -86,10 +86,10 @@
     <ClCompile Include="src\node\depth.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="src\node\working_copy_status.cpp">
+    <ClCompile Include="src\node\revision_kind.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
-    <ClCompile Include="src\node\revision_kind.cpp">
+    <ClCompile Include="src\node\status_kind.cpp">
       <Filter>Source Files\node</Filter>
     </ClCompile>
   </ItemGroup>
