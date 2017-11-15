@@ -5,7 +5,7 @@
 #include <svn_client.h>
 #include <svn_path.h>
 
-#include "svn_type_error.hpp"
+#include <cpp/svn_type_error.hpp>
 
 static svn::svn_error* copy_error(svn_error_t* error) {
     const auto buffer_size = 100;
@@ -460,12 +460,78 @@ void client::commit(const std::vector<std::string>& paths,
                                     pool));
 }
 
+static lock* copy_lock(const svn_lock_t* raw) {
+    if (raw == nullptr)
+        return nullptr;
+
+    auto result             = new lock();
+    result->comment         = raw->comment;
+    result->creation_date   = raw->creation_date;
+    result->expiration_date = raw->expiration_date;
+    result->is_dav_comment  = raw->is_dav_comment;
+    result->owner           = raw->owner;
+    result->path            = raw->path;
+    result->token           = raw->token;
+
+    return result;
+}
+
+static checksum* copy_checksum(const svn_checksum_t* raw) {
+    if (raw == nullptr)
+        return nullptr;
+
+    auto result    = new checksum();
+    result->digest = raw->digest;
+    result->kind   = static_cast<checksum_kind>(raw->kind);
+
+    return result;
+}
+
+static working_copy_info* copy_working_copy_info(const svn_wc_info_t* raw) {
+    if (raw == nullptr)
+        return nullptr;
+
+    auto result                = new working_copy_info();
+    result->changelist         = raw->changelist;
+    result->checksum           = copy_checksum(raw->checksum);
+    result->copyfrom_rev       = raw->copyfrom_rev;
+    result->copyfrom_url       = raw->copyfrom_url;
+    result->depth              = static_cast<depth>(raw->depth);
+    result->moved_from_abspath = raw->moved_from_abspath;
+    result->moved_to_abspath   = raw->moved_to_abspath;
+    result->recorded_size      = raw->recorded_size;
+    result->recorded_time      = raw->recorded_time;
+    result->wcroot_abspath     = raw->wcroot_abspath;
+
+    return result;
+}
+
+static info* copy_info(const svn_client_info2_t* raw) {
+    if (raw == nullptr)
+        return nullptr;
+
+    auto result                 = new info();
+    result->kind                = raw->kind;
+    result->last_changed_author = raw->last_changed_author;
+    result->last_changed_date   = raw->last_changed_date;
+    result->last_changed_rev    = raw->last_changed_rev;
+    result->lock                = copy_lock(raw->lock);
+    result->repos_root_URL      = raw->repos_root_URL;
+    result->repos_UUID          = raw->repos_UUID;
+    result->rev                 = raw->rev;
+    result->size                = raw->size;
+    result->URL                 = raw->URL;
+    result->wc_info             = copy_working_copy_info(raw->wc_info);
+
+    return result;
+}
+
 static svn_error_t* invoke_info(void*                     raw_baton,
                                 const char*               path,
-                                const svn_client_info2_t* info,
+                                const svn_client_info2_t* raw_info,
                                 apr_pool_t*               raw_scratch_pool) {
     auto callback_baton = static_cast<baton_wrapper<client::info_callback>*>(raw_baton);
-    callback_baton->value(path, reinterpret_cast<const client_info*>(info));
+    callback_baton->value(path, copy_info(raw_info));
     return nullptr;
 }
 
@@ -581,12 +647,53 @@ void client::revert(const std::vector<std::string>& paths,
                                     pool));
 }
 
+static status* copy_status(const svn_client_status_t* raw) {
+    if (raw == nullptr)
+        return nullptr;
+
+    auto result                = new status();
+    result->changed_author     = raw->changed_author;
+    result->changed_date       = raw->changed_date;
+    result->changed_rev        = raw->changed_rev;
+    result->changelist         = raw->changelist;
+    result->conflicted         = raw->conflicted;
+    result->copied             = raw->copied;
+    result->depth              = static_cast<depth>(raw->depth);
+    result->filesize           = raw->filesize;
+    result->file_external      = raw->file_external;
+    result->kind               = static_cast<node_kind>(raw->kind);
+    result->local_abspath      = raw->local_abspath;
+    result->local_lock         = copy_lock(raw->lock);
+    result->moved_from_abspath = raw->moved_from_abspath;
+    result->moved_to_abspath   = raw->moved_to_abspath;
+    result->node_status        = static_cast<status_kind>(raw->node_status);
+    result->ood_changed_author = raw->ood_changed_author;
+    result->ood_changed_date   = raw->ood_changed_date;
+    result->ood_changed_rev    = raw->ood_changed_rev;
+    result->ood_kind           = static_cast<node_kind>(raw->ood_kind);
+    result->prop_status        = static_cast<status_kind>(raw->prop_status);
+    result->repos_lock         = copy_lock(raw->repos_lock);
+    result->repos_node_status  = static_cast<status_kind>(raw->repos_node_status);
+    result->repos_prop_status  = static_cast<status_kind>(raw->repos_prop_status);
+    result->repos_relpath      = raw->repos_relpath;
+    result->repos_root_url     = raw->repos_root_url;
+    result->repos_text_status  = static_cast<status_kind>(raw->repos_text_status);
+    result->repos_uuid         = raw->repos_uuid;
+    result->revision           = raw->revision;
+    result->switched           = raw->switched;
+    result->text_status        = static_cast<status_kind>(raw->text_status);
+    result->versioned          = raw->versioned;
+    result->wc_is_locked       = raw->wc_is_locked;
+
+    return result;
+}
+
 static svn_error_t* invoke_status(void*                      raw_baton,
                                   const char*                path,
-                                  const svn_client_status_t* status,
+                                  const svn_client_status_t* raw_status,
                                   apr_pool_t*                raw_scratch_pool) {
     auto callback_baton = static_cast<baton_wrapper<client::status_callback>*>(raw_baton);
-    callback_baton->value(path, status);
+    callback_baton->value(path, copy_status(raw_status));
     return nullptr;
 }
 

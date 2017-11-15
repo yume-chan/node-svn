@@ -21,15 +21,41 @@
 template <class Result, class... Args>
 struct async_data {
     async_data(std::function<Result(Args...)> callback)
-        : callback(std::move(callback)) {}
+        : callback(std::move(callback)) {
+        uv_mutex_init(&mutex);
+    }
+
+    ~async_data() {
+        uv_mutex_destroy(&mutex);
+    }
 
     std::function<Result(Args...)> callback;
     std::tuple<Args...>            args;
 
     std::promise<Result> promise;
 
+    uv_mutex_t mutex;
+
     void invoke() {
+        uv_mutex_lock(&mutex);
         call(args);
+        uv_mutex_unlock(&mutex);
+    }
+
+    struct releaser {
+        releaser(uv_mutex_t& mutex)
+            : mutex(mutex) {}
+
+        ~releaser() {
+            uv_mutex_unlock(&mutex);
+        }
+
+        uv_mutex_t& mutex;
+    };
+
+    releaser wait() {
+        uv_mutex_lock(&mutex);
+        return releaser(mutex);
     }
 
   private:
@@ -76,6 +102,7 @@ static std::function<Result(Args...)> async_callback(std::function<Result(Args..
         data->args = std::make_tuple<Args...>(std::forward<Args>(args)...);
 
         uv_async_send(async);
+        data->wait();
     };
 }
 

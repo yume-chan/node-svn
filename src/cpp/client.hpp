@@ -7,60 +7,20 @@
 #include <svn_opt.h>
 #include <svn_types.h>
 
+#include <cpp/types.hpp>
+
 struct apr_pool_t;
 struct svn_client_ctx_t;
-struct svn_wc_info_t;
-struct svn_client_status_t;
 
 namespace svn {
-struct client_info {
-    /** Where the item lives in the repository. */
-    const char* URL;
-
-    /** The revision of the object.  If the target is a working-copy
-      * path, then this is its current working revnum.  If the target
-      * is a URL, then this is the repos revision that it lives in. */
-    svn_revnum_t rev;
-
-    /** The root URL of the repository. */
-    const char* repos_root_URL;
-
-    /** The repository's UUID. */
-    const char* repos_UUID;
-
-    /** The node's kind. */
-    svn_node_kind_t kind;
-
-    /** The size of the file in the repository (untranslated,
-      * e.g. without adjustment of line endings and keyword
-      * expansion). Only applicable for file -- not directory -- URLs.
-      * For working copy paths, @a size will be #SVN_INVALID_FILESIZE. */
-    svn_filesize_t size;
-
-    /** The last revision in which this object changed. */
-    svn_revnum_t last_changed_rev;
-
-    /** The date of the last_changed_rev. */
-    apr_time_t last_changed_date;
-
-    /** The author of the last_changed_rev. */
-    const char* last_changed_author;
-
-    /** An exclusive lock, if present.  Could be either local or remote. */
-    const svn_lock_t* lock;
-
-    /** Possible information about the working copy, NULL if not valid. */
-    const svn_wc_info_t* wc_info;
-};
-
 class client : public std::enable_shared_from_this<client> {
   public:
     using get_changelists_callback = std::function<void(const char*, const char*)>;
     using cat_callback             = std::function<void(const char*, size_t)>;
     using commit_callback          = std::function<void(const svn_commit_info_t*)>;
-    using info_callback            = std::function<void(const char*, const client_info*)>;
+    using info_callback            = std::function<void(const char*, const info*)>;
     using remove_callback          = std::function<void(const svn_commit_info_t*)>;
-    using status_callback          = std::function<void(const char*, const svn_client_status_t*)>;
+    using status_callback          = std::function<void(const char*, const status*)>;
 
     explicit client();
     client(client&&);

@@ -9,7 +9,13 @@ export interface NodeInfo {
 }
 
 export interface NodeStatus {
-
+    path: string;
+    kind: NodeKind;
+    node_status: StatusKind;
+    text_status: StatusKind;
+    prop_status: StatusKind;
+    versioned: boolean;
+    changelist?: string;
 }
 
 export type Revision = RevisionKind.base |
@@ -21,6 +27,11 @@ export type Revision = RevisionKind.base |
     { number: number } |
     { date: number };
 
+export interface GetChangelistsOptions {
+    changelists: string | string[];
+    depth: Depth;
+}
+
 export interface InfoOptions {
     peg_revision: Revision;
     revision: Revision;
@@ -31,7 +42,7 @@ export class Client {
     constructor();
 
     add_to_changelist(path: string | string[], changelist: string): void;
-    get_changelists(path: string, callback: (path: string, changelist: string) => void): void;
+    get_changelists(path: string, callback: (path: string, changelist: string) => void, options?: Partial<GetChangelistsOptions>): void;
     remove_from_changelists(path: string | string[]): void;
 
     add(path: string): void;
@@ -52,7 +63,7 @@ export class AsyncClient {
     constructor();
 
     add_to_changelist(path: string | string[], changelist: string): Promise<void>;
-    get_changelists(path: string, callback: (path: string, changelist: string) => void): Promise<void>;
+    get_changelists(path: string, callback: (path: string, changelist: string) => void, options?: Partial<GetChangelistsOptions>): Promise<void>;
     remove_from_changelists(path: string | string[]): Promise<void>;
 
     add(path: string): Promise<void>;
@@ -95,7 +106,7 @@ export enum RevisionKind {
     head = 7,
 }
 
-export enum WorkingCopyStatus {
+export enum StatusKind {
     none,
     unversioned,
     normal,

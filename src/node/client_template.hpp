@@ -236,8 +236,11 @@ METHOD_BEGIN(get_changelists)
         }
     CALLBACK_END
 
-    ASYNC_BEGIN(void, raw_path, raw_callback)
-        ASYNC_VOID(_this->_client->get_changelists(raw_path, raw_callback))
+    auto raw_changelists = convert_array(args[2].As<v8::Object>()->Get(v8::New<v8::String>(isolate, "changelists")), true);
+    auto raw_depth       = convert_depth(isolate, context, args[2], "depth", svn_depth_infinity);
+
+    ASYNC_BEGIN(void, raw_path, raw_callback, raw_changelists, raw_depth)
+        ASYNC_VOID(_this->_client->get_changelists(raw_path, raw_callback, raw_changelists, raw_depth))
     ASYNC_END
 
     ASYNC_RESULT;
@@ -332,8 +335,8 @@ METHOD_BEGIN(info)
         throw svn::svn_type_error("");
 
     auto callback = args[1].As<v8::Function>();
-    CALLBACK_BEGIN(raw_callback, void, const char*, const svn::client_info*)
-        [isolate, &callback](const char* path, const svn::client_info* raw_info) -> void {
+    CALLBACK_BEGIN(raw_callback, void, const char*, const svn::info*)
+        [isolate, &callback](const char* path, const svn::info* raw_info) -> void {
             const auto argc = 2;
             auto       info = v8::New<v8::Object>(isolate);
             info->Set(InternalizedString("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
@@ -388,10 +391,22 @@ METHOD_BEGIN(status)
         throw svn::svn_type_error("");
 
     auto callback = args[1].As<v8::Function>();
-    CALLBACK_BEGIN(raw_callback, void, const char*, const svn_client_status_t*)
-        [isolate, &callback](const char* path, const svn_client_status_t* raw_info) -> void {
+    CALLBACK_BEGIN(raw_callback, void, const char*, const svn::status*)
+        [isolate, &callback](const char* path, const svn::status* raw_info) -> void {
+            v8::HandleScope scope(isolate);
+
+            auto info = v8::New<v8::Object>(isolate);
+            info->Set(InternalizedString("path"), v8::New<v8::String>(isolate, path));
+            info->Set(InternalizedString("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
+            info->Set(InternalizedString("node_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_status)));
+            info->Set(InternalizedString("text_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->text_status)));
+            info->Set(InternalizedString("prop_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->prop_status)));
+            info->Set(InternalizedString("versioned"), v8::New<v8::Boolean>(isolate, raw_info->versioned));
+
+            if (raw_info->changelist != nullptr)
+                info->Set(InternalizedString("changelist"), v8::New<v8::String>(isolate, raw_info->changelist));
+
             const auto           argc       = 2;
-            auto                 info       = v8::New<v8::Object>(isolate);
             v8::Local<v8::Value> argv[argc] = {
                 v8::New<v8::String>(isolate, path),
                 info};

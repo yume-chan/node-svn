@@ -44,6 +44,14 @@ struct Factory<v8::Integer> {
 };
 
 template <>
+struct Factory<v8::Boolean> {
+    static inline v8::Local<v8::Boolean> New(v8::Isolate* isolate,
+                                             bool         value) {
+        return v8::Boolean::New(isolate, value);
+    }
+};
+
+template <>
 struct Factory<v8::External> {
     static inline v8::Local<v8::External> New(v8::Isolate* isolate,
                                               void*        value) {
