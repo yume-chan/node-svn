@@ -24,7 +24,7 @@ static std::string convert_string(const v8::Local<v8::Value>& value) {
 }
 
 static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value, bool allowEmpty) {
-    if (value.IsEmpty()) {
+    if (value.IsEmpty() || value->IsUndefined()) {
         if (allowEmpty)
             return std::vector<std::string>();
         else
@@ -48,14 +48,84 @@ static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value,
     throw svn::svn_type_error("");
 }
 
-static svn_depth_t convert_depth(const v8::Local<v8::Value>& value, svn_depth_t defaultValue) {
+static svn_opt_revision_t convert_revision(v8::Isolate*                  isolate,
+                                           const v8::Local<v8::Context>& context,
+                                           const v8::Local<v8::Value>&   options,
+                                           const char*                   key,
+                                           svn_opt_revision_t            defaultValue) {
+    auto object = options.As<v8::Object>();
+    auto value  = object->Get(context, v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
     if (value.IsEmpty())
         return defaultValue;
 
-    if (!value->IsNumber())
+    auto local = value.ToLocalChecked();
+    if (local->IsUndefined())
+        return defaultValue;
+
+    if (local->IsNumber()) {
+        auto simple = static_cast<svn_opt_revision_kind>(local->Int32Value());
+        switch (simple) {
+            case svn_opt_revision_unspecified:
+            case svn_opt_revision_committed:
+            case svn_opt_revision_previous:
+            case svn_opt_revision_base:
+            case svn_opt_revision_working:
+            case svn_opt_revision_head:
+                return svn_opt_revision_t{simple};
+            case svn_opt_revision_number:
+            case svn_opt_revision_date:
+            default:
+                throw svn::svn_type_error("");
+        }
+    }
+
+    if (!local->IsObject())
         throw svn::svn_type_error("");
 
-    return static_cast<svn_depth_t>(value->Int32Value());
+    object = local.As<v8::Object>();
+    value  = object->Get(context, v8::New<v8::String>(isolate, "number", v8::NewStringType::kInternalized));
+    if (!value.IsEmpty()) {
+        local = value.ToLocalChecked();
+        if (!local->IsNumber())
+            throw svn::svn_type_error("");
+
+        auto result         = svn_opt_revision_t{svn_opt_revision_number};
+        result.value.number = local->Int32Value();
+        return result;
+    }
+
+    value = object->Get(context, v8::New<v8::String>(isolate, "date", v8::NewStringType::kInternalized));
+    if (!value.IsEmpty()) {
+        local = value.ToLocalChecked();
+        if (!local->IsNumber())
+            throw svn::svn_type_error("");
+
+        auto result       = svn_opt_revision_t{svn_opt_revision_date};
+        result.value.date = local->IntegerValue();
+        return result;
+    }
+
+    throw svn::svn_type_error("");
+}
+
+static svn_depth_t convert_depth(v8::Isolate*                  isolate,
+                                 const v8::Local<v8::Context>& context,
+                                 const v8::Local<v8::Value>&   options,
+                                 const char*                   key,
+                                 svn_depth_t                   defaultValue) {
+    auto object = options.As<v8::Object>();
+    auto value  = object->Get(context, v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
+    if (value.IsEmpty())
+        return defaultValue;
+
+    auto local = value.ToLocalChecked();
+    if (local->IsUndefined())
+        return defaultValue;
+
+    if (!local->IsNumber())
+        throw svn::svn_type_error("");
+
+    return static_cast<svn_depth_t>(local->Int32Value());
 }
 
 static void buffer_free_pointer(char*, void* hint) {
@@ -138,8 +208,10 @@ METHOD_BEGIN(add_to_changelist)
     auto raw_paths      = convert_array(args[0], false);
     auto raw_changelist = convert_string(args[1]);
 
-    ASYNC_BEGIN(void, raw_paths, raw_changelist)
-        ASYNC_VOID(_this->_client->add_to_changelist(raw_paths, raw_changelist))
+    auto raw_depth = convert_depth(isolate, context, args[2], "depth", svn_depth_infinity);
+
+    ASYNC_BEGIN(void, raw_paths, raw_changelist, raw_depth)
+        ASYNC_VOID(_this->_client->add_to_changelist(raw_paths, raw_changelist, raw_depth))
     ASYNC_END(void)
 
     ASYNC_RESULT;
@@ -152,15 +224,17 @@ METHOD_BEGIN(get_changelists)
     if (!args[1]->IsFunction())
         throw svn::svn_type_error("");
 
-    auto callback     = args[1].As<v8::Function>();
-    auto raw_callback = [isolate, &callback](const char* path, const char* changelist) -> void {
-        const auto           argc       = 2;
-        v8::Local<v8::Value> argv[argc] = {
-            v8::New<v8::String>(isolate, path),
-            v8::New<v8::String>(isolate, changelist)};
+    auto callback = args[1].As<v8::Function>();
+    CALLBACK_BEGIN(raw_callback, void, const char*, const char*)
+        [isolate, &callback](const char* path, const char* changelist) -> void {
+            const auto           argc       = 2;
+            v8::Local<v8::Value> argv[argc] = {
+                v8::New<v8::String>(isolate, path),
+                v8::New<v8::String>(isolate, changelist)};
 
-        callback->Call(v8::Undefined(isolate), argc, argv);
-    };
+            callback->Call(v8::Undefined(isolate), argc, argv);
+        }
+    CALLBACK_END
 
     ASYNC_BEGIN(void, raw_path, raw_callback)
         ASYNC_VOID(_this->_client->get_changelists(raw_path, raw_callback))
@@ -218,20 +292,24 @@ METHOD_END
 static svn::client::commit_callback invoke_commit_callback(v8::Isolate* isolate, const v8::Local<v8::Value>& value) {
     if (!value->IsFunction())
         throw svn::svn_type_error("");
+
     auto callback = value.As<v8::Function>();
+    CALLBACK_BEGIN(result, void, const svn_commit_info_t*)
+        [isolate, &callback](const svn_commit_info_t* raw_info) -> void {
+            const auto argc = 1;
+            auto       info = v8::New<v8::Object>(isolate);
+            info->Set(InternalizedString("author"), v8::New<v8::String>(isolate, raw_info->author));
+            info->Set(InternalizedString("date"), v8::New<v8::String>(isolate, raw_info->date));
+            info->Set(InternalizedString("post_commit_err"), v8::New<v8::String>(isolate, raw_info->post_commit_err));
+            info->Set(InternalizedString("repos_root"), v8::New<v8::String>(isolate, raw_info->repos_root));
+            info->Set(InternalizedString("revision"), v8::New<v8::Integer>(isolate, raw_info->revision));
+            v8::Local<v8::Value> argv[argc] = {info};
 
-    return [isolate, &callback](const svn_commit_info_t* raw_info) -> void {
-        const auto argc = 1;
-        auto       info = v8::New<v8::Object>(isolate);
-        info->Set(InternalizedString("author"), v8::New<v8::String>(isolate, raw_info->author));
-        info->Set(InternalizedString("date"), v8::New<v8::String>(isolate, raw_info->date));
-        info->Set(InternalizedString("post_commit_err"), v8::New<v8::String>(isolate, raw_info->post_commit_err));
-        info->Set(InternalizedString("repos_root"), v8::New<v8::String>(isolate, raw_info->repos_root));
-        info->Set(InternalizedString("revision"), v8::New<v8::Integer>(isolate, raw_info->revision));
-        v8::Local<v8::Value> argv[argc] = {info};
+            callback->Call(v8::Undefined(isolate), argc, argv);
+        }
+    CALLBACK_END
 
-        callback->Call(v8::Undefined(isolate), argc, argv);
-    };
+    return result;
 }
 
 METHOD_BEGIN(commit)
@@ -253,21 +331,27 @@ METHOD_BEGIN(info)
     if (!args[1]->IsFunction())
         throw svn::svn_type_error("");
 
-    auto callback     = args[1].As<v8::Function>();
-    auto raw_callback = [isolate, &callback](const char* path, const svn::client_info* raw_info) -> void {
-        const auto argc = 2;
-        auto       info = v8::New<v8::Object>(isolate);
-        info->Set(InternalizedString("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
-        info->Set(InternalizedString("url"), v8::New<v8::String>(isolate, raw_info->URL));
-        v8::Local<v8::Value> argv[argc] = {
-            v8::New<v8::String>(isolate, path),
-            info};
+    auto callback = args[1].As<v8::Function>();
+    CALLBACK_BEGIN(raw_callback, void, const char*, const svn::client_info*)
+        [isolate, &callback](const char* path, const svn::client_info* raw_info) -> void {
+            const auto argc = 2;
+            auto       info = v8::New<v8::Object>(isolate);
+            info->Set(InternalizedString("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
+            info->Set(InternalizedString("url"), v8::New<v8::String>(isolate, raw_info->URL));
+            v8::Local<v8::Value> argv[argc] = {
+                v8::New<v8::String>(isolate, path),
+                info};
 
-        callback->Call(v8::Undefined(isolate), argc, argv);
-    };
+            callback->Call(v8::Undefined(isolate), argc, argv);
+        }
+    CALLBACK_END
 
-    ASYNC_BEGIN(void, raw_path, raw_callback)
-        ASYNC_VOID(_this->_client->info(raw_path, raw_callback));
+    auto raw_peg_revision = convert_revision(isolate, context, args[2], "peg_revision", svn_opt_revision_t{svn_opt_revision_working});
+    auto raw_revision     = convert_revision(isolate, context, args[2], "revision", svn_opt_revision_t{svn_opt_revision_working});
+    auto raw_depth        = convert_depth(isolate, context, args[2], "depth", svn_depth_empty);
+
+    ASYNC_BEGIN(void, raw_path, raw_callback, raw_peg_revision, raw_revision, raw_depth)
+        ASYNC_VOID(_this->_client->info(raw_path, raw_callback, raw_peg_revision, raw_revision, raw_depth));
     ASYNC_END
 
     ASYNC_RESULT;
@@ -303,16 +387,18 @@ METHOD_BEGIN(status)
     if (!args[1]->IsFunction())
         throw svn::svn_type_error("");
 
-    auto callback     = args[1].As<v8::Function>();
-    auto raw_callback = [isolate, &callback](const char* path, const svn_client_status_t* raw_info) -> void {
-        const auto           argc       = 2;
-        auto                 info       = v8::New<v8::Object>(isolate);
-        v8::Local<v8::Value> argv[argc] = {
-            v8::New<v8::String>(isolate, path),
-            info};
+    auto callback = args[1].As<v8::Function>();
+    CALLBACK_BEGIN(raw_callback, void, const char*, const svn_client_status_t*)
+        [isolate, &callback](const char* path, const svn_client_status_t* raw_info) -> void {
+            const auto           argc       = 2;
+            auto                 info       = v8::New<v8::Object>(isolate);
+            v8::Local<v8::Value> argv[argc] = {
+                v8::New<v8::String>(isolate, path),
+                info};
 
-        callback->Call(v8::Undefined(isolate), argc, argv);
-    };
+            callback->Call(v8::Undefined(isolate), argc, argv);
+        }
+    CALLBACK_END
 
     ASYNC_BEGIN(void, raw_path, raw_callback)
         ASYNC_VOID(_this->_client->status(raw_path, raw_callback));

@@ -33,20 +33,29 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
     args.GetReturnValue().Set(object);
 }
 
-// V8_METHOD_BEGIN(Test)
-// {
-// 	const char *c;
-// 	vector<string> strings;
+// static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
+//     auto isolate = args.GetIsolate();
+//     auto context = isolate->GetCurrentContext();
 
-// 	{
-// 		auto s = std::string("Hello world");
-// 		c = s.c_str();
-// 		strings.push_back(std::move(s));
-// 	}
+//     auto object = args[0].As<v8::Object>();
 
-// 	auto len = strlen(c);
+//     auto isEmpty = object.IsEmpty();
+//     if (isEmpty)
+//         return;
+
+//     auto isUndefined = object->IsUndefined();
+//     /* if (isUndefined)
+//         return;*/
+
+//     auto value = object->Get(context, v8::New<v8::String>(isolate, "test"));
+//     isEmpty    = value.IsEmpty();
+//     if (isEmpty)
+//         return;
+
+//     isUndefined = value.ToLocalChecked()->IsUndefined();
+//     if (isUndefined)
+//         return;
 // }
-// V8_METHOD_END;
 
 void init(v8::Local<v8::Object> exports) {
     auto isolate = exports->GetIsolate();

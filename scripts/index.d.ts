@@ -12,6 +12,21 @@ export interface NodeStatus {
 
 }
 
+export type Revision = RevisionKind.base |
+    RevisionKind.committed |
+    RevisionKind.head |
+    RevisionKind.previous |
+    RevisionKind.unspecified |
+    RevisionKind.working |
+    { number: number } |
+    { date: number };
+
+export interface InfoOptions {
+    peg_revision: Revision;
+    revision: Revision;
+    depth: Depth;
+}
+
 export class Client {
     constructor();
 
@@ -23,7 +38,7 @@ export class Client {
     cat(path: string): Buffer;
     checkout(url: string, path: string): void;
     commit(path: string | string[], message: string, callback: (info: CommitInfo) => void): void;
-    info(path: string, callback: (path: string, info: NodeInfo) => void): void;
+    info(path: string, callback: (path: string, info: NodeInfo) => void, options?: Partial<InfoOptions>): void;
     remove(path: string | string[], callback: (info: CommitInfo) => void): void;
     revert(path: string | string[]): void;
     status(path: string, callback: (path: string, info: NodeStatus) => void): void;
@@ -44,7 +59,7 @@ export class AsyncClient {
     cat(path: string): Promise<Buffer>;
     checkout(url: string, path: string): Promise<void>;
     commit(path: string | string[], message: string, callback: (info: CommitInfo) => void): Promise<void>;
-    info(path: string, callback: (path: string, info: NodeInfo) => void): Promise<void>;
+    info(path: string, callback: (path: string, info: NodeInfo) => void, options?: Partial<InfoOptions>): Promise<void>;
     remove(path: string | string[], callback: (info: CommitInfo) => void): Promise<void>;
     revert(path: string | string[]): Promise<void>;
     status(path: string, callback: (path: string, info: NodeStatus) => void): Promise<void>;
@@ -70,14 +85,14 @@ export enum NodeKind {
 }
 
 export enum RevisionKind {
-    unspecified,
-    number,
-    date,
-    committed,
-    previous,
-    base,
-    working,
-    head,
+    unspecified = 0,
+    number = 1,
+    date = 2,
+    committed = 3,
+    previous = 4,
+    base = 5,
+    working = 6,
+    head = 7,
 }
 
 export enum WorkingCopyStatus {

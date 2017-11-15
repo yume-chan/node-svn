@@ -1,6 +1,9 @@
 const svn = require("../bin/x64/Debug/node-svn.node");
 const client = new svn.AsyncClient();
-const promise = client.get_working_copy_root("C:\\Users\\Simon\\Desktop\\www\\webchat\\static");
-promise.then(value => console.log(value));
+client.info("C:\\Users\\Simon\\Desktop\\www\\webchat", (info) => {
+    console.log(JSON.stringify(info));
+}, { revision: svn.RevisionKind.working });
 
-setInterval(()=>{}, 1000);
+console.log("exit");
+
+setInterval(() => {}, 1000);

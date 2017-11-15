@@ -6,8 +6,15 @@
 #define METHOD_BEGIN(name)                                               \
     void client::name(const v8::FunctionCallbackInfo<v8::Value>& args) { \
         auto isolate = args.GetIsolate();                                \
+        auto context = isolate->GetCurrentContext();                     \
         try {                                                            \
             auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+
+#define CALLBACK_BEGIN(name, result, ...) \
+    auto name =
+
+#define CALLBACK_END \
+    ;
 
 #define ASYNC_BEGIN(...)
 

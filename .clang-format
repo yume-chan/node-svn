@@ -24,11 +24,13 @@ BreakConstructorInitializers: BeforeComma
 
 ColumnLimit: 0
 
+IndentCaseLabels: true
+
 SortUsingDeclarations: true
 
 Standard: Cpp11
 
-MacroBlockBegin: METHOD_BEGIN|ASYNC_BEGIN
-MacroBlockEnd: METHOD_END|ASYNC_END
+MacroBlockBegin: METHOD_BEGIN|ASYNC_BEGIN|CALLBACK_BEGIN
+MacroBlockEnd: METHOD_END|ASYNC_END|CALLBACK_END
 ---
 

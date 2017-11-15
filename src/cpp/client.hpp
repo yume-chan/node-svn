@@ -146,7 +146,7 @@ class client : public std::enable_shared_from_this<client> {
               const info_callback&            callback,
               const svn_opt_revision_t&       peg_revision      = svn_opt_revision_t{svn_opt_revision_working},
               const svn_opt_revision_t&       revision          = svn_opt_revision_t{svn_opt_revision_working},
-              svn_depth_t                     depth             = svn_depth_infinity,
+              svn_depth_t                     depth             = svn_depth_empty,
               bool                            fetch_excluded    = true,
               bool                            fetch_actual_only = true,
               bool                            include_externals = false,
