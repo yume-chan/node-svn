@@ -7,5 +7,7 @@ for (const item of list) {
     try {
         module.exports = require(item);
         break;
-    } catch (err) { }
+    } catch (err) {
+        continue;
+    }
 }
