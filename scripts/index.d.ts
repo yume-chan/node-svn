@@ -38,6 +38,22 @@ export interface InfoOptions {
     depth: Depth;
 }
 
+type CredentialProviderResult<T> =
+    undefined |
+    T |
+    Promise<undefined> |
+    Promise<T>
+
+interface SimpleCredential {
+    username: string;
+    password: string;
+    save: boolean;
+}
+
+interface SimpleCredentialProvider {
+    provide_simple_provider(realm: string, username?: string): CredentialProviderResult<SimpleCredential>;
+}
+
 export class Client {
     constructor();
 

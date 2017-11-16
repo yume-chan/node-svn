@@ -147,6 +147,20 @@ client::client() {
 
     svn_error_set_malfunction_handler(throw_on_malfunction);
 
+    auto providers = apr_array_make(_pool, 10, sizeof(svn_auth_provider_object_t*));
+
+    svn_auth_provider_object_t* provider;
+    svn_auth_get_simple_provider2(&provider, nullptr, nullptr, _pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t*) = provider;
+
+    svn_auth_baton_t* auth_baton;
+    svn_auth_open(&auth_baton, providers, _pool);
+    _context->auth_baton = auth_baton;
+
+    const char* path;
+    check_result(svn_config_get_user_config_path(&path, nullptr, nullptr, _pool));
+    svn_auth_set_parameter(_context->auth_baton, SVN_AUTH_PARAM_CONFIG_DIR, path);
+
     _context->log_msg_func3 = get_commit_message;
 }
 

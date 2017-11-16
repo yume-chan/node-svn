@@ -169,10 +169,6 @@ NODE_EXTERN v8::Local<v8::Value> MakeCallback(
 
 }  // namespace node
 
-#if defined(NODE_WANT_INTERNALS) && NODE_WANT_INTERNALS
-#include "node_internals.h"
-#endif
-
 #include <assert.h>
 #include <stdint.h>
 
@@ -425,8 +421,9 @@ typedef void (*addon_context_register_func)(
     v8::Local<v8::Context> context,
     void* priv);
 
-#define NM_F_BUILTIN 0x01
-#define NM_F_LINKED  0x02
+#define NM_F_BUILTIN   0x01
+#define NM_F_LINKED    0x02
+#define NM_F_INTERNAL  0x04
 
 struct node_module {
   int nm_version;
@@ -439,9 +436,6 @@ struct node_module {
   void* nm_priv;
   struct node_module* nm_link;
 };
-
-node_module* get_builtin_module(const char *name);
-node_module* get_linked_module(const char *name);
 
 extern "C" NODE_EXTERN void node_module_register(void* mod);
 
@@ -542,15 +536,7 @@ typedef double async_id;
 struct async_context {
   ::node::async_id async_id;
   ::node::async_id trigger_async_id;
-
-  // Legacy, Node 8.x only.
-  NODE_DEPRECATED("Use async_context directly as returned by EmitAsyncInit()",
-                  operator ::node::async_id() const {
-    return async_id;
-  });
 };
-
-typedef async_id async_uid;  // Legacy, Node 8.x only
 
 /* Registers an additional v8::PromiseHook wrapper. This API exists because V8
  * itself supports only a single PromiseHook. */
@@ -562,30 +548,13 @@ NODE_EXTERN void AddPromiseHook(v8::Isolate* isolate,
  * zero then no execution has been set. This will happen if the user handles
  * I/O from native code. */
 NODE_EXTERN async_id AsyncHooksGetExecutionAsyncId(v8::Isolate* isolate);
-/* legacy alias */
-NODE_EXTERN NODE_DEPRECATED("Use AsyncHooksGetExecutionAsyncId(isolate)",
-                async_id AsyncHooksGetCurrentId(v8::Isolate* isolate));
-
 
 /* Return same value as async_hooks.triggerAsyncId(); */
 NODE_EXTERN async_id AsyncHooksGetTriggerAsyncId(v8::Isolate* isolate);
-/* legacy alias */
-NODE_EXTERN NODE_DEPRECATED("Use AsyncHooksGetTriggerAsyncId(isolate)",
-                async_id AsyncHooksGetTriggerId(v8::Isolate* isolate));
-
-// This is a legacy overload of EmitAsyncInit that has to remain for ABI
-// compatibility during Node 8.x. Do not use.
-NODE_EXTERN async_uid EmitAsyncInit(v8::Isolate* isolate,
-                                    v8::Local<v8::Object> resource,
-                                    const char* name,
-                                    async_id trigger_async_id);
-
-// From now on EmitAsyncInit always refers to the proper, new version.
-#define EmitAsyncInit EmitAsyncInit__New
 
 /* If the native API doesn't inherit from the helper class then the callbacks
  * must be triggered manually. This triggers the init() callback. The return
- * value is the uid assigned to the resource.
+ * value is the async id assigned to the resource.
  *
  * The `trigger_async_id` parameter should correspond to the resource which is
  * creating the new resource, which will usually be the return value of
@@ -595,9 +564,44 @@ NODE_EXTERN async_context EmitAsyncInit(v8::Isolate* isolate,
                                         const char* name,
                                         async_id trigger_async_id = -1);
 
+NODE_EXTERN async_context EmitAsyncInit(v8::Isolate* isolate,
+                                        v8::Local<v8::Object> resource,
+                                        v8::Local<v8::String> name,
+                                        async_id trigger_async_id = -1);
+
 /* Emit the destroy() callback. */
 NODE_EXTERN void EmitAsyncDestroy(v8::Isolate* isolate,
                                   async_context asyncContext);
+
+class InternalCallbackScope;
+
+/* This class works like `MakeCallback()` in that it sets up a specific
+ * asyncContext as the current one and informs the async_hooks and domains
+ * modules that this context is currently active.
+ *
+ * `MakeCallback()` is a wrapper around this class as well as
+ * `Function::Call()`. Either one of these mechanisms needs to be used for
+ * top-level calls into JavaScript (i.e. without any existing JS stack).
+ *
+ * This object should be stack-allocated to ensure that it is contained in a
+ * valid HandleScope.
+ */
+class NODE_EXTERN CallbackScope {
+ public:
+  CallbackScope(v8::Isolate* isolate,
+                v8::Local<v8::Object> resource,
+                async_context asyncContext);
+  ~CallbackScope();
+
+ private:
+  InternalCallbackScope* private_;
+  v8::TryCatch try_catch_;
+
+  void operator=(const CallbackScope&) = delete;
+  void operator=(CallbackScope&&) = delete;
+  CallbackScope(const CallbackScope&) = delete;
+  CallbackScope(CallbackScope&&) = delete;
+};
 
 /* An API specific to emit before/after callbacks is unnecessary because
  * MakeCallback will automatically call them for you.
@@ -631,36 +635,6 @@ v8::MaybeLocal<v8::Value> MakeCallback(v8::Isolate* isolate,
                                        v8::Local<v8::Value>* argv,
                                        async_context asyncContext);
 
-// Legacy, Node 8.x only.
-
-NODE_EXTERN
-NODE_DEPRECATED("Use MakeCallback(..., async_context asyncContext) instead",
-    v8::MaybeLocal<v8::Value> MakeCallback(v8::Isolate* isolate,
-                                           v8::Local<v8::Object> recv,
-                                           v8::Local<v8::Function> callback,
-                                           int argc,
-                                           v8::Local<v8::Value>* argv,
-                                           async_id asyncId,
-                                           async_id triggerAsyncId));
-NODE_EXTERN
-NODE_DEPRECATED("Use MakeCallback(..., async_context asyncContext) instead",
-    v8::MaybeLocal<v8::Value> MakeCallback(v8::Isolate* isolate,
-                                           v8::Local<v8::Object> recv,
-                                           const char* method,
-                                           int argc,
-                                           v8::Local<v8::Value>* argv,
-                                           async_id asyncId,
-                                           async_id triggerAsyncId));
-NODE_EXTERN
-NODE_DEPRECATED("Use MakeCallback(..., async_context asyncContext) instead",
-    v8::MaybeLocal<v8::Value> MakeCallback(v8::Isolate* isolate,
-                                           v8::Local<v8::Object> recv,
-                                           v8::Local<v8::String> symbol,
-                                           int argc,
-                                           v8::Local<v8::Value>* argv,
-                                           async_id asyncId,
-                                           async_id triggerAsyncId));
-
 /* Helper class users can optionally inherit from. If
  * `AsyncResource::MakeCallback()` is used, then all four callbacks will be
  * called automatically. */
@@ -669,6 +643,16 @@ class AsyncResource {
     AsyncResource(v8::Isolate* isolate,
                   v8::Local<v8::Object> resource,
                   const char* name,
+                  async_id trigger_async_id = -1)
+        : isolate_(isolate),
+          resource_(isolate, resource) {
+      async_context_ = EmitAsyncInit(isolate, resource, name,
+                                     trigger_async_id);
+    }
+
+    AsyncResource(v8::Isolate* isolate,
+                  v8::Local<v8::Object> resource,
+                  v8::Local<v8::String> name,
                   async_id trigger_async_id = -1)
         : isolate_(isolate),
           resource_(isolate, resource) {
@@ -711,12 +695,6 @@ class AsyncResource {
       return resource_.Get(isolate_);
     }
 
-    NODE_DEPRECATED("Use AsyncResource::get_async_id()",
-      async_id get_uid() const {
-        return get_async_id();
-      }
-    )
-
     async_id get_async_id() const {
       return async_context_.async_id;
     }
@@ -724,6 +702,16 @@ class AsyncResource {
     async_id get_trigger_async_id() const {
       return async_context_.trigger_async_id;
     }
+
+  protected:
+    class CallbackScope : public node::CallbackScope {
+     public:
+      explicit CallbackScope(AsyncResource* res)
+        : node::CallbackScope(res->isolate_,
+                              res->resource_.Get(res->isolate_),
+                              res->async_context_) {}
+    };
+
   private:
     v8::Isolate* isolate_;
     v8::Persistent<v8::Object> resource_;

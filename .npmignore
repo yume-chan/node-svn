@@ -1,27 +1,31 @@
-# Visual Studio Cache
+# Visual Studio cache
 .vs
 
-# Visual Studio Output
+# Visual Studio output
 bin
 obj
 
-# Node-gyp Output
+# Node-gyp output
 build
 
-# (include) Node Modules
+# (include) Node.js modules
 # node_modules
 
-# Visual Studio Code Config
+# Visual Studio Code config
 .vscode
 
-# Clang Formatter Config
+# Clang-format config
 .clang-format
 
-# Visual Studio Project Files
+# Visual Studio project files
 node-svn.sln
 node-svn.vcxproj
 node-svn.vcxproj.filters
 node-svn.vcxproj.user
+
+# Node.js include and library
+include/node
+lib/node.lib
 
 # Tests
 tests
