@@ -10,25 +10,39 @@
         try {                                                            \
             auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
 
-#define CALLBACK_BEGIN(name, result, ...) \
-    auto name =
+#define TO_ASYNC_CALLBACK(callback, ...) \
+    std::function<std::invoke_result_t<decltype(callback), __VA_ARGS__>(__VA_ARGS__)>(callback)
 
-#define CALLBACK_END \
-    ;
+template <class T>
+class future {
+  public:
+    future() {}
 
-#define ASYNC_BEGIN(...)
+    T value;
 
-#define ASYNC_VOID(value) \
-    value;                \
-    auto sync_result = 1;
+    T get() {
+        return value;
+    }
+};
 
-#define ASYNC_RETURN(value) \
-    auto sync_result = value;
+template <>
+class future<void> {
+  public:
+    future() {}
 
-#define ASYNC_END
+    void get() {}
+};
+
+#define ASYNC_BEGIN(result, ...) \
+    future<result> future;
+
+#define ASYNC_RETURN(result) \
+    future.value = result;
+
+#define ASYNC_END(...)
 
 #define ASYNC_RESULT \
-    sync_result
+    future.get()
 
 #define METHOD_RETURN(value) \
     args.GetReturnValue().Set(value);

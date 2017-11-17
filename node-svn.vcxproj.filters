@@ -25,6 +25,9 @@
     <Filter Include="Header Files\node">
       <UniqueIdentifier>{77384a04-3de2-4324-99ac-e2c4fab1d1bb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\uv">
+      <UniqueIdentifier>{87091be7-7bc9-4d23-823f-d55680042291}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\cpp\client.hpp">
@@ -62,6 +65,12 @@
     </ClInclude>
     <ClInclude Include="src\node\status_kind.hpp">
       <Filter>Header Files\node</Filter>
+    </ClInclude>
+    <ClInclude Include="src\uv\work.hpp">
+      <Filter>Header Files\uv</Filter>
+    </ClInclude>
+    <ClInclude Include="src\uv\async.hpp">
+      <Filter>Header Files\uv</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

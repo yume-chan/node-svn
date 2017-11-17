@@ -57,6 +57,8 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
 //         return;
 // }
 
+#include <type_traits>
+
 void init(v8::Local<v8::Object> exports) {
     auto isolate = exports->GetIsolate();
     auto context = isolate->GetCurrentContext();

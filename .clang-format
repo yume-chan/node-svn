@@ -1,6 +1,5 @@
----
 IndentWidth: 4
----
+
 Language: Cpp
 
 PointerAlignment: Left
@@ -32,5 +31,3 @@ Standard: Cpp11
 
 MacroBlockBegin: METHOD_BEGIN|ASYNC_BEGIN|CALLBACK_BEGIN
 MacroBlockEnd: METHOD_END|ASYNC_END|CALLBACK_END
----
-

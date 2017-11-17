@@ -9,7 +9,6 @@ export interface NodeInfo {
 }
 
 export interface NodeStatus {
-    path: string;
     kind: NodeKind;
     node_status: StatusKind;
     text_status: StatusKind;
