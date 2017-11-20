@@ -60,7 +60,7 @@ enum class node_kind {
 
 enum class status_kind {
     /** does not exist */
-    none,
+    none = 1,
 
     /** is not a versioned thing in this wc */
     unversioned,
