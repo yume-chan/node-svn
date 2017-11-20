@@ -73,7 +73,7 @@ export class Client {
 
     remove(path: string | string[], callback: (info: CommitInfo) => void): void;
     revert(path: string | string[]): void;
-    status(path: string, callback: (path: string, info: NodeStatus) => void): void;
+    status(path: string, callback: (info: NodeStatus) => void): void;
     update(path: string): number;
     update(path: string[]): number[];
 
@@ -97,7 +97,7 @@ export class AsyncClient {
 
     remove(path: string | string[], callback: (info: CommitInfo) => void): Promise<void>;
     revert(path: string | string[]): Promise<void>;
-    status(path: string, callback: (path: string, info: NodeStatus) => void): Promise<void>;
+    status(path: string, callback: (info: NodeStatus) => void): Promise<void>;
     update(path: string): Promise<number>;
     update(path: string[]): Promise<number[]>;
 
