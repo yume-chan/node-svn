@@ -49,45 +49,6 @@ class work {
 
     std::promise<Result> promise;
 };
-//
-//template <class Work, class AfterWork>
-//class work<Work, AfterWork, void> {
-//  public:
-//    work(Work do_work, AfterWork after_work)
-//        : do_work(std::move(do_work))
-//        , after_work(std::move(after_work)) {
-//        uv_work.data = this;
-//        uv_queue_work(uv_default_loop(), &uv_work, invoke_work, invoke_after_work);
-//    }
-//
-//  private:
-//    static void invoke_work(uv_work_t* req) {
-//        auto _this = static_cast<work*>(req->data);
-//        try {
-//            _this->do_work();
-//            _this->promise.set_value();
-//        } catch (...) {
-//            _this->promise.set_exception(std::current_exception());
-//        }
-//    }
-//
-//    static void invoke_after_work(uv_work_t* req, int status) {
-//        auto _this  = static_cast<work*>(req->data);
-//        auto future = _this->promise.get_future();
-//        _this->after_work(std::move(future));
-//
-//        delete _this;
-//    }
-//
-//    ~work() {}
-//
-//    uv_work_t uv_work;
-//
-//    const Work      do_work;
-//    const AfterWork after_work;
-//
-//    std::promise<void> promise;
-//};
 
 template <class Work, class AfterWork>
 static void queue_work(Work do_work, AfterWork after_work) {

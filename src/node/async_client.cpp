@@ -16,9 +16,8 @@
                                                                                \
         auto _this = node::ObjectWrap::Unwrap<async_client>(args.Holder());
 
-// TODO: Convert to async
 #define TO_ASYNC_CALLBACK(callback, ...) \
-    std::function<std::invoke_result_t<decltype(callback), __VA_ARGS__>(__VA_ARGS__)>(callback)
+    uv::make_async<decltype(callback), __VA_ARGS__>(_raw_callback)->to_function();
 
 #define EXPAND(x) x
 

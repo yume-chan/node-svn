@@ -225,12 +225,16 @@ METHOD_BEGIN(get_changelists)
         throw svn::svn_type_error("");
 
     auto callback      = args[1].As<v8::Function>();
-    auto _raw_callback = [isolate, &callback](const char* path, const char* changelist) -> void {
+    auto _callback = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
+    auto _raw_callback = [isolate, _callback](const char* path, const char* changelist) -> void {
+        v8::HandleScope scope(isolate);
+
         const auto           argc       = 2;
         v8::Local<v8::Value> argv[argc] = {
             v8::New<v8::String>(isolate, path),
             v8::New<v8::String>(isolate, changelist)};
 
+        auto callback = _callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
     auto raw_callback = TO_ASYNC_CALLBACK(_raw_callback, const char*, const char*);
@@ -296,7 +300,10 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
         throw svn::svn_type_error("");
 
     auto callback      = value.As<v8::Function>();
-    auto _raw_callback = [isolate, &callback](const svn_commit_info_t* raw_info) -> void {
+    auto _callback = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
+    auto _raw_callback = [isolate, _callback](const svn_commit_info_t* raw_info) -> void {
+        v8::HandleScope scope(isolate);
+
         const auto argc = 1;
         auto       info = v8::New<v8::Object>(isolate);
         info->Set(InternalizedString("author"), v8::New<v8::String>(isolate, raw_info->author));
@@ -306,6 +313,7 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
         info->Set(InternalizedString("revision"), v8::New<v8::Integer>(isolate, raw_info->revision));
         v8::Local<v8::Value> argv[argc] = {info};
 
+        auto callback = _callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
 
@@ -332,7 +340,10 @@ METHOD_BEGIN(info)
         throw svn::svn_type_error("");
 
     auto callback      = args[1].As<v8::Function>();
-    auto _raw_callback = [isolate, &callback](const char* path, const svn::info* raw_info) -> void {
+    auto _callback     = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
+    auto _raw_callback = [isolate, _callback](const char* path, const svn::info* raw_info) -> void {
+        v8::HandleScope scope(isolate);
+
         const auto argc = 2;
         auto       info = v8::New<v8::Object>(isolate);
         info->Set(InternalizedString("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
@@ -341,6 +352,7 @@ METHOD_BEGIN(info)
             v8::New<v8::String>(isolate, path),
             info};
 
+        auto callback = _callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
     auto raw_callback = TO_ASYNC_CALLBACK(_raw_callback, const char*, const svn::info*);

@@ -8,7 +8,7 @@
 
 namespace uv {
 template <class Callback, class Result, class... Args>
-class async {
+class async : public std::enable_shared_from_this<async<Callback, Result, Args...>> {
   public:
     async(Callback callback)
         : callback(std::move(callback))
@@ -32,6 +32,13 @@ class async {
         future.get();
 
         promise = std::promise<Result>();
+    }
+
+    std::function<Result(Args...)> to_function() {
+        auto _this = this->shared_from_this();
+        return [_this](Args... args) -> Result {
+            return _this->operator()(args...);
+        };
     }
 
   private:
@@ -74,7 +81,7 @@ class async {
 
 template <class Callback, class... Args>
 static decltype(auto) make_async(Callback callback) {
-    using Result = decltype(callback());
-    return new async<Callback, Result, Args...>(callback);
+    using Result = std::invoke_result_t<Callback, Args...>;
+    return std::make_shared<async<Callback, Result, Args...>>(callback);
 }
 } // namespace uv
