@@ -32,6 +32,11 @@ export interface GetChangelistsOptions {
     depth: Depth;
 }
 
+export interface CatOptions {
+    peg_revision: Revision;
+    revision: Revision;
+}
+
 export interface InfoOptions {
     peg_revision: Revision;
     revision: Revision;
@@ -64,7 +69,7 @@ export class Client {
     remove_from_changelists(path: string | string[]): void;
 
     add(path: string): void;
-    cat(path: string): Buffer;
+    cat(path: string, options?: Partial<CatOptions>): Buffer;
     checkout(url: string, path: string): void;
     commit(path: string | string[], message: string, callback: (info: CommitInfo) => void): void;
 
@@ -89,7 +94,7 @@ export class AsyncClient {
     remove_from_changelists(path: string | string[]): Promise<void>;
 
     add(path: string): Promise<void>;
-    cat(path: string): Promise<Buffer>;
+    cat(path: string, options?: Partial<CatOptions>): Promise<Buffer>;
     checkout(url: string, path: string): Promise<void>;
     commit(path: string | string[], message: string, callback: (info: CommitInfo) => void): Promise<void>;
 

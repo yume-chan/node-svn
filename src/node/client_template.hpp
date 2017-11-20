@@ -284,8 +284,12 @@ METHOD_END
 METHOD_BEGIN(cat)
     auto raw_path = convert_string(args[0]);
 
-    ASYNC_BEGIN(std::vector<char>, raw_path)
-        ASYNC_RETURN(_this->_client->cat(raw_path));
+    auto options          = args[1];
+    auto raw_peg_revision = convert_revision(isolate, context, options, "peg_revision", svn_opt_revision_t{svn_opt_revision_working});
+    auto raw_revision     = convert_revision(isolate, context, options, "revision", svn_opt_revision_t{svn_opt_revision_working});
+
+    ASYNC_BEGIN(std::vector<char>, raw_path, raw_peg_revision, raw_revision)
+        ASYNC_RETURN(_this->_client->cat(raw_path, nullptr, raw_peg_revision, raw_revision));
     ASYNC_END()
 
     auto result = buffer_from_vector(isolate, ASYNC_RESULT);
