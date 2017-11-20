@@ -5,10 +5,11 @@ export interface CommitInfo {
 }
 
 export interface NodeInfo {
-
+    path: string;
 }
 
 export interface NodeStatus {
+    path: string;
     kind: NodeKind;
     node_status: StatusKind;
     text_status: StatusKind;
@@ -53,6 +54,8 @@ interface SimpleCredentialProvider {
     provide_simple_provider(realm: string, username?: string): CredentialProviderResult<SimpleCredential>;
 }
 
+type InfoCallback = (info: NodeInfo) => void;
+
 export class Client {
     constructor();
 
@@ -64,7 +67,10 @@ export class Client {
     cat(path: string): Buffer;
     checkout(url: string, path: string): void;
     commit(path: string | string[], message: string, callback: (info: CommitInfo) => void): void;
-    info(path: string, callback: (path: string, info: NodeInfo) => void, options?: Partial<InfoOptions>): void;
+
+    info(path: string, callback: InfoCallback): void;
+    info(path: string, options: Partial<InfoOptions> | undefined, callback: InfoCallback): void;
+
     remove(path: string | string[], callback: (info: CommitInfo) => void): void;
     revert(path: string | string[]): void;
     status(path: string, callback: (path: string, info: NodeStatus) => void): void;
@@ -85,7 +91,10 @@ export class AsyncClient {
     cat(path: string): Promise<Buffer>;
     checkout(url: string, path: string): Promise<void>;
     commit(path: string | string[], message: string, callback: (info: CommitInfo) => void): Promise<void>;
-    info(path: string, callback: (path: string, info: NodeInfo) => void, options?: Partial<InfoOptions>): Promise<void>;
+
+    info(path: string, callback: InfoCallback): Promise<void>;
+    info(path: string, options: Partial<InfoOptions> | undefined, callback: InfoCallback): Promise<void>;
+
     remove(path: string | string[], callback: (info: CommitInfo) => void): Promise<void>;
     revert(path: string | string[]): Promise<void>;
     status(path: string, callback: (path: string, info: NodeStatus) => void): Promise<void>;

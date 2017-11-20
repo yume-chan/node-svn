@@ -33,27 +33,27 @@ class client : public std::enable_shared_from_this<client> {
 
     void add_to_changelist(const std::string&              path,
                            const std::string&              changelist,
-                           svn_depth_t                     depth       = svn_depth_infinity,
+                           depth                           depth       = depth::infinity,
                            const std::vector<std::string>& changelists = std::vector<std::string>()) const;
     void add_to_changelist(const std::vector<std::string>& paths,
                            const std::string&              changelist,
-                           svn_depth_t                     depth       = svn_depth_infinity,
+                           depth                           depth       = depth::infinity,
                            const std::vector<std::string>& changelists = std::vector<std::string>()) const;
 
     void get_changelists(const std::string&              path,
                          const get_changelists_callback& callback,
                          const std::vector<std::string>& changelists = std::vector<std::string>(),
-                         svn_depth_t                     depth       = svn_depth_infinity) const;
+                         depth                           depth       = depth::infinity) const;
 
     void remove_from_changelists(const std::string&              path,
-                                 svn_depth_t                     depth       = svn_depth_infinity,
+                                 depth                           depth       = depth::infinity,
                                  const std::vector<std::string>& changelists = std::vector<std::string>()) const;
     void remove_from_changelists(const std::vector<std::string>& paths,
-                                 svn_depth_t                     depth       = svn_depth_infinity,
+                                 depth                           depth       = depth::infinity,
                                  const std::vector<std::string>& changelists = std::vector<std::string>()) const;
 
     void add(const std::string& path,
-             svn_depth_t        depth        = svn_depth_infinity,
+             depth              depth        = depth::infinity,
              bool               force        = true,
              bool               no_ignore    = false,
              bool               no_autoprops = false,
@@ -75,14 +75,14 @@ class client : public std::enable_shared_from_this<client> {
                           const std::string&        path,
                           const svn_opt_revision_t& peg_revision             = svn_opt_revision_t{svn_opt_revision_working},
                           const svn_opt_revision_t& revision                 = svn_opt_revision_t{svn_opt_revision_working},
-                          svn_depth_t               depth                    = svn_depth_infinity,
+                          depth                     depth                    = depth::infinity,
                           bool                      ignore_externals         = false,
                           bool                      allow_unver_obstructions = false) const;
 
     void commit(const std::string&              path,
                 const std::string&              message,
                 const commit_callback&          callback,
-                svn_depth_t                     depth                  = svn_depth_infinity,
+                depth                           depth                  = depth::infinity,
                 const std::vector<std::string>& changelists            = std::vector<std::string>(),
                 apr_hash_t*                     revprop_table          = nullptr,
                 bool                            keep_locks             = true,
@@ -93,7 +93,7 @@ class client : public std::enable_shared_from_this<client> {
     void commit(const std::vector<std::string>& paths,
                 const std::string&              message,
                 const commit_callback&          callback,
-                svn_depth_t                     depth                  = svn_depth_infinity,
+                depth                           depth                  = depth::infinity,
                 const std::vector<std::string>& changelists            = std::vector<std::string>(),
                 apr_hash_t*                     revprop_table          = nullptr,
                 bool                            keep_locks             = true,
@@ -106,7 +106,7 @@ class client : public std::enable_shared_from_this<client> {
               const info_callback&            callback,
               const svn_opt_revision_t&       peg_revision      = svn_opt_revision_t{svn_opt_revision_working},
               const svn_opt_revision_t&       revision          = svn_opt_revision_t{svn_opt_revision_working},
-              svn_depth_t                     depth             = svn_depth_empty,
+              depth                           depth             = depth::empty,
               bool                            fetch_excluded    = true,
               bool                            fetch_actual_only = true,
               bool                            include_externals = false,
@@ -124,12 +124,12 @@ class client : public std::enable_shared_from_this<client> {
                 apr_hash_t*                     revprop_table = nullptr) const;
 
     void revert(const std::string&              path,
-                svn_depth_t                     depth             = svn_depth_infinity,
+                depth                           depth             = depth::infinity,
                 const std::vector<std::string>& changelists       = std::vector<std::string>(),
                 bool                            clear_changelists = true,
                 bool                            metadata_only     = true) const;
     void revert(const std::vector<std::string>& paths,
-                svn_depth_t                     depth             = svn_depth_infinity,
+                depth                           depth             = depth::infinity,
                 const std::vector<std::string>& changelists       = std::vector<std::string>(),
                 bool                            clear_changelists = true,
                 bool                            metadata_only     = true) const;
@@ -137,7 +137,7 @@ class client : public std::enable_shared_from_this<client> {
     svn_revnum_t status(const std::string&              path,
                         const status_callback&          callback,
                         const svn_opt_revision_t&       revision           = svn_opt_revision_t{svn_opt_revision_working},
-                        svn_depth_t                     depth              = svn_depth_infinity,
+                        depth                           depth              = depth::infinity,
                         bool                            get_all            = false,
                         bool                            check_out_of_date  = false,
                         bool                            check_working_copy = true,
@@ -148,7 +148,7 @@ class client : public std::enable_shared_from_this<client> {
 
     svn_revnum_t              update(const std::string&        path,
                                      const svn_opt_revision_t& revision                 = svn_opt_revision_t{svn_opt_revision_head},
-                                     svn_depth_t               depth                    = svn_depth_infinity,
+                                     depth                     depth                    = depth::infinity,
                                      bool                      depth_is_sticky          = false,
                                      bool                      ignore_externals         = false,
                                      bool                      allow_unver_obstructions = false,
@@ -156,7 +156,7 @@ class client : public std::enable_shared_from_this<client> {
                                      bool                      make_parents             = true) const;
     std::vector<svn_revnum_t> update(const std::vector<std::string>& paths,
                                      const svn_opt_revision_t&       revision                 = svn_opt_revision_t{svn_opt_revision_head},
-                                     svn_depth_t                     depth                    = svn_depth_infinity,
+                                     depth                           depth                    = depth::infinity,
                                      bool                            depth_is_sticky          = false,
                                      bool                            ignore_externals         = false,
                                      bool                            allow_unver_obstructions = false,

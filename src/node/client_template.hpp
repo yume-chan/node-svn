@@ -53,6 +53,13 @@ static svn_opt_revision_t convert_revision(v8::Isolate*                  isolate
                                            const v8::Local<v8::Value>&   options,
                                            const char*                   key,
                                            svn_opt_revision_t            defaultValue) {
+    if (options.IsEmpty())
+        return defaultValue;
+
+    if (!options->IsObject()) {
+        throw svn::svn_type_error("");
+    }
+
     auto object = options.As<v8::Object>();
     auto value  = object->Get(context, v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
     if (value.IsEmpty())
@@ -108,24 +115,26 @@ static svn_opt_revision_t convert_revision(v8::Isolate*                  isolate
     throw svn::svn_type_error("");
 }
 
-static svn_depth_t convert_depth(v8::Isolate*                  isolate,
-                                 const v8::Local<v8::Context>& context,
-                                 const v8::Local<v8::Value>&   options,
-                                 const char*                   key,
-                                 svn_depth_t                   defaultValue) {
-    auto object = options.As<v8::Object>();
-    auto value  = object->Get(context, v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
-    if (value.IsEmpty())
+static svn::depth convert_depth(v8::Isolate*                  isolate,
+                                const v8::Local<v8::Context>& context,
+                                const v8::Local<v8::Value>&   options,
+                                const char*                   key,
+                                svn::depth                    defaultValue) {
+    if (options.IsEmpty() || options->IsUndefined())
         return defaultValue;
 
-    auto local = value.ToLocalChecked();
-    if (local->IsUndefined())
-        return defaultValue;
-
-    if (!local->IsNumber())
+    if (!options->IsObject())
         throw svn::svn_type_error("");
 
-    return static_cast<svn_depth_t>(local->Int32Value());
+    auto object = options.As<v8::Object>();
+    auto value  = object->Get(context, v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized)).ToLocalChecked();
+    if (value->IsUndefined())
+        return defaultValue;
+
+    if (!value->IsNumber())
+        throw svn::svn_type_error("");
+
+    return static_cast<svn::depth>(value->Int32Value());
 }
 
 static void buffer_free_pointer(char*, void* hint) {
@@ -208,7 +217,7 @@ METHOD_BEGIN(add_to_changelist)
     auto raw_paths      = convert_array(args[0], false);
     auto raw_changelist = convert_string(args[1]);
 
-    auto raw_depth = convert_depth(isolate, context, args[2], "depth", svn_depth_infinity);
+    auto raw_depth = convert_depth(isolate, context, args[2], "depth", svn::depth::infinity);
 
     ASYNC_BEGIN(void, raw_paths, raw_changelist, raw_depth)
         _this->_client->add_to_changelist(raw_paths, raw_changelist, raw_depth);
@@ -225,7 +234,7 @@ METHOD_BEGIN(get_changelists)
         throw svn::svn_type_error("");
 
     auto callback      = args[1].As<v8::Function>();
-    auto _callback = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
+    auto _callback     = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
     auto _raw_callback = [isolate, _callback](const char* path, const char* changelist) -> void {
         v8::HandleScope scope(isolate);
 
@@ -240,7 +249,7 @@ METHOD_BEGIN(get_changelists)
     auto raw_callback = TO_ASYNC_CALLBACK(_raw_callback, const char*, const char*);
 
     auto raw_changelists = convert_array(args[2].As<v8::Object>()->Get(v8::New<v8::String>(isolate, "changelists")), true);
-    auto raw_depth       = convert_depth(isolate, context, args[2], "depth", svn_depth_infinity);
+    auto raw_depth       = convert_depth(isolate, context, args[2], "depth", svn::depth::infinity);
 
     ASYNC_BEGIN(void, raw_path, raw_callback, raw_changelists, raw_depth)
         _this->_client->get_changelists(raw_path, raw_callback, raw_changelists, raw_depth);
@@ -300,7 +309,7 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
         throw svn::svn_type_error("");
 
     auto callback      = value.As<v8::Function>();
-    auto _callback = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
+    auto _callback     = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
     auto _raw_callback = [isolate, _callback](const svn_commit_info_t* raw_info) -> void {
         v8::HandleScope scope(isolate);
 
@@ -336,30 +345,37 @@ METHOD_END
 METHOD_BEGIN(info)
     auto raw_path = convert_string(args[0]);
 
-    if (!args[1]->IsFunction())
+    v8::Local<v8::Value>    options;
+    v8::Local<v8::Function> callback;
+    if (args[1]->IsFunction()) {
+        callback = args[1].As<v8::Function>();
+    } else if (args[2]->IsFunction()) {
+        options  = args[1];
+        callback = args[2].As<v8::Function>();
+    } else {
         throw svn::svn_type_error("");
+    }
 
-    auto callback      = args[1].As<v8::Function>();
     auto _callback     = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
     auto _raw_callback = [isolate, _callback](const char* path, const svn::info* raw_info) -> void {
         v8::HandleScope scope(isolate);
 
-        const auto argc = 2;
-        auto       info = v8::New<v8::Object>(isolate);
+        auto info = v8::New<v8::Object>(isolate);
+        info->Set(InternalizedString("path"), v8::New<v8::String>(isolate, path));
         info->Set(InternalizedString("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
         info->Set(InternalizedString("url"), v8::New<v8::String>(isolate, raw_info->URL));
-        v8::Local<v8::Value> argv[argc] = {
-            v8::New<v8::String>(isolate, path),
-            info};
+
+        const auto           argc       = 1;
+        v8::Local<v8::Value> argv[argc] = {info};
 
         auto callback = _callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
     auto raw_callback = TO_ASYNC_CALLBACK(_raw_callback, const char*, const svn::info*);
 
-    auto raw_peg_revision = convert_revision(isolate, context, args[2], "peg_revision", svn_opt_revision_t{svn_opt_revision_working});
-    auto raw_revision     = convert_revision(isolate, context, args[2], "revision", svn_opt_revision_t{svn_opt_revision_working});
-    auto raw_depth        = convert_depth(isolate, context, args[2], "depth", svn_depth_empty);
+    auto raw_peg_revision = convert_revision(isolate, context, options, "peg_revision", svn_opt_revision_t{svn_opt_revision_working});
+    auto raw_revision     = convert_revision(isolate, context, options, "revision", svn_opt_revision_t{svn_opt_revision_working});
+    auto raw_depth        = convert_depth(isolate, context, options, "depth", svn::depth::empty);
 
     ASYNC_BEGIN(void, raw_path, raw_callback, raw_peg_revision, raw_revision, raw_depth)
         _this->_client->info(raw_path, raw_callback, raw_peg_revision, raw_revision, raw_depth);
@@ -404,6 +420,7 @@ METHOD_BEGIN(status)
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
+        info->Set(InternalizedString("path"), v8::New<v8::String>(isolate, path));
         info->Set(InternalizedString("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
         info->Set(InternalizedString("node_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_status)));
         info->Set(InternalizedString("text_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->text_status)));
@@ -413,10 +430,8 @@ METHOD_BEGIN(status)
         if (raw_info->changelist != nullptr)
             info->Set(InternalizedString("changelist"), v8::New<v8::String>(isolate, raw_info->changelist));
 
-        const auto           argc       = 2;
-        v8::Local<v8::Value> argv[argc] = {
-            v8::New<v8::String>(isolate, path),
-            info};
+        const auto           argc       = 1;
+        v8::Local<v8::Value> argv[argc] = {info};
 
         auto callback = _callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
