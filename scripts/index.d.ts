@@ -59,7 +59,9 @@ interface SimpleCredentialProvider {
     provide_simple_provider(realm: string, username?: string): CredentialProviderResult<SimpleCredential>;
 }
 
-type InfoCallback = (info: NodeInfo) => void;
+type InfoCallback = (info: Readonly<NodeInfo>) => void;
+type StatusCallback = (status: Readonly<NodeStatus>) => void;
+type CommitCallback = (info: Readonly<CommitInfo>) => void;
 
 export class Client {
     constructor();
@@ -71,14 +73,14 @@ export class Client {
     add(path: string): void;
     cat(path: string, options?: Partial<CatOptions>): Buffer;
     checkout(url: string, path: string): void;
-    commit(path: string | string[], message: string, callback: (info: CommitInfo) => void): void;
+    commit(path: string | string[], message: string, callback: CommitCallback): void;
 
     info(path: string, callback: InfoCallback): void;
     info(path: string, options: Partial<InfoOptions> | undefined, callback: InfoCallback): void;
 
-    remove(path: string | string[], callback: (info: CommitInfo) => void): void;
+    remove(path: string | string[], callback: CommitCallback): void;
     revert(path: string | string[]): void;
-    status(path: string, callback: (info: NodeStatus) => void): void;
+    status(path: string, callback: StatusCallback): void;
 
     update(path: string): number;
     update(path: string[]): number[];
@@ -96,14 +98,14 @@ export class AsyncClient {
     add(path: string): Promise<void>;
     cat(path: string, options?: Partial<CatOptions>): Promise<Buffer>;
     checkout(url: string, path: string): Promise<void>;
-    commit(path: string | string[], message: string, callback: (info: CommitInfo) => void): Promise<void>;
+    commit(path: string | string[], message: string, callback: CommitCallback): Promise<void>;
 
     info(path: string, callback: InfoCallback): Promise<void>;
     info(path: string, options: Partial<InfoOptions> | undefined, callback: InfoCallback): Promise<void>;
 
-    remove(path: string | string[], callback: (info: CommitInfo) => void): Promise<void>;
+    remove(path: string | string[], callback: CommitCallback): Promise<void>;
     revert(path: string | string[]): Promise<void>;
-    status(path: string, callback: (info: NodeStatus) => void): Promise<void>;
+    status(path: string, callback: StatusCallback): Promise<void>;
 
     update(path: string): Promise<number>;
     update(path: string[]): Promise<number[]>;

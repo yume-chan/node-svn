@@ -11,6 +11,11 @@ build
 # (include) Node.js modules
 # node_modules
 
+# Node-gyp SDK
+node-gyp
+include/node
+lib/node
+
 # Visual Studio Code config
 .vscode
 

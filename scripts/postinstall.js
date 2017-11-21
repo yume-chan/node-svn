@@ -14,4 +14,9 @@ function find(folder) {
     return result;
 }
 
-find("lib").forEach(x => fs.copyFileSync(x, path.resolve("build/Release", path.relative("lib", x))));
+const configuration = process.argv[3] === "debug" ? "Debug" : "Release";
+const target = `build/${configuration}`;
+
+console.log(`Copying dependencies to ${target}...`);
+
+find("lib").forEach(x => fs.copyFileSync(x, path.resolve(target, path.relative("lib", x))));

@@ -13,3 +13,8 @@ binding.gyp
 
 # Node Modules
 node_modules
+
+# Node-gyp SDK
+node-gyp
+include/node
+lib/node
