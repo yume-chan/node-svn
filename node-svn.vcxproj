@@ -72,7 +72,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <LibraryPath>$(ProjectDir)lib/node/windows/x86;$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)lib/node/windows/x86;$(ProjectDir)lib/svn/windows/x86;$(LibraryPath)</LibraryPath>
     <IncludePath>$(ProjectDir)include\svn;$(ProjectDir)include\apr;$(ProjectDir)include\node;$(ProjectDir)src;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)build\$(Configuration)\obj\</IntDir>
@@ -81,14 +81,14 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <IncludePath>$(ProjectDir)include\svn;$(ProjectDir)include\apr;$(ProjectDir)include\node;$(ProjectDir)src;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)lib/node/windows/x64;$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)lib/node/windows/x64;$(ProjectDir)lib/svn/windows/x64;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)build\$(Configuration)\obj\</IntDir>
     <TargetExt>.node</TargetExt>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>$(ProjectDir)lib/node/windows/x86;$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)lib/node/windows/x86;$(ProjectDir)lib/svn/windows/x86;$(LibraryPath)</LibraryPath>
     <IncludePath>$(ProjectDir)include\svn;$(ProjectDir)include\apr;$(ProjectDir)include\node;$(ProjectDir)src;$(IncludePath)</IncludePath>
     <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)build\$(Configuration)\obj\</IntDir>
@@ -97,7 +97,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IncludePath>$(ProjectDir)include\svn;$(ProjectDir)include\apr;$(ProjectDir)include\node;$(ProjectDir)src;$(IncludePath)</IncludePath>
-    <LibraryPath>$(ProjectDir)lib/node/windows/x64;$(ProjectDir)lib;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(ProjectDir)lib/node/windows/x64;$(ProjectDir)lib/svn/windows/x64;$(LibraryPath)</LibraryPath>
     <OutDir>$(SolutionDir)build\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)build\$(Configuration)\obj\</IntDir>
     <TargetExt>.node</TargetExt>

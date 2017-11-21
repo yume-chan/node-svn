@@ -20,7 +20,12 @@ Wrap SVN to Node Native Addon.
 
 ## Platform
 
-It relies on pre-built SVN binaries, currently only Windows x64 is supported.
+It relies on pre-built SVN binaries.
+
+|     | Windows          | Linux | macOS |
+| --- | ---------------- | ----- | ----- |
+| x86 | Yes (not tested) | No    | No    |
+| x64 | Yes              | No    | No    |
 
 ## Installation
 
