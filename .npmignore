@@ -12,9 +12,9 @@ build
 # node_modules
 
 # Node-gyp SDK
-node-gyp
 include/node
 lib/node
+lib/node-sdk
 
 # Visual Studio Code config
 .vscode

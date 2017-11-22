@@ -16,9 +16,7 @@ const client = new svn.AsyncClient();
 // });
 
 client.cat("C:\\Users\\Simon\\Desktop\\www\\webchat\\index.html").then(result => {
-    console.log(JSON.stringify(result));
+    process.exit();
 });
-
-console.log("exit");
 
 setInterval(() => { }, 1000);
