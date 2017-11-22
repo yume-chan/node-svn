@@ -14,6 +14,9 @@ function find(folder) {
     return result;
 }
 
+const arch = process.arch;
+const lib = `lib/svn/windows/${arch}`;
+
 const configuration = {
     targets: [
         {
@@ -24,8 +27,8 @@ const configuration = {
                 "src",
             ],
             libraries: [
-                "<(module_root_dir)/lib/libapr_tsvn.lib",
-                "<(module_root_dir)/lib/libsvn_tsvn.lib"
+                `<(module_root_dir)/${lib}/libapr_tsvn.lib`,
+                `<(module_root_dir)/${lib}/libsvn_tsvn.lib`,
             ],
             sources: find("src").map(x => path.relative(".", x).replace(/\\/g, "/")),
             configurations: {

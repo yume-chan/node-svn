@@ -29,7 +29,11 @@ class async : public std::enable_shared_from_this<async<Callback, Result, Args..
         uv_async_send(uv_async);
 
         auto future = promise.get_future();
-        future.get();
+        if constexpr (std::is_void_v<Result>) {
+            future.get();
+        } else {
+            return future.get();
+        }
 
         promise = std::promise<Result>();
     }

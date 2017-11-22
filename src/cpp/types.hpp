@@ -423,7 +423,7 @@ struct info {
     const char* repos_UUID;
 
     /** The node's kind. */
-    int32_t kind;
+    node_kind kind;
 
     /** The size of the file in the repository (untranslated,
     * e.g. without adjustment of line endings and keyword
@@ -445,5 +445,70 @@ struct info {
 
     /** Possible information about the working copy, NULL if not valid. */
     const working_copy_info* wc_info;
+};
+
+/**
+* Various ways of specifying revisions.
+*
+* @note
+* In contexts where local mods are relevant, the `working' kind
+* refers to the uncommitted "working" revision, which may be modified
+* with respect to its base revision.  In other contexts, `working'
+* should behave the same as `committed' or `current'.
+*/
+enum class revision_kind {
+    /** No revision information given. */
+    unspecified,
+
+    /** revision given as number */
+    number,
+
+    /** revision given as date */
+    date,
+
+    /** rev of most recent change */
+    committed,
+
+    /** (rev of most recent change) - 1 */
+    previous,
+
+    /** .svn/entries current revision */
+    base,
+
+    /** current, plus local mods */
+    working,
+
+    /** repository youngest */
+    head
+};
+
+struct revision {
+    revision_kind kind;
+
+    union {
+        /** The revision number */
+        int32_t number;
+
+        /** the date of the revision */
+        int64_t date;
+    } value;
+};
+
+struct commit_info {
+    /** just-committed revision. */
+    int32_t revision;
+
+    /** server-side date of the commit. */
+    const char* date;
+
+    /** author of the commit. */
+    const char* author;
+
+    /** error message from post-commit hook, or NULL. */
+    const char* post_commit_error;
+
+    /** repository root, may be @c NULL if unknown.
+    @since New in 1.7. */
+    const char* repos_root;
 };
 } // namespace svn

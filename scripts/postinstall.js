@@ -14,12 +14,12 @@ function find(folder) {
     return result;
 }
 
-const platform = process.argv[2];
-const from = `lib/svn/windows/${platform}`;
+const arch = process.argv[2] || process.arch;
+const lib = `lib/svn/windows/${arch}`;
 
 const configuration = process.argv[3] === "debug" ? "Debug" : "Release";
 const target = `build/${configuration}`;
 
 console.log(`Copying dependencies to ${target}...`);
 
-find(from).forEach(x => fs.copyFileSync(x, path.resolve(target, path.relative(from, x))));
+find(lib).forEach(x => fs.copyFileSync(x, path.resolve(target, path.relative(lib, x))));

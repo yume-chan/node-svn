@@ -1,19 +1,36 @@
 import "node";
 
 export interface CommitInfo {
-
+    author: string;
+    date: string;
+    repos_root: string;
+    revision: number;
+    post_commit_error: string | undefined;
 }
 
 export interface NodeInfo {
     path: string;
+    kind: NodeKind;
+    last_changed_author: string;
+    last_changed_date: number | string;
+    last_changed_rev: number;
+    repos_root_url: string;
+    url: string;
 }
 
 export interface NodeStatus {
     path: string;
+    changed_author: string;
+    changed_date: number | string;
+    changed_rev: number;
+    conflicted: boolean;
+    copied: boolean;
+    depth: Depth;
     kind: NodeKind;
     node_status: StatusKind;
-    text_status: StatusKind;
     prop_status: StatusKind;
+    revision: number;
+    text_status: StatusKind;
     versioned: boolean;
     changelist?: string;
 }
@@ -27,21 +44,37 @@ export type Revision = RevisionKind.base |
     { number: number } |
     { date: number };
 
-export interface GetChangelistsOptions {
+export interface DepthOption {
+    depth: Depth;
+}
+
+export interface ChangelistsOption {
     changelists: string | string[];
-    depth: Depth;
 }
 
-export interface CatOptions {
+export type AddToChangelistOptions = DepthOption & ChangelistsOption;
+
+export type GetChangelistsOptions = DepthOption & ChangelistsOption;
+
+export type RemoveFromChangelistsOptions = DepthOption & ChangelistsOption;
+
+export type AddOptions = DepthOption;
+
+export interface RevisionOption {
     peg_revision: Revision;
     revision: Revision;
 }
 
-export interface InfoOptions {
-    peg_revision: Revision;
-    revision: Revision;
-    depth: Depth;
+export type CatOptions = RevisionOption;
+
+export interface CatResult {
+    content: Buffer;
+    properties: { [key: string]: string };
 }
+
+export type CheckoutOptions = DepthOption & RevisionOption;
+
+export type InfoOptions = DepthOption & RevisionOption;
 
 type CredentialProviderResult<T> =
     undefined |
@@ -59,6 +92,7 @@ interface SimpleCredentialProvider {
     provide_simple_provider(realm: string, username?: string): CredentialProviderResult<SimpleCredential>;
 }
 
+type GetChangelistCallback = (path: string, changelist: string) => void;
 type InfoCallback = (info: Readonly<NodeInfo>) => void;
 type StatusCallback = (status: Readonly<NodeStatus>) => void;
 type CommitCallback = (info: Readonly<CommitInfo>) => void;
@@ -66,13 +100,16 @@ type CommitCallback = (info: Readonly<CommitInfo>) => void;
 export class Client {
     constructor();
 
-    add_to_changelist(path: string | string[], changelist: string): void;
-    get_changelists(path: string, callback: (path: string, changelist: string) => void, options?: Partial<GetChangelistsOptions>): void;
-    remove_from_changelists(path: string | string[]): void;
+    add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): void;
 
-    add(path: string): void;
-    cat(path: string, options?: Partial<CatOptions>): Buffer;
-    checkout(url: string, path: string): void;
+    get_changelists(path: string, callback: GetChangelistCallback): void;
+    get_changelists(path: string, options: Partial<GetChangelistsOptions> | undefined, callback: GetChangelistCallback): void;
+
+    remove_from_changelists(path: string | string[], options?: Partial<RemoveFromChangelistsOptions>): void;
+
+    add(path: string, options?: Partial<AddOptions>): void;
+    cat(path: string, options?: Partial<CatOptions>): CatResult;
+    checkout(url: string, path: string, options?: Partial<CheckoutOptions>): void;
     commit(path: string | string[], message: string, callback: CommitCallback): void;
 
     info(path: string, callback: InfoCallback): void;
@@ -91,13 +128,16 @@ export class Client {
 export class AsyncClient {
     constructor();
 
-    add_to_changelist(path: string | string[], changelist: string): Promise<void>;
-    get_changelists(path: string, callback: (path: string, changelist: string) => void, options?: Partial<GetChangelistsOptions>): Promise<void>;
-    remove_from_changelists(path: string | string[]): Promise<void>;
+    add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): Promise<void>;
 
-    add(path: string): Promise<void>;
-    cat(path: string, options?: Partial<CatOptions>): Promise<Buffer>;
-    checkout(url: string, path: string): Promise<void>;
+    get_changelists(path: string, callback: GetChangelistCallback): Promise<void>;
+    get_changelists(path: string, options: Partial<GetChangelistsOptions> | undefined, callback: GetChangelistCallback): Promise<void>;
+
+    remove_from_changelists(path: string | string[], options?: Partial<RemoveFromChangelistsOptions>): Promise<void>;
+
+    add(path: string, options?: Partial<AddOptions>): Promise<void>;
+    cat(path: string, options?: Partial<CatOptions>): Promise<CatResult>;
+    checkout(url: string, path: string, options?: Partial<CheckoutOptions>): Promise<void>;
     commit(path: string | string[], message: string, callback: CommitCallback): Promise<void>;
 
     info(path: string, callback: InfoCallback): Promise<void>;

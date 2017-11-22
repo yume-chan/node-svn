@@ -57,9 +57,6 @@
     <ClInclude Include="src\node\revision_kind.hpp">
       <Filter>Header Files\node</Filter>
     </ClInclude>
-    <ClInclude Include="src\node\node_kind.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\cpp\types.hpp">
       <Filter>Header Files\cpp</Filter>
     </ClInclude>
@@ -71,6 +68,9 @@
     </ClInclude>
     <ClInclude Include="src\uv\async.hpp">
       <Filter>Header Files\uv</Filter>
+    </ClInclude>
+    <ClInclude Include="src\node\node_kind.hpp">
+      <Filter>Header Files\node</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

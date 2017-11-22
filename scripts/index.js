@@ -3,11 +3,15 @@ const list = [
     "../build/Release/svn.node",
 ];
 
-for (const item of list) {
-    try {
-        module.exports = require(item);
-        break;
-    } catch (err) {
-        continue;
+(function() {
+    for (const item of list) {
+        try {
+            module.exports = require(item);
+            return;
+        } catch (err) {
+            continue;
+        }
     }
-}
+
+    throw new Error("");
+})();
