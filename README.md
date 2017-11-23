@@ -61,11 +61,8 @@ Visual Studio doesn't know where to find Node.js, `./scripts/update-node.ps1` wi
 
 1. Invoke `./scripts/update-node.ps1`
 1. Open `node-svn.sln`
-1. Set platform to x64
 1. Press <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd>
-1. Copy files in lib folder to the output folder (`bin/Configuration/`).
-
-It will use the bundled Node header files and pre-built static library to compile and link, thus the produced library can only be consumed by the same version of Node.
+1. Copy files in lib folder to the output folder (`build/Configuration/`).
 
 #### node-gyp
 
