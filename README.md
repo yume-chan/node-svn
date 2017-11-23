@@ -94,7 +94,8 @@ To make things worse, SQLite will just throw access violation when you try to do
 
 - [ ] Add options to all methods
 - [ ] Strongly-typed error handling
-- [ ] Async Iterator for things like `status()`
+- [ ] Iterator/Async Iterator for things like `status()`
+- [ ] Authentication
 - [ ] Cross platform
 - [ ] Better multi-threading handling
 - [ ] You name it
