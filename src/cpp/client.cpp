@@ -440,12 +440,12 @@ static commit_info* copy_commit_info(const svn_commit_info_t* raw) {
     if (raw == nullptr)
         return nullptr;
 
-    auto result             = new commit_info();
-    result->author          = raw->author;
-    result->date            = raw->date;
+    auto result               = new commit_info();
+    result->author            = raw->author;
+    result->date              = raw->date;
     result->post_commit_error = raw->post_commit_err;
-    result->repos_root      = raw->repos_root;
-    result->revision        = static_cast<int32_t>(raw->revision);
+    result->repos_root        = raw->repos_root;
+    result->revision          = static_cast<int32_t>(raw->revision);
 
     return result;
 }

@@ -61,20 +61,25 @@ export type RemoveFromChangelistsOptions = DepthOption & ChangelistsOption;
 export type AddOptions = DepthOption;
 
 export interface RevisionOption {
-    peg_revision: Revision;
     revision: Revision;
 }
 
-export type CatOptions = RevisionOption;
+export interface PegRevisionOpitons implements RevisionOption {
+    peg_revision: Revision;
+}
+
+export type CatOptions = PegRevisionOpitons;
 
 export interface CatResult {
     content: Buffer;
     properties: { [key: string]: string };
 }
 
-export type CheckoutOptions = DepthOption & RevisionOption;
+export type CheckoutOptions = DepthOption & PegRevisionOpitons;
 
-export type InfoOptions = DepthOption & RevisionOption;
+export type InfoOptions = DepthOption & PegRevisionOpitons;
+
+export type StatusOptions = DepthOption & RevisionOption;
 
 type CredentialProviderResult<T> =
     undefined |
@@ -117,7 +122,9 @@ export class Client {
 
     remove(path: string | string[], callback: CommitCallback): void;
     revert(path: string | string[]): void;
+
     status(path: string, callback: StatusCallback): void;
+    status(path: string, options: Partial<StatusOptions> | undefined, callback: StatusCallback): void;
 
     update(path: string): number;
     update(path: string[]): number[];
@@ -145,7 +152,9 @@ export class AsyncClient {
 
     remove(path: string | string[], callback: CommitCallback): Promise<void>;
     revert(path: string | string[]): Promise<void>;
+
     status(path: string, callback: StatusCallback): Promise<void>;
+    status(path: string, options: Partial<StatusOptions> | undefined, callback: StatusCallback): Promise<void>;
 
     update(path: string): Promise<number>;
     update(path: string[]): Promise<number[]>;

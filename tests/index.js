@@ -25,12 +25,17 @@ try {
     //     console.log(JSON.stringify(info));
     // });
 
-    client.cat("C:\\Users\\Simon\\Desktop\\www\\webchat\\index.html").then(result => {
-        console.log(JSON.stringify(result));
-        done = true;
-    }, err => {
-        console.error(err);
-        done = true;
+    // client.cat("C:\\Users\\Simon\\Desktop\\www\\webchat\\index.html").then(result => {
+    //     console.log(JSON.stringify(result));
+    //     done = true;
+    // }, err => {
+    //     console.error(err);
+    //     done = true;
+    // });
+
+    client.status("C:\\Users\\Simon\\Desktop\\git\\svn", (status) => {
+        console.log(JSON.stringify(status));
+        // done = true;
     });
 
 }

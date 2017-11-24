@@ -126,6 +126,23 @@ static svn::depth convert_depth(v8::Isolate*                 isolate,
     throw svn::svn_type_error("");
 }
 
+static bool convert_boolean(v8::Isolate*                 isolate,
+                            const v8::Local<v8::Object>& options,
+                            const char*                  key,
+                            bool                         defaultValue) {
+    if (options.IsEmpty())
+        return defaultValue;
+
+    auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
+    if (value->IsUndefined())
+        return defaultValue;
+
+    if (value->IsBoolean())
+        return value->BooleanValue();
+
+    throw svn::svn_type_error("");
+}
+
 static void buffer_free_pointer(char*, void* hint) {
     delete static_cast<std::vector<char>*>(hint);
 }
@@ -163,6 +180,19 @@ static v8::Local<v8::Object> buffer_from_vector(v8::Isolate* isolate, std::vecto
         function->RemovePrototype();                                                         \
         prototype->Set(InternalizedString(name), function, v8::PropertyAttribute::DontEnum); \
     }
+
+#define CONVERT_OPTIONS_AND_CALLBACK(index)                \
+    v8::Local<v8::Object>   options;                       \
+    v8::Local<v8::Function> raw_callback;                  \
+    if (args[index]->IsFunction()) {                       \
+        raw_callback = args[index].As<v8::Function>();     \
+    } else if (args[index + 1]->IsFunction()) {            \
+        options      = convert_options(args[index]);       \
+        raw_callback = args[index + 1].As<v8::Function>(); \
+    } else {                                               \
+        throw svn::svn_type_error("");                     \
+    }                                                      \
+    auto _raw_callback = std::make_shared<v8::Global<v8::Function>>(isolate, raw_callback);
 
 namespace node {
 void CLASS_NAME::init(v8::Local<v8::Object>   exports,
@@ -209,15 +239,15 @@ void CLASS_NAME::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args
 }
 
 METHOD_BEGIN(add_to_changelist)
-    auto raw_paths      = convert_array(args[0], false);
-    auto raw_changelist = convert_string(args[1]);
+    auto paths      = convert_array(args[0], false);
+    auto changelist = convert_string(args[1]);
 
-    auto options         = convert_options(args[2]);
-    auto raw_depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto raw_changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
+    auto options     = convert_options(args[2]);
+    auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
+    auto changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
 
-    ASYNC_BEGIN(void, raw_paths, raw_changelist, raw_depth, raw_changelists)
-        _this->_client->add_to_changelist(raw_paths, raw_changelist, raw_depth, raw_changelists);
+    ASYNC_BEGIN(void, paths, changelist, depth, changelists)
+        _this->_client->add_to_changelist(paths, changelist, depth, changelists);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -225,21 +255,11 @@ METHOD_BEGIN(add_to_changelist)
 METHOD_END
 
 METHOD_BEGIN(get_changelists)
-    auto raw_path = convert_string(args[0]);
+    auto path = convert_string(args[0]);
 
-    v8::Local<v8::Object>   options;
-    v8::Local<v8::Function> callback;
-    if (args[1]->IsFunction()) {
-        callback = args[1].As<v8::Function>();
-    } else if (args[2]->IsFunction()) {
-        options  = convert_options(args[1]);
-        callback = args[2].As<v8::Function>();
-    } else {
-        throw svn::svn_type_error("");
-    }
+    CONVERT_OPTIONS_AND_CALLBACK(1)
 
-    auto _callback     = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
-    auto _raw_callback = [isolate, _callback](const char* path, const char* changelist) -> void {
+    auto _callback = [isolate, _raw_callback](const char* path, const char* changelist) -> void {
         v8::HandleScope scope(isolate);
 
         const auto           argc       = 2;
@@ -247,16 +267,16 @@ METHOD_BEGIN(get_changelists)
             v8::New<v8::String>(isolate, path),
             v8::New<v8::String>(isolate, changelist)};
 
-        auto callback = _callback->Get(isolate);
+        auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto raw_callback = TO_ASYNC_CALLBACK(_raw_callback, const char*, const char*);
+    auto callback = TO_ASYNC_CALLBACK(_callback, const char*, const char*);
 
-    auto raw_depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto raw_changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
+    auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
+    auto changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
 
-    ASYNC_BEGIN(void, raw_path, raw_callback, raw_depth, raw_changelists)
-        _this->_client->get_changelists(raw_path, raw_callback, raw_depth, raw_changelists);
+    ASYNC_BEGIN(void, path, callback, depth, changelists)
+        _this->_client->get_changelists(path, callback, depth, changelists);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -264,14 +284,14 @@ METHOD_BEGIN(get_changelists)
 METHOD_END
 
 METHOD_BEGIN(remove_from_changelists)
-    auto raw_paths = convert_array(args[0], false);
+    auto paths = convert_array(args[0], false);
 
-    auto options         = convert_options(args[1]);
-    auto raw_depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto raw_changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
+    auto options     = convert_options(args[1]);
+    auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
+    auto changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
 
-    ASYNC_BEGIN(void, raw_paths, raw_depth, raw_changelists)
-        _this->_client->remove_from_changelists(raw_paths, raw_depth, raw_changelists);
+    ASYNC_BEGIN(void, paths, depth, changelists)
+        _this->_client->remove_from_changelists(paths, depth, changelists);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -279,13 +299,13 @@ METHOD_BEGIN(remove_from_changelists)
 METHOD_END
 
 METHOD_BEGIN(add)
-    auto raw_path = convert_string(args[0]);
+    auto path = convert_string(args[0]);
 
-    auto options   = convert_options(args[1]);
-    auto raw_depth = convert_depth(isolate, options, "depth", svn::depth::infinity);
+    auto options = convert_options(args[1]);
+    auto depth   = convert_depth(isolate, options, "depth", svn::depth::infinity);
 
-    ASYNC_BEGIN(void, raw_path, raw_depth)
-        _this->_client->add(raw_path, raw_depth);
+    ASYNC_BEGIN(void, path, depth)
+        _this->_client->add(path, depth);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -293,14 +313,14 @@ METHOD_BEGIN(add)
 METHOD_END
 
 METHOD_BEGIN(cat)
-    auto raw_path = convert_string(args[0]);
+    auto path = convert_string(args[0]);
 
-    auto options          = convert_options(args[1]);
-    auto raw_peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
-    auto raw_revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
+    auto options      = convert_options(args[1]);
+    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
+    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
 
-    ASYNC_BEGIN(svn::cat_result, raw_path, raw_peg_revision, raw_revision)
-        ASYNC_RETURN(_this->_client->cat(raw_path, raw_peg_revision, raw_revision));
+    ASYNC_BEGIN(svn::cat_result, path, peg_revision, revision)
+        ASYNC_RETURN(_this->_client->cat(path, peg_revision, revision));
     ASYNC_END()
 
     auto raw_result = ASYNC_RESULT;
@@ -318,16 +338,16 @@ METHOD_BEGIN(cat)
 METHOD_END
 
 METHOD_BEGIN(checkout)
-    auto raw_url  = convert_string(args[0]);
-    auto raw_path = convert_string(args[1]);
+    auto url  = convert_string(args[0]);
+    auto path = convert_string(args[1]);
 
-    auto options          = convert_options(args[2]);
-    auto raw_peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
-    auto raw_revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
-    auto raw_depth        = convert_depth(isolate, options, "depth", svn::depth::infinity);
+    auto options      = convert_options(args[2]);
+    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
+    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
+    auto depth        = convert_depth(isolate, options, "depth", svn::depth::infinity);
 
-    ASYNC_BEGIN(void, raw_url, raw_path, raw_peg_revision, raw_revision, raw_depth)
-        _this->_client->checkout(raw_url, raw_path, raw_peg_revision, raw_revision, raw_depth);
+    ASYNC_BEGIN(void, url, path, peg_revision, revision, depth)
+        _this->_client->checkout(url, path, peg_revision, revision, depth);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -338,9 +358,9 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
     if (!value->IsFunction())
         throw svn::svn_type_error("");
 
-    auto callback      = value.As<v8::Function>();
-    auto _callback     = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
-    auto _raw_callback = [isolate, _callback](const svn::commit_info* raw_info) -> void {
+    auto raw_callback  = value.As<v8::Function>();
+    auto _raw_callback = std::make_shared<v8::Global<v8::Function>>(isolate, raw_callback);
+    auto _callback     = [isolate, _raw_callback](const svn::commit_info* raw_info) -> void {
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
@@ -355,20 +375,20 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
 
-        auto callback = _callback->Get(isolate);
+        auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
 
-    return TO_ASYNC_CALLBACK(_raw_callback, const svn::commit_info*);
+    return TO_ASYNC_CALLBACK(_callback, const svn::commit_info*);
 }
 
 METHOD_BEGIN(commit)
-    auto raw_paths    = convert_array(args[0], false);
-    auto raw_message  = convert_string(args[1]);
+    auto paths        = convert_array(args[0], false);
+    auto message      = convert_string(args[1]);
     auto raw_callback = convert_commit_callback(isolate, args[2]);
 
-    ASYNC_BEGIN(void, raw_paths, raw_message, raw_callback)
-        _this->_client->commit(raw_paths, raw_message, raw_callback);
+    ASYNC_BEGIN(void, paths, message, raw_callback)
+        _this->_client->commit(paths, message, raw_callback);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -383,21 +403,11 @@ static v8::Local<v8::Value> copy_int64(v8::Isolate* isolate, int64_t value) {
 }
 
 METHOD_BEGIN(info)
-    auto raw_path = convert_string(args[0]);
+    auto path = convert_string(args[0]);
 
-    v8::Local<v8::Object>   options;
-    v8::Local<v8::Function> callback;
-    if (args[1]->IsFunction()) {
-        callback = args[1].As<v8::Function>();
-    } else if (args[2]->IsFunction()) {
-        options  = convert_options(args[1]);
-        callback = args[2].As<v8::Function>();
-    } else {
-        throw svn::svn_type_error("");
-    }
+    CONVERT_OPTIONS_AND_CALLBACK(1)
 
-    auto _callback     = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
-    auto _raw_callback = [isolate, _callback](const char* path, const svn::info* raw_info) -> void {
+    auto _callback = [isolate, _raw_callback](const char* path, const svn::info* raw_info) -> void {
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
@@ -412,17 +422,17 @@ METHOD_BEGIN(info)
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
 
-        auto callback = _callback->Get(isolate);
+        auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto raw_callback = TO_ASYNC_CALLBACK(_raw_callback, const char*, const svn::info*);
+    auto callback = TO_ASYNC_CALLBACK(_callback, const char*, const svn::info*);
 
-    auto raw_peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
-    auto raw_revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
-    auto raw_depth        = convert_depth(isolate, options, "depth", svn::depth::empty);
+    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
+    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
+    auto depth        = convert_depth(isolate, options, "depth", svn::depth::empty);
 
-    ASYNC_BEGIN(void, raw_path, raw_callback, raw_peg_revision, raw_revision, raw_depth)
-        _this->_client->info(raw_path, raw_callback, raw_peg_revision, raw_revision, raw_depth);
+    ASYNC_BEGIN(void, path, callback, peg_revision, revision, depth)
+        _this->_client->info(path, callback, peg_revision, revision, depth);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -430,11 +440,11 @@ METHOD_BEGIN(info)
 METHOD_END
 
 METHOD_BEGIN(remove)
-    auto raw_paths    = convert_array(args[0], false);
+    auto paths        = convert_array(args[0], false);
     auto raw_callback = convert_commit_callback(isolate, args[1]);
 
-    ASYNC_BEGIN(void, raw_paths, raw_callback)
-        _this->_client->remove(raw_paths, raw_callback);
+    ASYNC_BEGIN(void, paths, raw_callback)
+        _this->_client->remove(paths, raw_callback);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -442,30 +452,34 @@ METHOD_BEGIN(remove)
 METHOD_END
 
 METHOD_BEGIN(revert)
-    auto raw_paths = convert_array(args[0], false);
+    auto paths = convert_array(args[0], false);
 
-    ASYNC_BEGIN(void, raw_paths)
-        _this->_client->revert(raw_paths);
+    ASYNC_BEGIN(void, paths)
+        _this->_client->revert(paths);
     ASYNC_END()
 
     ASYNC_RESULT;
     METHOD_RETURN(v8::Undefined(isolate));
 METHOD_END
 
+static v8::Local<v8::Value> copy_string(v8::Isolate* isolate, const char* value) {
+    if (value == nullptr)
+        return v8::Undefined(isolate);
+    return v8::New<v8::String>(isolate, value);
+}
+
 METHOD_BEGIN(status)
-    auto raw_path = convert_string(args[0]);
+    auto path = convert_string(args[0]);
 
-    if (!args[1]->IsFunction())
-        throw svn::svn_type_error("");
+    CONVERT_OPTIONS_AND_CALLBACK(1)
 
-    auto callback      = args[1].As<v8::Function>();
-    auto _callback     = std::make_shared<v8::Global<v8::Function>>(isolate, callback);
-    auto _raw_callback = [isolate, _callback](const char* path, const svn::status* raw_info) -> void {
+    auto _callback = [isolate, _raw_callback](const char* path, const svn::status* raw_info) -> void {
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
         info->Set(InternalizedString("path"), v8::New<v8::String>(isolate, path));
-        info->Set(InternalizedString("changed_author"), v8::New<v8::String>(isolate, raw_info->changed_author));
+        info->Set(InternalizedString("changelist"), copy_string(isolate, raw_info->changelist));
+        info->Set(InternalizedString("changed_author"), copy_string(isolate, raw_info->changed_author));
         info->Set(InternalizedString("changed_date"), copy_int64(isolate, raw_info->changed_date));
         info->Set(InternalizedString("changed_rev"), v8::New<v8::Integer>(isolate, raw_info->changed_rev));
         info->Set(InternalizedString("conflicted"), v8::New<v8::Boolean>(isolate, raw_info->conflicted));
@@ -478,19 +492,20 @@ METHOD_BEGIN(status)
         info->Set(InternalizedString("text_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->text_status)));
         info->Set(InternalizedString("versioned"), v8::New<v8::Boolean>(isolate, raw_info->versioned));
 
-        if (raw_info->changelist != nullptr)
-            info->Set(InternalizedString("changelist"), v8::New<v8::String>(isolate, raw_info->changelist));
-
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
 
-        auto callback = _callback->Get(isolate);
+        auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto raw_callback = TO_ASYNC_CALLBACK(_raw_callback, const char*, const svn::status*);
+    auto callback = TO_ASYNC_CALLBACK(_callback, const char*, const svn::status*);
 
-    ASYNC_BEGIN(void, raw_path, raw_callback)
-        _this->_client->status(raw_path, std::move(raw_callback));
+    auto revision         = convert_revision(isolate, options, "revision", svn::revision_kind::working);
+    auto depth            = convert_depth(isolate, options, "depth", svn::depth::infinity);
+    auto ignore_externals = convert_boolean(isolate, options, "ignore_externals", true);
+
+    ASYNC_BEGIN(void, path, callback, revision, depth, ignore_externals)
+        _this->_client->status(path, callback, revision, depth, false, false, true, false, ignore_externals);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -498,10 +513,10 @@ METHOD_BEGIN(status)
 METHOD_END
 
 METHOD_BEGIN(update)
-    auto raw_paths = convert_array(args[0], false);
+    auto paths = convert_array(args[0], false);
 
-    ASYNC_BEGIN(std::vector<int32_t>, raw_paths)
-        ASYNC_RETURN(_this->_client->update(raw_paths));
+    ASYNC_BEGIN(std::vector<int32_t>, paths)
+        ASYNC_RETURN(_this->_client->update(paths));
     ASYNC_END(args)
 
     if (args[0]->IsString()) {
@@ -517,10 +532,10 @@ METHOD_BEGIN(update)
 METHOD_END
 
 METHOD_BEGIN(get_working_copy_root)
-    auto raw_path = convert_string(args[0]);
+    auto path = convert_string(args[0]);
 
-    ASYNC_BEGIN(std::string, raw_path)
-        ASYNC_RETURN(_this->_client->get_working_copy_root(raw_path));
+    ASYNC_BEGIN(std::string, path)
+        ASYNC_RETURN(_this->_client->get_working_copy_root(path));
     ASYNC_END()
 
     auto result = v8::New<v8::String>(isolate, ASYNC_RESULT);

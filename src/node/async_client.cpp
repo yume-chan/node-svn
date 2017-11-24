@@ -17,7 +17,7 @@
         auto _this = node::ObjectWrap::Unwrap<async_client>(args.Holder());
 
 #define TO_ASYNC_CALLBACK(callback, ...) \
-    uv::make_async<decltype(callback), __VA_ARGS__>(_raw_callback)->to_function();
+    uv::make_async<decltype(callback), __VA_ARGS__>(callback)->to_function();
 
 #define EXPAND(x) x
 
