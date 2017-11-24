@@ -34,7 +34,7 @@ static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value,
     if (value->IsArray()) {
         auto array  = value.As<v8::Array>();
         auto length = array->Length();
-        auto result = std::vector<std::string>(length);
+        auto result = std::vector<std::string>();
         for (uint32_t i = 0; i < length; i++) {
             auto item = array->Get(i);
             result.push_back(std::move(convert_string(item)));
@@ -383,12 +383,12 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
 }
 
 METHOD_BEGIN(commit)
-    auto paths        = convert_array(args[0], false);
-    auto message      = convert_string(args[1]);
-    auto raw_callback = convert_commit_callback(isolate, args[2]);
+    auto paths    = convert_array(args[0], false);
+    auto message  = convert_string(args[1]);
+    auto callback = convert_commit_callback(isolate, args[2]);
 
-    ASYNC_BEGIN(void, paths, message, raw_callback)
-        _this->_client->commit(paths, message, raw_callback);
+    ASYNC_BEGIN(void, paths, message, callback)
+        _this->_client->commit(paths, message, callback);
     ASYNC_END()
 
     ASYNC_RESULT;
@@ -440,11 +440,11 @@ METHOD_BEGIN(info)
 METHOD_END
 
 METHOD_BEGIN(remove)
-    auto paths        = convert_array(args[0], false);
-    auto raw_callback = convert_commit_callback(isolate, args[1]);
+    auto paths    = convert_array(args[0], false);
+    auto callback = convert_commit_callback(isolate, args[1]);
 
-    ASYNC_BEGIN(void, paths, raw_callback)
-        _this->_client->remove(paths, raw_callback);
+    ASYNC_BEGIN(void, paths, callback)
+        _this->_client->remove(paths, callback);
     ASYNC_END()
 
     ASYNC_RESULT;
