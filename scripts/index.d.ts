@@ -64,7 +64,7 @@ export interface RevisionOption {
     revision: Revision;
 }
 
-export interface PegRevisionOpitons implements RevisionOption {
+export interface PegRevisionOpitons extends RevisionOption {
     peg_revision: Revision;
 }
 
@@ -79,7 +79,9 @@ export type CheckoutOptions = DepthOption & PegRevisionOpitons;
 
 export type InfoOptions = DepthOption & PegRevisionOpitons;
 
-export type StatusOptions = DepthOption & RevisionOption;
+export type StatusOptions = DepthOption & RevisionOption & {
+    ignore_externals: boolean;
+};
 
 type CredentialProviderResult<T> =
     undefined |
