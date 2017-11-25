@@ -111,6 +111,9 @@ static const apr_array_header_t* convert_vector(const std::string& value,
 }
 
 static apr_hash_t* convert_map(svn::string_map& map, apr_pool_t* pool) {
+	if (map.size() == 0)
+		return nullptr;
+
     auto result = apr_hash_make(pool);
 
     for (auto pair : map) {
@@ -169,6 +172,9 @@ client::client() {
     svn_auth_provider_object_t* provider;
     svn_auth_get_simple_provider2(&provider, nullptr, nullptr, _pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t*) = provider;
+
+	svn_auth_get_username_provider(&provider, _pool);
+	APR_ARRAY_PUSH(providers, svn_auth_provider_object_t*) = provider;
 
     svn_auth_baton_t* auth_baton;
     svn_auth_open(&auth_baton, providers, _pool);

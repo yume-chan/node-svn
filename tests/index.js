@@ -11,6 +11,14 @@ try {
     const svn = require("..");
     const client = new svn.AsyncClient();
 
+    //client.info("C:\\Users\\Simon\\Desktop\\www\\webchat", (info) => {
+    //    console.log(JSON.stringify(info));
+    //}, { revision: svn.RevisionKind.working }).then(() => { }, (error) => { console.log(error); });
+
+    client.commit("D:/Svn/Working Copy/repo1/folder1/test.txt", "Add test.txt", (info) => {
+        console.log(JSON.stringify(info));
+    }).then(() => { }, (error) => { console.error(error); });
+
     // client.info("C:\\Users\\Simon\\Desktop\\www\\webchat", (file, info) => {
     //     console.log(file);
     //     console.log(JSON.stringify(info));
@@ -33,13 +41,13 @@ try {
     //     done = true;
     // });
 
-    client.status("C:\\Users\\Simon\\Desktop\\git\\svn", (status) => {
-        console.log(JSON.stringify(status));
-        // done = true;
-    });
+    //client.status("C:\\Users\\Simon\\Desktop\\git\\svn", (status) => {
+    //    console.log(JSON.stringify(status));
+    //    done = true;
+    //});
 
 }
 catch (err) {
     console.error(err);
-    done = true;
+    // done = true;
 }

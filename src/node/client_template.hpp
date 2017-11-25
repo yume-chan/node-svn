@@ -7,6 +7,16 @@
 
 #include <node/v8.hpp>
 
+#define InternalizedString(value) \
+    v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
+
+static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, svn::svn_error& raw_error) {
+    auto error = v8::Exception::Error(v8::New<v8::String>(isolate, raw_error.what()));
+    if (raw_error.child != nullptr)
+        error.As<v8::Object>()->Set(InternalizedString("child"), copy_error(isolate, *raw_error.child));
+    return error;
+}
+
 static std::string convert_string(const v8::Local<v8::Value>& value) {
     if (!value->IsString())
         throw svn::svn_type_error("");
@@ -159,9 +169,6 @@ static v8::Local<v8::Object> buffer_from_vector(v8::Isolate* isolate, std::vecto
 
 #define STRINGIFY_INTERNAL(X) #X
 #define STRINGIFY(X) STRINGIFY_INTERNAL(X)
-
-#define InternalizedString(value) \
-    v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
 
 #define SetReadOnly(object, name, value)                  \
     (object)->DefineOwnProperty(context,                  \

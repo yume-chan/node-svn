@@ -6,6 +6,16 @@
 #define CLASS_NAME async_client
 #define EXPORT_NAME "AsyncClient"
 
+#define REPORT_ERROR                                                                            \
+    }                                                                                           \
+    catch (svn::svn_type_error & error) {                                                       \
+        resolver->Reject(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what()))); \
+    }                                                                                           \
+    catch (svn::svn_error & raw_error) {                                                        \
+        auto error = copy_error(isolate, raw_error);                                            \
+        resolver->Reject(error);                                                                \
+    }
+
 #define METHOD_BEGIN(name)                                                     \
     void async_client::name(const v8::FunctionCallbackInfo<v8::Value>& args) { \
         auto isolate = args.GetIsolate();                                      \
@@ -14,7 +24,8 @@
         auto resolver = v8::New<v8::Promise::Resolver>(context);               \
         args.GetReturnValue().Set(resolver);                                   \
                                                                                \
-        auto _this = node::ObjectWrap::Unwrap<async_client>(args.Holder());
+        try {                                                                  \
+            auto _this = node::ObjectWrap::Unwrap<async_client>(args.Holder());
 
 #define TO_ASYNC_CALLBACK(callback, ...) \
     uv::make_async<decltype(callback), __VA_ARGS__>(callback)->to_function();
@@ -66,21 +77,13 @@
 #define METHOD_RETURN(value) \
     resolver->Resolve(value);
 
-// clang-format off
-
-#define METHOD_END                                                                                  \
-        }                                                                                           \
-        catch (svn::svn_type_error & error) {                                                       \
-            resolver->Reject(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what()))); \
-        }                                                                                           \
-        catch (svn::svn_error & error) {                                                            \
-            resolver->Reject(v8::Exception::Error(v8::New<v8::String>(isolate, error.what())));     \
-        }                                                                                           \
-    };                                                                                              \
-                                                                                                    \
-    uv::queue_work(std::move(do_work), std::move(after_work));                                      \
-}
-
-// clang-format on
+#define METHOD_END                                             \
+    REPORT_ERROR                                               \
+    }                                                          \
+    ;                                                          \
+                                                               \
+    uv::queue_work(std::move(do_work), std::move(after_work)); \
+    REPORT_ERROR                                               \
+    }
 
 #include "client_template.hpp"
