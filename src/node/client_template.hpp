@@ -502,7 +502,7 @@ METHOD_BEGIN(status)
 
     auto revision         = convert_revision(isolate, options, "revision", svn::revision_kind::working);
     auto depth            = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto ignore_externals = convert_boolean(isolate, options, "ignore_externals", true);
+    auto ignore_externals = convert_boolean(isolate, options, "ignore_externals", false);
 
     ASYNC_BEGIN(void, path, callback, revision, depth, ignore_externals)
         _this->_client->status(path, callback, revision, depth, false, false, true, false, ignore_externals);

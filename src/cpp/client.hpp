@@ -145,7 +145,7 @@ class client : public std::enable_shared_from_this<client> {
                    bool                            check_out_of_date  = false,
                    bool                            check_working_copy = true,
                    bool                            no_ignore          = false,
-                   bool                            ignore_externals   = true,
+                   bool                            ignore_externals   = false,
                    bool                            depth_as_sticky    = false,
                    const std::vector<std::string>& changelists        = std::vector<std::string>()) const;
 

@@ -28,6 +28,8 @@ It relies on pre-built SVN shared library binaries.
 
 ## Installation
 
+You need at least Node.js v8.5.0
+
 It's not published to npm yet, so just install it by
 
 ````shell
