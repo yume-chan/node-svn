@@ -153,6 +153,19 @@ static bool convert_boolean(v8::Isolate*                 isolate,
     throw svn::svn_type_error("");
 }
 
+static std::vector<std::string> convert_array(v8::Isolate*          isolate,
+                                              v8::Local<v8::Object> options,
+                                              const char*           key) {
+    if (options.IsEmpty())
+        return std::vector<std::string>();
+
+	auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
+	if (value->IsUndefined())
+		return std::vector<std::string>();
+
+	return convert_array(value, true);
+}
+
 static void buffer_free_pointer(char*, void* hint) {
     delete static_cast<std::vector<char>*>(hint);
 }
@@ -251,7 +264,7 @@ METHOD_BEGIN(add_to_changelist)
 
     auto options     = convert_options(args[2]);
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
+	auto changelists = convert_array(isolate, options, "changelists");
 
     ASYNC_BEGIN(void, paths, changelist, depth, changelists)
         _this->_client->add_to_changelist(paths, changelist, depth, changelists);
@@ -280,7 +293,7 @@ METHOD_BEGIN(get_changelists)
     auto callback = TO_ASYNC_CALLBACK(_callback, const char*, const char*);
 
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
+	auto changelists = convert_array(isolate, options, "changelists");
 
     ASYNC_BEGIN(void, path, callback, depth, changelists)
         _this->_client->get_changelists(path, callback, depth, changelists);
@@ -295,7 +308,7 @@ METHOD_BEGIN(remove_from_changelists)
 
     auto options     = convert_options(args[1]);
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto changelists = convert_array(options->Get(v8::New<v8::String>(isolate, "changelists")), true);
+    auto changelists = convert_array(isolate, options, "changelists");
 
     ASYNC_BEGIN(void, paths, depth, changelists)
         _this->_client->remove_from_changelists(paths, depth, changelists);
