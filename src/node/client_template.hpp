@@ -504,7 +504,8 @@ METHOD_BEGIN(status)
         info->Set(InternalizedString("changed_rev"), v8::New<v8::Integer>(isolate, raw_info->changed_rev));
         info->Set(InternalizedString("conflicted"), v8::New<v8::Boolean>(isolate, raw_info->conflicted));
         info->Set(InternalizedString("copied"), v8::New<v8::Boolean>(isolate, raw_info->copied));
-        info->Set(InternalizedString("depth"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->depth)));
+		info->Set(InternalizedString("depth"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->depth)));
+		info->Set(InternalizedString("file_external"), v8::New<v8::Boolean>(isolate, raw_info->file_external));
         info->Set(InternalizedString("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
         info->Set(InternalizedString("node_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_status)));
         info->Set(InternalizedString("prop_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->prop_status)));

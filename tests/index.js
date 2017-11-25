@@ -11,7 +11,7 @@ try {
     const svn = require("..");
     const client = new svn.AsyncClient();
 
-    client.remove_from_changelists(String.raw`D:\Svn\Working Copy\repo1\file-that-is-external.txt`)
+    client.status(String.raw`D:\Svn\Working Copy\repo1\file-that-is-external.txt`, (info) => { console.log(JSON.stringify(info)); })
         .then(() => { console.log("success"); }, (error) => { console.error(JSON.stringify(error)); });
 }
 catch (err) {

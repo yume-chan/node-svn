@@ -26,6 +26,7 @@ export interface NodeStatus {
     conflicted: boolean;
     copied: boolean;
     depth: Depth;
+    file_external: boolean;
     kind: NodeKind;
     node_status: StatusKind;
     prop_status: StatusKind;
