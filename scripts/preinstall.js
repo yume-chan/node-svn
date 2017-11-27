@@ -1,21 +1,33 @@
 const path = require("path");
 const fs = require("fs");
 
-function find(folder) {
+function find(folder, ext) {
     const result = [];
     for (const name of fs.readdirSync(folder)) {
         const full = path.resolve(folder, name);
         if (fs.statSync(full).isDirectory()) {
             result.push(...find(full));
-        } else if (path.extname(full) === ".cpp") {
+        } else if (path.extname(full) === ext) {
             result.push(full);
         }
     }
     return result;
 }
 
+const platform = process.platform;
 const arch = process.arch;
-const lib = `lib/svn/windows/${arch}`;
+const libs = [];
+switch (platform) {
+    case "win32":
+        const base = `lib/svn/${platform}/${arch}`;
+        libs.push(
+            `<(module_root_dir)/${base}/libapr_tsvn.lib`,
+            `<(module_root_dir)/${base}/libsvn_tsvn.lib`,
+        );
+        break;
+    default:
+        throw new Error("platform not supported.");
+}
 
 const configuration = {
     targets: [
@@ -26,11 +38,8 @@ const configuration = {
                 "include/svn",
                 "src",
             ],
-            libraries: [
-                `<(module_root_dir)/${lib}/libapr_tsvn.lib`,
-                `<(module_root_dir)/${lib}/libsvn_tsvn.lib`,
-            ],
-            sources: find("src").map(x => path.relative(".", x).replace(/\\/g, "/")),
+            libraries: libs,
+            sources: find("src", ".cpp").map(x => path.relative(".", x).replace(/\\/g, "/")),
             configurations: {
                 Release: {
                     msvs_settings: {
