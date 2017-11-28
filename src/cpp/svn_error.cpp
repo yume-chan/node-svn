@@ -3,11 +3,11 @@
 #include <memory>
 
 namespace svn {
-svn_error::svn_error(apr_status_t code,
-                     const char*  what,
-                     svn_error*   child,
-                     std::string  file,
-                     int          line) noexcept
+svn_error::svn_error(int         code,
+                     const char* what,
+                     svn_error*  child,
+                     std::string file,
+                     int         line) noexcept
     : std::runtime_error(what)
     , code(code)
     , child(child)

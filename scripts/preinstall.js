@@ -6,7 +6,7 @@ function find(folder, ext) {
     for (const name of fs.readdirSync(folder)) {
         const full = path.resolve(folder, name);
         if (fs.statSync(full).isDirectory()) {
-            result.push(...find(full));
+            result.push(...find(full, ext));
         } else if (path.extname(full) === ext) {
             result.push(full);
         }
@@ -16,13 +16,19 @@ function find(folder, ext) {
 
 const platform = process.platform;
 const arch = process.arch;
+const base = `lib/svn/${platform}/${arch}`;
 const libs = [];
 switch (platform) {
     case "win32":
-        const base = `lib/svn/${platform}/${arch}`;
         libs.push(
             `<(module_root_dir)/${base}/libapr_tsvn.lib`,
             `<(module_root_dir)/${base}/libsvn_tsvn.lib`,
+        );
+        break;
+    case "linux":
+        libs.push(
+            `<(module_root_dir)/${base}/libapr-1.so`,
+            `<(module_root_dir)/${base}/libsvn_client-1.so`,
         );
         break;
     default:
@@ -34,22 +40,25 @@ const configuration = {
         {
             target_name: "svn",
             include_dirs: [
-                "include/apr",
-                "include/svn",
+                `include/${platform}/apr`,
+                `include/${platform}/svn`,
                 "src",
             ],
             libraries: libs,
             sources: find("src", ".cpp").map(x => path.relative(".", x).replace(/\\/g, "/")),
-            configurations: {
-                Release: {
-                    msvs_settings: {
-                        VCCLCompilerTool: {
-                            AdditionalOptions: [
-                                "/std:c++17"
-                            ],
-                            ExceptionHandling: 1,
-                        }
-                    }
+            cflags_cc: [
+                "-std=gnu++17",
+                "-fexceptions",
+            ],
+            "cflags_cc!": [
+                "-fno-rtti",
+            ],
+            msvs_settings: {
+                VCCLCompilerTool: {
+                    AdditionalOptions: [
+                        "/std:c++17"
+                    ],
+                    ExceptionHandling: 1,
                 }
             }
         },

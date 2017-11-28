@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+#include "svn_type_error.hpp"
+
 namespace svn {
 enum class depth {
     /* The order of these depths is important: the higher the number,
@@ -237,7 +239,7 @@ struct status {
 
     /** The depth of the node as recorded in the working copy
       * (#svn_depth_unknown for files or when no depth is recorded) */
-    depth depth;
+    depth node_depth;
 
     /**
       * @defgroup ood WC out-of-date info from the repository
@@ -370,14 +372,14 @@ struct working_copy_info {
     int32_t copyfrom_rev;
 
     /** The checksum of the node, if it is a file. */
-    const checksum* checksum;
+    const checksum* node_checksum;
 
     /** A changelist the item is in, @c NULL if this node is not in a
       * changelist. */
     const char* changelist;
 
     /** The depth of the item, see #svn_depth_t */
-    depth depth;
+    depth node_depth;
 
     /**
       * The size of the file after being translated into its local
@@ -441,7 +443,7 @@ struct info {
     const char* last_changed_author;
 
     /** An exclusive lock, if present.  Could be either local or remote. */
-    const lock* lock;
+    const lock* node_lock;
 
     /** Possible information about the working copy, NULL if not valid. */
     const working_copy_info* wc_info;
@@ -483,6 +485,29 @@ enum class revision_kind {
 };
 
 struct revision {
+    revision(revision_kind kind) {
+        switch (kind) {
+            case revision_kind::unspecified:
+            case revision_kind::committed:
+            case revision_kind::previous:
+            case revision_kind::base:
+            case revision_kind::working:
+            case revision_kind::head:
+                this->kind = kind;
+                break;
+            default:
+                throw svn_type_error("");
+        }
+    }
+
+    revision(int32_t number)
+        : kind(revision_kind::number)
+        , number(number) {}
+
+    revision(int64_t date)
+        : kind(revision_kind::date)
+        , date(date) {}
+
     revision_kind kind;
 
     union {
@@ -491,7 +516,7 @@ struct revision {
 
         /** the date of the revision */
         int64_t date;
-    } value;
+    };
 };
 
 struct commit_info {

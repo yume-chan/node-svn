@@ -8,7 +8,7 @@
 #define SET_ENUM(target, prefix, name)                                                                                   \
     {                                                                                                                    \
         auto key   = InternalizedString(#name);                                                                          \
-        auto value = static_cast<int32_t>(prefix##name);                                                                 \
+        auto value = static_cast<int32_t>(prefix::name);                                                                 \
         target->DefineOwnProperty(context,                                                                               \
                                   key,                                                                                   \
                                   v8::New<v8::Integer>(isolate, value),                                                  \
@@ -25,7 +25,7 @@
                                 value,                    \
                                 v8::PropertyAttributeEx::ReadOnlyDontDelete)
 
-#define SET_REVISION_KIND(name) SET_ENUM(object, svn::revision_kind::, name)
+#define SET_REVISION_KIND(name) SET_ENUM(object, svn::revision_kind, name)
 
 namespace node {
 namespace revision_kind {

@@ -1,5 +1,7 @@
 #include "client.hpp"
 
+#include <utility>
+
 #include <apr_pools.h>
 
 #include <svn_client.h>
@@ -79,10 +81,10 @@ static const char* convert_path(const std::string& value,
     return raw;
 }
 
-static const apr_array_header_t* convert_vector(const std::vector<std::string>& value,
-                                                apr_pool_t*                     pool,
-                                                bool                            allowEmpty,
-                                                bool                            isPath) {
+static const apr_array_header_t* convert_vector(const svn::string_vector& value,
+                                                apr_pool_t*               pool,
+                                                bool                      allowEmpty,
+                                                bool                      isPath) {
     if (value.size() == 0) {
         if (allowEmpty)
             return nullptr;
@@ -110,9 +112,9 @@ static const apr_array_header_t* convert_vector(const std::string& value,
     return result;
 }
 
-static apr_hash_t* convert_map(svn::string_map& map, apr_pool_t* pool) {
-	if (map.size() == 0)
-		return nullptr;
+static apr_hash_t* convert_map(const svn::string_map& map, apr_pool_t* pool) {
+    if (map.size() == 0)
+        return nullptr;
 
     auto result = apr_hash_make(pool);
 
@@ -128,10 +130,6 @@ static apr_hash_t* convert_map(svn::string_map& map, apr_pool_t* pool) {
     }
 
     return result;
-}
-
-static void destory_pool(apr_pool_t* pool) {
-    apr_pool_destroy(pool);
 }
 
 static std::unique_ptr<apr_pool_t, decltype(&apr_pool_destroy)> create_pool(apr_pool_t* parent) {
@@ -173,8 +171,8 @@ client::client() {
     svn_auth_get_simple_provider2(&provider, nullptr, nullptr, _pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t*) = provider;
 
-	svn_auth_get_username_provider(&provider, _pool);
-	APR_ARRAY_PUSH(providers, svn_auth_provider_object_t*) = provider;
+    svn_auth_get_username_provider(&provider, _pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t*) = provider;
 
     svn_auth_baton_t* auth_baton;
     svn_auth_open(&auth_baton, providers, _pool);
@@ -212,10 +210,10 @@ client::~client() {
     }
 }
 
-void client::add_to_changelist(const std::string&              path,
-                               const std::string&              changelist,
-                               depth                           depth,
-                               const std::vector<std::string>& changelists) const {
+void client::add_to_changelist(const std::string&   path,
+                               const std::string&   changelist,
+                               depth                depth,
+                               const string_vector& changelists) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -231,10 +229,10 @@ void client::add_to_changelist(const std::string&              path,
                                               pool));
 }
 
-void client::add_to_changelist(const std::vector<std::string>& paths,
-                               const std::string&              changelist,
-                               depth                           depth,
-                               const std::vector<std::string>& changelists) const {
+void client::add_to_changelist(const string_vector& paths,
+                               const std::string&   changelist,
+                               depth                depth,
+                               const string_vector& changelists) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -262,7 +260,7 @@ static svn_error_t* invoke_get_changelists(void*       raw_baton,
 void client::get_changelists(const std::string&              path,
                              const get_changelists_callback& callback,
                              depth                           depth,
-                             const std::vector<std::string>& changelists) const {
+                             const string_vector&            changelists) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -279,9 +277,9 @@ void client::get_changelists(const std::string&              path,
                                             pool));
 }
 
-void client::remove_from_changelists(const std::string&              path,
-                                     depth                           depth,
-                                     const std::vector<std::string>& changelists) const {
+void client::remove_from_changelists(const std::string&   path,
+                                     depth                depth,
+                                     const string_vector& changelists) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -295,9 +293,9 @@ void client::remove_from_changelists(const std::string&              path,
                                                     pool));
 }
 
-void client::remove_from_changelists(const std::vector<std::string>& paths,
-                                     depth                           depth,
-                                     const std::vector<std::string>& changelists) const {
+void client::remove_from_changelists(const string_vector& paths,
+                                     depth                depth,
+                                     const string_vector& changelists) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -344,7 +342,7 @@ svn_error_t* invoke_cat_callback(void*       raw_baton,
 static svn_opt_revision_t* convert_revision(const revision& value) {
     auto result        = new svn_opt_revision_t();
     result->kind       = static_cast<svn_opt_revision_kind>(value.kind);
-    result->value.date = static_cast<apr_time_t>(value.value.date);
+    result->value.date = static_cast<apr_time_t>(value.date);
     return result;
 }
 
@@ -386,7 +384,7 @@ string_map client::cat(const std::string&  path,
     size_t            key_size;
     svn_string_t*     value;
     for (index = apr_hash_first(_pool, raw_properties); index; index = apr_hash_next(index)) {
-        apr_hash_this(index, &static_cast<const void*>(key), &static_cast<apr_ssize_t>(key_size), &static_cast<void*>(value));
+        apr_hash_this(index, reinterpret_cast<const void**>(&key), reinterpret_cast<apr_ssize_t*>(&key_size), reinterpret_cast<void**>(&value));
 
         result.emplace(std::piecewise_construct,
                        std::forward_as_tuple(key, key_size),
@@ -428,7 +426,7 @@ int32_t client::checkout(const std::string& url,
 
     int32_t result_rev;
 
-    check_result(svn_client_checkout3(&static_cast<svn_revnum_t>(result_rev),
+    check_result(svn_client_checkout3(reinterpret_cast<svn_revnum_t*>(&result_rev),
                                       raw_url,
                                       raw_path,
                                       raw_peg_revision,
@@ -464,18 +462,18 @@ static svn_error_t* invoke_commit(const svn_commit_info_t* commit_info,
     return nullptr;
 }
 
-void client::commit(const std::string&              path,
-                    const std::string&              message,
-                    const commit_callback&          callback,
-                    depth                           depth,
-                    const std::vector<std::string>& changelists,
-                    string_map&                     revprop_table,
-                    bool                            keep_locks,
-                    bool                            keep_changelists,
-                    bool                            commit_as_operations,
-                    bool                            include_file_externals,
-                    bool                            include_dir_externals) const {
-    commit(std::vector<std::string>{path},
+void client::commit(const std::string&     path,
+                    const std::string&     message,
+                    const commit_callback& callback,
+                    depth                  depth,
+                    const string_vector&   changelists,
+                    const string_map&      revprop_table,
+                    bool                   keep_locks,
+                    bool                   keep_changelists,
+                    bool                   commit_as_operations,
+                    bool                   include_file_externals,
+                    bool                   include_dir_externals) const {
+    commit(string_vector{path},
            message,
            callback,
            depth,
@@ -488,17 +486,17 @@ void client::commit(const std::string&              path,
            include_dir_externals);
 }
 
-void client::commit(const std::vector<std::string>& paths,
-                    const std::string&              message,
-                    const commit_callback&          callback,
-                    depth                           depth,
-                    const std::vector<std::string>& changelists,
-                    string_map&                     revprop_table,
-                    bool                            keep_locks,
-                    bool                            keep_changelists,
-                    bool                            commit_as_operations,
-                    bool                            include_file_externals,
-                    bool                            include_dir_externals) const {
+void client::commit(const string_vector&   paths,
+                    const std::string&     message,
+                    const commit_callback& callback,
+                    depth                  depth,
+                    const string_vector&   changelists,
+                    const string_map&      revprop_table,
+                    bool                   keep_locks,
+                    bool                   keep_changelists,
+                    bool                   commit_as_operations,
+                    bool                   include_file_externals,
+                    bool                   include_dir_externals) const {
     check_string(message);
     auto message_baton       = std::make_unique<baton_wrapper<std::string>>(message);
     _context->log_msg_baton3 = message_baton.get();
@@ -559,10 +557,10 @@ static working_copy_info* copy_working_copy_info(const svn_wc_info_t* raw) {
 
     auto result                = new working_copy_info();
     result->changelist         = raw->changelist;
-    result->checksum           = copy_checksum(raw->checksum);
+    result->node_checksum      = copy_checksum(raw->checksum);
     result->copyfrom_rev       = raw->copyfrom_rev;
     result->copyfrom_url       = raw->copyfrom_url;
-    result->depth              = static_cast<depth>(raw->depth);
+    result->node_depth         = static_cast<depth>(raw->depth);
     result->moved_from_abspath = raw->moved_from_abspath;
     result->moved_to_abspath   = raw->moved_to_abspath;
     result->recorded_size      = raw->recorded_size;
@@ -581,7 +579,7 @@ static info* copy_info(const svn_client_info2_t* raw) {
     result->last_changed_author = raw->last_changed_author;
     result->last_changed_date   = raw->last_changed_date;
     result->last_changed_rev    = raw->last_changed_rev;
-    result->lock                = copy_lock(raw->lock);
+    result->node_lock           = copy_lock(raw->lock);
     result->repos_root_URL      = raw->repos_root_URL;
     result->repos_UUID          = raw->repos_UUID;
     result->rev                 = raw->rev;
@@ -601,15 +599,15 @@ static svn_error_t* invoke_info(void*                     raw_baton,
     return nullptr;
 }
 
-void client::info(const std::string&              path,
-                  const info_callback&            callback,
-                  const revision&                 peg_revision,
-                  const revision&                 revision,
-                  depth                           depth,
-                  bool                            fetch_excluded,
-                  bool                            fetch_actual_only,
-                  bool                            include_externals,
-                  const std::vector<std::string>& changelists) const {
+void client::info(const std::string&   path,
+                  const info_callback& callback,
+                  const revision&      peg_revision,
+                  const revision&      revision,
+                  depth                depth,
+                  bool                 fetch_excluded,
+                  bool                 fetch_actual_only,
+                  bool                 include_externals,
+                  const string_vector& changelists) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -637,19 +635,19 @@ void client::remove(const std::string&     path,
                     const remove_callback& callback,
                     bool                   force,
                     bool                   keep_local,
-                    string_map&            revprop_table) const {
-    remove(std::vector<std::string>{path},
+                    const string_map&      revprop_table) const {
+    remove(string_vector{path},
            callback,
            force,
            keep_local,
            revprop_table);
 }
 
-void client::remove(const std::vector<std::string>& paths,
-                    const remove_callback&          callback,
-                    bool                            force,
-                    bool                            keep_local,
-                    string_map&                     revprop_table) const {
+void client::remove(const string_vector&   paths,
+                    const remove_callback& callback,
+                    bool                   force,
+                    bool                   keep_local,
+                    const string_map&      revprop_table) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -667,11 +665,11 @@ void client::remove(const std::vector<std::string>& paths,
                                     pool));
 }
 
-void client::revert(const std::string&              path,
-                    depth                           depth,
-                    const std::vector<std::string>& changelists,
-                    bool                            clear_changelists,
-                    bool                            metadata_only) const {
+void client::revert(const std::string&   path,
+                    depth                depth,
+                    const string_vector& changelists,
+                    bool                 clear_changelists,
+                    bool                 metadata_only) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -687,11 +685,11 @@ void client::revert(const std::string&              path,
                                     pool));
 }
 
-void client::revert(const std::vector<std::string>& paths,
-                    depth                           depth,
-                    const std::vector<std::string>& changelists,
-                    bool                            clear_changelists,
-                    bool                            metadata_only) const {
+void client::revert(const string_vector& paths,
+                    depth                depth,
+                    const string_vector& changelists,
+                    bool                 clear_changelists,
+                    bool                 metadata_only) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -718,7 +716,7 @@ static status* copy_status(const svn_client_status_t* raw) {
     result->changelist         = raw->changelist;
     result->conflicted         = raw->conflicted;
     result->copied             = raw->copied;
-    result->depth              = static_cast<depth>(raw->depth);
+    result->node_depth         = static_cast<depth>(raw->depth);
     result->filesize           = raw->filesize;
     result->file_external      = raw->file_external;
     result->kind               = static_cast<node_kind>(raw->kind);
@@ -757,17 +755,17 @@ static svn_error_t* invoke_status(void*                      raw_baton,
     return nullptr;
 }
 
-int32_t client::status(const std::string&              path,
-                       const status_callback&          callback,
-                       const revision&                 revision,
-                       depth                           depth,
-                       bool                            get_all,
-                       bool                            check_out_of_date,
-                       bool                            check_working_copy,
-                       bool                            no_ignore,
-                       bool                            ignore_externals,
-                       bool                            depth_as_sticky,
-                       const std::vector<std::string>& changelists) const {
+int32_t client::status(const std::string&     path,
+                       const status_callback& callback,
+                       const revision&        revision,
+                       depth                  depth,
+                       bool                   get_all,
+                       bool                   check_out_of_date,
+                       bool                   check_working_copy,
+                       bool                   no_ignore,
+                       bool                   ignore_externals,
+                       bool                   depth_as_sticky,
+                       const string_vector&   changelists) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
@@ -778,7 +776,7 @@ int32_t client::status(const std::string&              path,
 
     int32_t result_rev;
 
-    check_result(svn_client_status6(&static_cast<svn_revnum_t>(result_rev),
+    check_result(svn_client_status6(reinterpret_cast<svn_revnum_t*>(&result_rev),
                                     _context,
                                     raw_path,
                                     raw_revision,
@@ -828,14 +826,14 @@ int32_t client::update(const std::string& path,
     return APR_ARRAY_IDX(raw_result_revs, 0, int32_t);
 }
 
-std::vector<int32_t> client::update(const std::vector<std::string>& paths,
-                                    const revision&                 revision,
-                                    depth                           depth,
-                                    bool                            depth_is_sticky,
-                                    bool                            ignore_externals,
-                                    bool                            allow_unver_obstructions,
-                                    bool                            adds_as_modification,
-                                    bool                            make_parents) const {
+std::vector<int32_t> client::update(const string_vector& paths,
+                                    const revision&      revision,
+                                    depth                depth,
+                                    bool                 depth_is_sticky,
+                                    bool                 ignore_externals,
+                                    bool                 allow_unver_obstructions,
+                                    bool                 adds_as_modification,
+                                    bool                 make_parents) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 

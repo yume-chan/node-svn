@@ -8,7 +8,7 @@
 #define SET_ENUM(target, prefix, name)                                                                                   \
     {                                                                                                                    \
         auto key   = InternalizedString(#name);                                                                          \
-        auto value = static_cast<int32_t>(prefix##name);                                                                 \
+        auto value = static_cast<int32_t>(prefix::name);                                                                 \
         target->DefineOwnProperty(context,                                                                               \
                                   key,                                                                                   \
                                   v8::New<v8::Integer>(isolate, value),                                                  \
@@ -25,7 +25,7 @@
                                 value,                    \
                                 v8::PropertyAttributeEx::ReadOnlyDontDelete)
 
-#define SET_DEPTH(name) SET_ENUM(object, svn::depth::, name)
+#define SET_DEPTH(name) SET_ENUM(object, svn::depth, name)
 
 namespace node {
 namespace depth {

@@ -32,10 +32,15 @@
 
 #define EXPAND(x) x
 
+#ifdef __GNUC__
+#define NUM_ARGS_IMPL(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
+#define NUM_ARGS(...) NUM_ARGS_IMPL(_, ## __VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#else
 #define NUM_ARGS_COUNT(x0, x1, x2, x3, x4, x5, n, ...) n
 #define NUM_ARGS_PAD(...) 0, __VA_ARGS__
 #define NUM_ARGS_EXPAND(...) EXPAND(NUM_ARGS_COUNT(__VA_ARGS__, 5, 4, 3, 2, 1, 0))
 #define NUM_ARGS(...) NUM_ARGS_EXPAND(NUM_ARGS_PAD(__VA_ARGS__))
+#endif
 
 // clang-format off
 

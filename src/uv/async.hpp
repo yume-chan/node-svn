@@ -24,7 +24,7 @@ class async : public std::enable_shared_from_this<async<Callback, Result, Args..
     }
 
     Result operator()(Args... args) {
-        args = std::make_tuple<Args...>(std::forward<Args>(args)...);
+        this->args = std::make_tuple<Args...>(std::forward<Args>(args)...);
 
         uv_async_send(uv_async);
 

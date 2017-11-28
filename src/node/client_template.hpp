@@ -1,6 +1,6 @@
-#include <node_buffer.h>
+#include <cstring>
 
-#include <svn_types.h>
+#include <node_buffer.h>
 
 #include <cpp/client.hpp>
 #include <cpp/svn_type_error.hpp>
@@ -22,12 +22,12 @@ static std::string convert_string(const v8::Local<v8::Value>& value) {
         throw svn::svn_type_error("");
 
     v8::String::Utf8Value utf8(value);
-    auto                  length = utf8.length();
+    auto                  length = static_cast<size_t>(utf8.length());
 
-    if (strlen(*utf8) != length)
+    if (std::strlen(*utf8) != length)
         throw svn::svn_type_error("");
 
-    return std::string(*utf8, utf8.length());
+    return std::string(*utf8, length);
 }
 
 static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value, bool allowEmpty) {
@@ -100,9 +100,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
             if (!number->IsNumber())
                 throw svn::svn_type_error("");
 
-            auto result         = svn::revision{svn::revision_kind::number};
-            result.value.number = number->Int32Value();
-            return result;
+            return svn::revision(number->Int32Value());
         }
 
         auto date = object->Get(v8::New<v8::String>(isolate, "date", v8::NewStringType::kInternalized));
@@ -110,9 +108,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
             if (!date->IsNumber())
                 throw svn::svn_type_error("");
 
-            auto result       = svn::revision{svn::revision_kind::date};
-            result.value.date = date->IntegerValue();
-            return result;
+            return svn::revision(date->IntegerValue());
         }
     }
 
@@ -159,11 +155,11 @@ static std::vector<std::string> convert_array(v8::Isolate*          isolate,
     if (options.IsEmpty())
         return std::vector<std::string>();
 
-	auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
-	if (value->IsUndefined())
-		return std::vector<std::string>();
+    auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
+    if (value->IsUndefined())
+        return std::vector<std::string>();
 
-	return convert_array(value, true);
+    return convert_array(value, true);
 }
 
 static void buffer_free_pointer(char*, void* hint) {
@@ -264,7 +260,7 @@ METHOD_BEGIN(add_to_changelist)
 
     auto options     = convert_options(args[2]);
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-	auto changelists = convert_array(isolate, options, "changelists");
+    auto changelists = convert_array(isolate, options, "changelists");
 
     ASYNC_BEGIN(void, paths, changelist, depth, changelists)
         _this->_client->add_to_changelist(paths, changelist, depth, changelists);
@@ -293,7 +289,7 @@ METHOD_BEGIN(get_changelists)
     auto callback = TO_ASYNC_CALLBACK(_callback, const char*, const char*);
 
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-	auto changelists = convert_array(isolate, options, "changelists");
+    auto changelists = convert_array(isolate, options, "changelists");
 
     ASYNC_BEGIN(void, path, callback, depth, changelists)
         _this->_client->get_changelists(path, callback, depth, changelists);
@@ -504,8 +500,8 @@ METHOD_BEGIN(status)
         info->Set(InternalizedString("changed_rev"), v8::New<v8::Integer>(isolate, raw_info->changed_rev));
         info->Set(InternalizedString("conflicted"), v8::New<v8::Boolean>(isolate, raw_info->conflicted));
         info->Set(InternalizedString("copied"), v8::New<v8::Boolean>(isolate, raw_info->copied));
-		info->Set(InternalizedString("depth"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->depth)));
-		info->Set(InternalizedString("file_external"), v8::New<v8::Boolean>(isolate, raw_info->file_external));
+        info->Set(InternalizedString("depth"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_depth)));
+        info->Set(InternalizedString("file_external"), v8::New<v8::Boolean>(isolate, raw_info->file_external));
         info->Set(InternalizedString("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
         info->Set(InternalizedString("node_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_status)));
         info->Set(InternalizedString("prop_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->prop_status)));
