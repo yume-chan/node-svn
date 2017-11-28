@@ -8,7 +8,9 @@ Wrap SVN to Node Native Addon.
     - [Platform](#platform)
     - [Installation](#installation)
     - [API](#api)
-    - [Dependencies](#dependencies)
+    - [Update SVN](#update-svn)
+        - [Windows](#windows)
+        - [Linux](#linux)
     - [Building](#building)
         - [Visual Studio](#visual-studio)
         - [node-gyp](#node-gyp)
@@ -19,12 +21,15 @@ Wrap SVN to Node Native Addon.
 
 ## Platform
 
-It relies on pre-built SVN shared library binaries.
+It relies on pre-built SVN shared library binaries. Here is the platform support table.
 
-|     | Windows          | Linux | macOS |
-| --- | ---------------- | ----- | ----- |
-| x86 | Yes (not tested) | No    | No    |
-| x64 | Yes              | No    | No    |
+|      | Windows                         | Linux            | macOS |
+| ---- | ------------------------------- | ---------------- | ----- |
+| x86  | Yes (not tested)                | No               | No    |
+| x64  | Yes                             | Yes (not tested) | No    |
+| Note | Build with Visual Studio 15.4.4 | Build with gcc-7<br> `patchelf` also required | N/A   |
+
+It uses many C++17 features so an older compiler may not work.
 
 ## Installation
 
@@ -40,11 +45,72 @@ npm install yume-chan/node-svn
 
 See [the type definition](scripts/index.d.ts).
 
-## Dependencies
+## Update SVN
 
-This repository contains SVN header files and pre-built shared libraries for Windows x86 and x64, from the SVN repository.
+### Windows
 
-To update it, following the [SVN building instruction](http://svn.apache.org/repos/asf/subversion/trunk/INSTALL) (for Windows, see [Update SVN on Windows](#updating-svn-on-windows) bolow) to build the binaries, then copy include and binaries to include and lib folders.
+I uses TortoiseSVN on Windows.
+
+1. `svn checkout svn://svn.code.sf.net/p/tortoisesvn/code/trunk tortoisesvn-code`
+1. Install dependencies:
+    * Visual Studio 2017
+    * Java
+    * Python 2.6 x86
+    * libxml2 Python bindings
+    * Perl
+    * Wix
+    * NAnt
+1. Copy `default.build.user.tmpl` to `default.build.user`
+1. Run `nant init`
+1. To compile 32-bit SVN:
+    * Launch `x86 Native Tools Command Prompt for VS 2017`
+1. To compile 64-bit SVN:
+    * Launch `x64 Native Tools Command Prompt for VS 2017`
+1. `cd` to working directory
+1. Run `nant Subversion` to compile
+    > Note: If you don't have Windows 8.1 SDK installed, nant will fail building `CrashServer` project, that's fine.
+1. Enter `ext` directory
+1. Enter `apr/release_${arch}` directory
+    1. Copy all items in `include` directory to `node-svn/include/win32/apr`
+    1. Copy `libapr_tsvn.dll`, `libapr_tsvn.lib` and `libapr_tsvn.pdb` to `node-svn/lib/svn/win32/${arch}`
+1. Enter `apr-util/release_${arch}` directory
+    1. Copy `libaprutil_tsvn.dll` and `libaprutil_tsvn.pdb` to `node-svn/lib/svn/win32/${arch}`
+1. Enter `cyrus-SASL/release_${arch}` directory
+    1. Copy all `.dll` and `.pdb` to `node-svn/lib/svn/win32/${arch}`
+1. Enter `Subversion/release_${arch}` directory
+    1. Copy `libsvn_tsvn.dll`, `libsvn_tsvn.lib` and `libsvn_tsvn.pdb` to `node-svn/lib/svn/win32/${arch}`
+
+### Linux
+
+1. Download and unzip APR and APR-util source code from [https://apr.apache.org/download.cgi](https://apr.apache.org/download.cgi)
+1. Download and unzip SVN source code from [https://subversion.apache.org/download.cgi?update=201708081800](https://subversion.apache.org/download.cgi?update=201708081800)
+1. Download dependencies and unzip them into SVN source directory
+    * zlib
+    * sqlite-amalgamation
+1. Install dependencies
+    * autoconf
+    * libtools
+1. Enter APR source directory
+    1. `./configure`
+        > If there is an error about `expat`, install `expat` into your system
+    1. `make`
+    1. `make install`
+1. Enter APR-util source directory
+    1. `./configure`
+        > If there is an error about apr not found, use `./configure --with-apr=/usr/local/apr` instead.
+    1. `make`
+    1. `make install`
+1. Enter SVN source directory
+    1. `./configure`
+        > If there is an error about apr and apr-util not found, use `./configure --with-apr=/usr/local/apr --with-apr-util=/usr/local/apr` instead.
+    1. `make`
+    1. `make install`
+1. Enter `usr/local/apr`
+1. Copy all files in `include/apr-1` to `node-svn/include/linux/apr`
+1. Copy `libapr-1.so` and `libaprutil-1.so` from `lib` to `node-svn/lib/svn/linux/x64`
+1. Enter `usr/local/`
+1. Copy all files in `include/subversion-1` to `node-svn/include/linux/svn`
+1. Copy `libsvn_*.so` from `lib` to `node-svn/lib/svn/linux/x64`
 
 ## Building
 
