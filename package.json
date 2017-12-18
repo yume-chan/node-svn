@@ -5,7 +5,8 @@
     },
     "description": "",
     "devDependencies": {
-        "@types/node": "^8.0.46"
+        "@types/node": "^8.0.46",
+        "xml2js": "^0.4.19"
     },
     "directories": {
         "test": "tests"

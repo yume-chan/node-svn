@@ -1,0 +1,21 @@
+[submodule "dependencies/apr-iconv"]
+	path = dependencies/apr-iconv
+	url = https://github.com/apache/apr-iconv.git
+[submodule "dependencies/apr"]
+	path = dependencies/apr
+	url = https://github.com/apache/apr.git
+[submodule "dependencies/sqlite-amalgamation"]
+	path = dependencies/sqlite-amalgamation
+	url = https://github.com/azadkuh/sqlite-amalgamation.git
+[submodule "dependencies/subversion"]
+	path = dependencies/subversion
+	url = https://github.com/apache/subversion.git
+[submodule "dependencies/libexpat"]
+	path = dependencies/libexpat
+	url = https://github.com/libexpat/libexpat.git
+[submodule "dependencies/serf"]
+	path = dependencies/serf
+	url = https://github.com/apache/serf.git
+[submodule "dependencies/zlib"]
+	path = dependencies/zlib
+	url = https://github.com/madler/zlib.git

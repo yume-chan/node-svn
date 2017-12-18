@@ -6,7 +6,7 @@ bin
 obj
 
 # Node-gyp Output
-build
+/build
 
 # Node-gyp Config
 binding.gyp
@@ -18,3 +18,5 @@ node_modules
 include/node
 lib/node
 lib/node-sdk
+
+dependencies/include
