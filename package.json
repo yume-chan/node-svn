@@ -23,9 +23,8 @@
         "url": "git+https://github.com/yume-chan/node-svn.git"
     },
     "scripts": {
-        "install": "node-gyp rebuild",
-        "postinstall": "node scripts/postinstall.js",
-        "preinstall": "node scripts/preinstall.js",
+        "configure": "node scripts/configure.js",
+        "build": "node-gyp rebuild",
         "test": "mocha"
     },
     "types": "scripts/index.d.ts",

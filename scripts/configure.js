@@ -2,8 +2,10 @@ const path = require("path");
 const fs = require("fs");
 const util = require("util");
 
-const vcxproj = require("./preinstall/vcxproj");
-const dsp = require("./preinstall/dsp");
+const gen_test_char = require("../dependencies/node-apr-gen-test-char");
+
+const vcxproj = require("./configure/vcxproj");
+const dsp = require("./configure/dsp");
 
 function find(folder, ext) {
     const result = [];
@@ -21,11 +23,17 @@ function find(folder, ext) {
 const arch = process.argv[3] || process.arch;
 const root = path.resolve(__dirname, "..");
 
+try {
+    fs.mkdirSync("dependencies/include");
+} catch (err) { }
+
 function configure_expat() {
     return vcxproj("dependencies/libexpat/expat/lib", "expat_static.vcxproj", "Release|Win32");
 }
 
 function configure_apr() {
+    gen_test_char.run(path.resolve(root, "dependencies/include/apr_escape_test_char.h"));
+
     const h = path.resolve(root, "dependencies/include/apr.h");
 
     // Modify APR_HAVE_IPV6 to 0
@@ -212,6 +220,9 @@ async function main() {
                     ...apr.includes,
                     ...client.includes,
                     "src"
+                ],
+                "defines": [
+                    "APR_DECLARE_STATIC"
                 ],
                 "sources": [
                     "src/cpp/client.cpp",
