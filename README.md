@@ -52,25 +52,14 @@ cd node-svn
 git submodule update --init
 git apply --directory=dependencies/subversion ./dependencies/patches/subversion.diff
 
-# Build node-apr-gen-test-char
-cd dependencies/node-apr-gen-test-char
-npm install
-cd ../..
-
 # Generate subversion project files
 cd dependencies/subversion
 python gen-make.py --with-zlib=../zlib --with-apr=../apr --with-apr-util=../apr --with-apr-iconv=../apr-iconv --with-sqlite=../sqlite-amalgamation --disable-shared --with-static-apr --vsnet-version=15 --disable-gmock
 cd ../..
 
-# Install Node dependencies
+# Build
 npm install
 
-# Run configure script
-npm run configure
-
-# Build
-npm run build
-
 # Tests
-npm run test
+npm test
 ````

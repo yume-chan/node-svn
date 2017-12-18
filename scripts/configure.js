@@ -2,7 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const util = require("util");
 
-const gen_test_char = require("../dependencies/node-apr-gen-test-char");
+const gen_test_char = require("node-apr-gen-test-char");
 
 const vcxproj = require("./configure/vcxproj");
 const dsp = require("./configure/dsp");
