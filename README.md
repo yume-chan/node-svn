@@ -14,7 +14,7 @@ In this way, on Windows it won't use dlls from other SVN installations, on Linux
 
 |     | Windows | Linux | macOS |
 | --- | ------- | ----- | ----- |
-| x86 | Maybe   | No    | N/A   |
+| x86 | Yes     | No    | N/A   |
 | x64 | Yes     | No    | No    |
 
 ## Dependencies
@@ -70,4 +70,7 @@ npm run configure
 
 # Build
 npm run build
+
+# Tests
+npm run test
 ````

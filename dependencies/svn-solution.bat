@@ -1,1 +1,0 @@
-python.exe gen-make.py --with-zlib=dependencies/zlib --with-apr=dependencies/apr --with-apr-util=dependencies/apr --with-apr-iconv=dependencies/apr-iconv --with-serf=dependencies/serf --with-sqlite=dependencies/sqlite-amalgamation --disable-shared --with-static-apr --vsnet-version=15 --disable-gmock
