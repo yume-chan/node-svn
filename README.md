@@ -13,6 +13,7 @@ Wrap SVN to Node Native Addon.
     - [Requirements](#requirements)
     - [Patches](#patches)
     - [Building](#building)
+    - [Generate patch file on Windows](#generate-patch-file-on-windows)
     - [Docs](#docs)
     - [Thread safety](#thread-safety)
     - [Roadmap](#roadmap)
@@ -29,19 +30,13 @@ In this way, on Windows it won't use dlls from other SVN installations, on Linux
 
 ## Platform table
 
-|     | Windows | Linux | macOS |
-| --- | ------- | ----- | ----- |
-| x86 | Yes     | No    | N/A   |
-| x64 | Yes     | No    | No    |
+|         | x86                                                                                                                                                                            | x64                                                                                                                                                                            |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Windows | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/build-svn?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/build-svn) | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/build-svn?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/build-svn) |
+| Linux   | No                                                                                                                                                                             | No                                                                                                                                                                             |
+| macOS   | No                                                                                                                                                                             | No                                                                                                                                                                             |
 
-
-|         | x86 | x64 | Note                 |
-| ------- | --- | --- | -------------------- |
-| Windows | Yes | Yes | Visual Studio 15.4.4 |
-| Linux   | No  | No  | *                    |
-| macOS   | No  | No  | *                    |
-
-***Help wanted!** I have no idea how to configure it on Linux and macOS, they may both require a complex configure script.
+**Help wanted!** I have no idea how to configure it on Linux and macOS, they may both require a complex configure script.
 
 ## Dependencies
 
@@ -91,6 +86,15 @@ npm install
 npm test
 ````
 
+## Generate patch file on Windows
+
+````shell
+cd dependencies/subversion
+git diff --no-color | Out-File -Encoding utf8 ../../patches/subversion.diff
+````
+
+**Then change the line ending to LF in an editor!**
+
 ## Docs
 
 See the [type definition](scripts/index.d.ts)
@@ -112,11 +116,11 @@ This project includes a patch to use **Serialized** mode instead, so you should 
 ## Roadmap
 
 - [ ] Add options to all methods
-- [ ] Strongly-typed error handling<sup>1</sup>
+- [ ] Strongly-typed error handling
 - [ ] Iterator/Async Iterator for things like `status()`
 - [ ] Authentication
 - [ ] Cross platform
 - [x] Better multi-threading handling
 - [ ] You name it
 
-1. **Help wanted!** How to create custom Error class in Node.js Native Addon?
+**Help wanted!** How to create custom Error class in Node.js Native Addon?
