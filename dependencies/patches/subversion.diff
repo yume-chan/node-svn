@@ -1,11 +1,11 @@
 ﻿diff --git a/build/generator/gen_win_dependencies.py b/build/generator/gen_win_dependencies.py
-index a9ee652567..d485ac4804 100644
+index a9ee652567..ab09db43d2 100644
 --- a/build/generator/gen_win_dependencies.py
 +++ b/build/generator/gen_win_dependencies.py
 @@ -440,25 +440,25 @@ class GenDependenciesBase(gen_base.GeneratorBase):
- 
+
      inc_base = os.path.join(self.apr_util_path, 'include')
- 
+
 -    if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apu_version.h')):
 +    if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apr_version.h')):
        inc_path = os.path.join(inc_base, 'apr-1')
@@ -17,23 +17,23 @@ index a9ee652567..d485ac4804 100644
 +      sys.stderr.write("ERROR: 'apr_version' not found.\n")
        sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n")
        sys.exit(1)
- 
+
 -    version_file_path = os.path.join(inc_path, 'apu_version.h')
 +    version_file_path = os.path.join(inc_path, 'apr_version.h')
      txt = open(version_file_path).read()
- 
+
 -    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
 +    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
      major = int(vermatch.group(1))
- 
+
 -    vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
 +    vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
      minor = int(vermatch.group(1))
- 
+
 -    vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
 +    vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
      patch = int(vermatch.group(1))
- 
+
      version = (major, minor, patch)
 @@ -550,7 +550,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
        lib_dir = os.path.join(self.apr_util_path, 'xml/expat/lib/LibR')
@@ -43,16 +43,7 @@ index a9ee652567..d485ac4804 100644
 +      inc_path = os.path.join(self.apr_util_path, '../libexpat/expat/lib')
        lib_dir = os.path.join(self.apr_util_path, 'lib')
        debug_lib_dir = None
- 
-@@ -763,7 +763,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
- 
-     if self.bdb_path:
-       bdb_path = self.bdb_path
--    
-+
-     inc_path = os.path.join(bdb_path, 'include')
-     db_h_path = os.path.join(inc_path, 'db.h')
- 
+
 diff --git a/subversion/libsvn_subr/sqlite.c b/subversion/libsvn_subr/sqlite.c
 index 43c49e30cd..e553b1cda9 100644
 --- a/subversion/libsvn_subr/sqlite.c
