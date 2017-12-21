@@ -10,6 +10,7 @@
         "@types/node": "^8.0.46",
         "chai": "^4.1.2",
         "mocha": "^4.0.1",
+        "mocha-appveyor-reporter": "^0.4.0",
         "node-apr-gen-test-char": "git+https://github.com/yume-chan/node-apr-gen-test-char.git",
         "xml2js": "^0.4.19"
     },
