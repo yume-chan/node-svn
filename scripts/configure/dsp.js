@@ -28,7 +28,7 @@ module.exports = function parseDsp(folder, file, condition) {
 
     const defineRegex = /\/D "(.*?)"/g;
     while ((match = defineRegex.exec(line))) {
-        defines.push(path.relative(root, match[1]));
+        defines.push(match[1]);
     }
 
     const sourceRegex = /SOURCE=(.*?\.c)/g;

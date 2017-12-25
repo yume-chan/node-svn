@@ -38,3 +38,20 @@ node-svn.vcxproj.user
 .gitmodules
 
 appveyor.yml
+
+# Unused dependency files
+dependencies/**
+
+dependencies/libexpat/**
+!dependencies/libexpat/expat/lib/**
+
+dependencies/subversion/**
+!dependencies/subversion/build/win32/vcnet-vcproj/libsvn_*.vcxproj
+!dependencies/subversion/subversion/include/**
+!dependencies/subversion/subversion/libsvn_*/**
+
+!dependencies/**/*.c
+!dependencies/**/*.h
+!dependencies/**/*.hw
+!dependencies/**/*.vcxproj
+!dependencies/**/*.dsp
