@@ -61,7 +61,8 @@ In this way, on Windows it won't use dlls from other SVN installations, on Linux
 
 1. Patch subversion configuration script to support new apr-util header format from apr-2.
 1. Patch subversion configuration script to change the hardcoded expat searching path.
-2. Patch subversion SQLite initialization to use **Serialize** mode (see [Thread Safety](#Thread-safey))
+2. Patch subversion SQLite initialization to use **Serialize** mode (see [Thread Safety](#Thread-safey)).
+1. Patch libexpat to include `expat.h` in package.
 
 ## Building
 
@@ -73,6 +74,7 @@ cd node-svn
 # Clone and patch submodules
 git submodule update --init
 git apply --directory=dependencies/subversion ./dependencies/patches/subversion.diff
+git apply --directory=dependencies/libexpat ./dependencies/patches/libexpat.diff
 
 # Generate subversion project files
 cd dependencies/subversion
@@ -90,7 +92,7 @@ npm test
 
 ````shell
 cd dependencies/subversion
-git diff --no-color | Out-File -Encoding utf8 ../../patches/subversion.diff
+git diff --no-color | Out-File -Encoding utf8 ../patches/subversion.diff
 ````
 
 **Then change the line ending to LF in an editor!**

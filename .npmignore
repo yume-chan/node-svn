@@ -11,15 +11,20 @@ obj
 # Node-gyp Config
 /binding.gyp
 
+# Node Modules
+#node_modules
+
+/dependencies/include
+
+/node-svn-*.tgz
+
+/dependencies/patches
+
 # Visual Studio Code config
 /.vscode
 
 # Tests
 /test
-
-/dependencies/include
-
-/node-svn-*.tgz
 
 # Clang-format config
 /.clang-format

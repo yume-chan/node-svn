@@ -15,6 +15,5 @@ obj
 node_modules
 
 /dependencies/include
-/dependencies/patches
 
 /node-svn-*.tgz
