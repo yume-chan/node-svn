@@ -2,8 +2,6 @@ const path = require("path");
 const fs = require("fs");
 const util = require("util");
 
-const gen_test_char = require("node-apr-gen-test-char");
-
 const vcxproj = require("./configure/vcxproj");
 const dsp = require("./configure/dsp");
 
@@ -20,6 +18,7 @@ function find(folder, ext) {
     return result;
 }
 
+const platform = process.argv[2] || process.platform;
 const arch = process.argv[3] || process.arch;
 const root = path.resolve(__dirname, "..");
 
@@ -32,7 +31,7 @@ function configure_expat() {
 }
 
 function configure_apr() {
-    gen_test_char.run(path.resolve(root, "dependencies/include/apr_escape_test_char.h"));
+    fs.copyFileSync(path.resolve(root, "dependencies/apr-gen-test-char", platform, "apr_escape_test_char.h"), path.resolve(root, "dependencies/include/apr_escape_test_char.h"));
 
     const h = path.resolve(root, "dependencies/include/apr.h");
 

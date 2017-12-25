@@ -9,14 +9,12 @@ obj
 /build
 
 # Node-gyp Config
-binding.gyp
+/binding.gyp
 
 # Node Modules
 node_modules
 
-# Node-gyp SDK
-include/node
-lib/node
-lib/node-sdk
+/dependencies/include
+/dependencies/patches
 
-dependencies/include
+/node-svn-*.tgz
