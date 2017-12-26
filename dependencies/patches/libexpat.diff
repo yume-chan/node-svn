@@ -1,24 +1,13 @@
-diff --git a/expat/lib/.npmignore b/expat/lib/.npmignore
-new file mode 100644
-index 0000000..0e5839e
---- /dev/null
-+++ b/expat/lib/.npmignore
-@@ -0,0 +1,18 @@
-+Makefile
-+.libs
-+*.lo
+diff --git a/expat/lib/.gitignore b/expat/lib/.gitignore
+index 9c9cf88..0e5839e 100644
+--- a/expat/lib/.gitignore
++++ b/expat/lib/.gitignore
+@@ -1,7 +1,7 @@
+ Makefile
+ .libs
+ *.lo
+-expat.h
 +#expat.h
-+Debug
-+Debug-w
-+Release
-+Release-w
-+expat.ncb
-+expat.opt
-+expat.plg
-+Debug_static
-+Debug-w_static
-+Release_static
-+Release-w_static
-+expat_static.plg
-+expatw.plg
-+expatw_static.plg
+ Debug
+ Debug-w
+ Release
