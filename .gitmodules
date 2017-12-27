@@ -1,21 +1,28 @@
 [submodule "dependencies/apr-iconv"]
 	path = dependencies/apr-iconv
 	url = https://github.com/apache/apr-iconv.git
+	shallow = true
 [submodule "dependencies/apr"]
 	path = dependencies/apr
 	url = https://github.com/apache/apr.git
+	shallow = true
 [submodule "dependencies/sqlite-amalgamation"]
 	path = dependencies/sqlite-amalgamation
 	url = https://github.com/azadkuh/sqlite-amalgamation.git
+	shallow = true
 [submodule "dependencies/subversion"]
 	path = dependencies/subversion
 	url = https://github.com/apache/subversion.git
+	shallow = true
 [submodule "dependencies/libexpat"]
 	path = dependencies/libexpat
 	url = https://github.com/libexpat/libexpat.git
+	shallow = true
 [submodule "dependencies/serf"]
 	path = dependencies/serf
 	url = https://github.com/apache/serf.git
+	shallow = true
 [submodule "dependencies/zlib"]
 	path = dependencies/zlib
 	url = https://github.com/madler/zlib.git
+	shallow = true
