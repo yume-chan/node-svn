@@ -63,6 +63,7 @@ In this way, on Windows it won't use dlls from other SVN installations, on Linux
 1. Patch subversion configuration script to change the hardcoded expat searching path.
 2. Patch subversion SQLite initialization to use **Serialize** mode (see [Thread Safety](#Thread-safey)).
 1. Patch libexpat to include `expat.h` in package.
+1. Patch serf to support new version of OpenSSL (with `OPENSSL_NO_DEPRECATED` on)
 
 ## Building
 
@@ -75,6 +76,7 @@ cd node-svn
 git submodule update --init
 git apply --directory=dependencies/subversion ./dependencies/patches/subversion.diff
 git apply --directory=dependencies/libexpat ./dependencies/patches/libexpat.diff
+git apply --directory=dependencies/serf ./dependencies/patches/serf.diff
 
 # Generate subversion project files
 cd dependencies/subversion

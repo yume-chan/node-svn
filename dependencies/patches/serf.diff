@@ -1,0 +1,33 @@
+diff --git a/buckets/ssl_buckets.c b/buckets/ssl_buckets.c
+index 431315e..bd17bd7 100644
+--- a/buckets/ssl_buckets.c
++++ b/buckets/ssl_buckets.c
+@@ -1364,16 +1364,16 @@ static void ssl_lock(int mode, int n, const char *file, int line)
+     }
+ }
+
+-static unsigned long ssl_id(void)
++static void ssl_id(CRYPTO_THREADID *id)
+ {
+     /* FIXME: This is lame and not portable. -aaron */
+-    return (unsigned long) apr_os_thread_current();
++    CRYPTO_THREADID_set_numeric(id, (unsigned long) apr_os_thread_current());
+ }
+
+ static apr_status_t cleanup_ssl(void *data)
+ {
+     CRYPTO_set_locking_callback(NULL);
+-    CRYPTO_set_id_callback(NULL);
++    CRYPTO_THREADID_set_callback(NULL);
+     CRYPTO_set_dynlock_create_callback(NULL);
+     CRYPTO_set_dynlock_lock_callback(NULL);
+     CRYPTO_set_dynlock_destroy_callback(NULL);
+@@ -1445,7 +1445,7 @@ static void init_ssl_libraries(void)
+             }
+         }
+         CRYPTO_set_locking_callback(ssl_lock);
+-        CRYPTO_set_id_callback(ssl_id);
++        CRYPTO_THREADID_set_callback(ssl_id);
+         CRYPTO_set_dynlock_create_callback(ssl_dyn_create);
+         CRYPTO_set_dynlock_lock_callback(ssl_dyn_lock);
+         CRYPTO_set_dynlock_destroy_callback(ssl_dyn_destroy);

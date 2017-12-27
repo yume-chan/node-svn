@@ -151,6 +151,7 @@ async function main() {
                 "dependencies": [
                     "apr",
                     "expat",
+                    "serf",
                     "libsvn_client",
                     "libsvn_diff",
                     "libsvn_delta",
@@ -161,6 +162,7 @@ async function main() {
                     "libsvn_ra",
                     "libsvn_ra_local",
                     "libsvn_ra_svn",
+                    "libsvn_ra_serf",
                     "libsvn_repos",
                     "libsvn_subr",
                     "libsvn_wc",

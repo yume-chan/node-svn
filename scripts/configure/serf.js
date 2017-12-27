@@ -24,21 +24,36 @@ module.exports = function configure(platform, arch, apr) {
     const references = [];
 
     includes.push(...apr.references);
-    includes.push(root);
+    includes.push(serf);
 
+    // Node's OpenSSL have this
+    defines.push("OPENSSL_NO_DEPRECATED");
+
+    // Use static apr
     defines.push("APR_DECLARE_STATIC");
+
+    // From SConsturct script
+    defines.push("SERF_NO_SSL_BIO_WRAPPERS");
+    defines.push("SERF_NO_SSL_X509_STORE_WRAPPERS");
+    defines.push("SERF_HAVE_SSL_LOCKING_CALLBACKS");
+    defines.push("SERF_HAVE_OPENSSL_ALPN");
 
     sources.push(...find(path.resolve(serf, "src"), ".c"));
     sources.push(...find(path.resolve(serf, "buckets"), ".c"));
     sources.push(...find(path.resolve(serf, "auth"), ".c"));
     sources.push(...find(path.resolve(serf, "protocols"), ".c"));
 
-    references.push(root);
+    references.push(serf);
 
     switch (platform) {
         case "win32":
-            defines.push("WIN32", "WIN32_LEAN_AND_MEAN", "NOUSER",
-                "NOGDI", "NONLS", "NOCRYPT",
+            // From SConsturct script
+            defines.push("WIN32",
+                "WIN32_LEAN_AND_MEAN",
+                "NOUSER",
+                "NOGDI",
+                "NONLS",
+                "NOCRYPT",
                 "_CRT_SECURE_NO_WARNINGS",
                 "_CRT_NONSTDC_NO_WARNINGS");
 
