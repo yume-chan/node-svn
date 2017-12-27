@@ -4,6 +4,8 @@ const util = require("util");
 
 const vcxproj = require("./configure/vcxproj");
 const dsp = require("./configure/dsp");
+const serf = require("./configure/serf");
+const svn = require("./configure/svn");
 
 function find(folder, ext) {
     const result = [];
@@ -26,11 +28,26 @@ try {
     fs.mkdirSync("dependencies/include");
 } catch (err) { }
 
-function configure_expat() {
-    return vcxproj("dependencies/libexpat/expat/lib", "expat_static.vcxproj", "Release|Win32");
+async function configure_expat() {
+    const { includes, defines, sources } = await vcxproj("dependencies/libexpat/expat/lib", "expat_static.vcxproj", "Release|Win32");
+    includes.push(path.resolve(root, "dependencies/libexpat/expat/lib"));
+
+    const references = [];
+    references.push(path.resolve(root, "dependencies/libexpat/expat/lib"));
+
+    const configuration =
+        {
+            "target_name": "expat",
+            "type": "static_library",
+            "include_dirs": includes,
+            "defines": defines,
+            "sources": sources
+        };
+
+    return { includes, defines, sources, references, configuration };
 }
 
-function configure_apr() {
+function configure_apr(expat) {
     fs.copyFileSync(path.resolve(root, "dependencies/apr-gen-test-char", platform, "apr_escape_test_char.h"), path.resolve(root, "dependencies/include/apr_escape_test_char.h"));
 
     const h = path.resolve(root, "dependencies/include/apr.h");
@@ -44,53 +61,62 @@ function configure_apr() {
 
     fs.copyFileSync(path.resolve(root, "dependencies/apr", "include/apu_want.hw"), path.resolve(root, "dependencies/include/apu_want.h"));
     fs.copyFileSync(path.resolve(root, "dependencies/apr", "include/private/apu_select_dbm.hw"), path.resolve(root, "dependencies/include/apu_select_dbm.h"));
-    return dsp("dependencies/apr", "apr.dsp", `apr - ${arch === "x64" ? "x64" : "Win32"} Release`);
+    const { includes, defines, sources } = dsp("dependencies/apr", "apr.dsp", `apr - ${arch === "x64" ? "x64" : "Win32"} Release`);
+    includes.push(...expat.references);
+    includes.push(path.resolve(root, "dependencies/include"));
+
+    const references = [];
+    references.push(...expat.references);
+    references.push(path.resolve(root, "dependencies/include"));
+    references.push(path.resolve(root, "dependencies/apr/include"));
+
+    const configuration = {
+        "target_name": "apr",
+        "type": "static_library",
+        "include_dirs": includes,
+        "defines": defines,
+        "sources": sources
+    };
+
+    return { includes, defines, sources, references, configuration };
 }
 
 function configure_apr_iconv() {
     return dsp("dependencies/apr-iconv", "apriconv.dsp", `apriconv - ${arch === "x64" ? "x64" : "Win32"} Release`);
 }
 
-function configure_svn(name) {
-    fs.copyFileSync(path.resolve(root, "dependencies/subversion", "subversion/svn_private_config.hw"), path.resolve(root, "dependencies/include/svn_private_config.h"));
-
-    const svn = "dependencies/subversion/build/win32/vcnet-vcproj";
-    return vcxproj(svn, `libsvn_${name}.vcxproj`, `Release|${arch === "x64" ? "x64" : "Win32"}`);
-}
-
 async function main() {
     const expat = await configure_expat();
-    expat.includes.push("dependencies/libexpat/expat/lib");
+    expat.references = ["dependencies/libexpat/expat/lib"];
 
-    const apr = configure_apr();
-    apr.includes.push("dependencies/include");
+    const apr = configure_apr(expat);
 
     const apr_iconv = configure_apr_iconv();
 
-    const client = await configure_svn("client");
-    const diff = await configure_svn("diff");
-    const delta = await configure_svn("delta");
-    const svn_fs = await configure_svn("fs");
-    const fs_util = await configure_svn("fs_util");
-    const fs_fs = await configure_svn("fs_fs");
-    const fs_x = await configure_svn("fs_x");
-    const ra = await configure_svn("ra");
-    const ra_local = await configure_svn("ra_local");
-    const ra_svn = await configure_svn("ra_svn");
-    const repos = await configure_svn("repos");
-    const subr = await configure_svn("subr");
+    const serf_conf = serf(platform, arch, apr);
+
+    const client = await svn(platform, arch, "client", apr);
+    const diff = await svn(platform, arch, "diff", apr);
+    const delta = await svn(platform, arch, "delta", apr);
+    const svn_fs = await svn(platform, arch, "fs", apr);
+    const fs_util = await svn(platform, arch, "fs_util", apr);
+    const fs_fs = await svn(platform, arch, "fs_fs", apr);
+    const fs_x = await svn(platform, arch, "fs_x", apr);
+    const ra = await svn(platform, arch, "ra", apr);
+    const ra_local = await svn(platform, arch, "ra_local", apr);
+    const ra_svn = await svn(platform, arch, "ra_svn", apr);
+
+    const ra_serf = await svn(platform, arch, "ra_serf", apr);
+    ra_serf.includes.push(...serf_conf.references);
+
+    const repos = await svn(platform, arch, "repos", apr);
+    const subr = await svn(platform, arch, "subr", apr);
     subr.defines.push("XML_STATIC");
-    const wc = await configure_svn("wc");
+    const wc = await svn(platform, arch, "wc", apr);
 
     const configuration = {
         "targets": [
-            {
-                "target_name": "apr",
-                "type": "static_library",
-                "include_dirs": apr.includes.concat(expat.includes),
-                "defines": apr.defines,
-                "sources": apr.sources
-            },
+            apr.configuration,
             {
                 "target_name": "apr-iconv",
                 "type": "static_library",
@@ -105,97 +131,21 @@ async function main() {
                 "defines": expat.defines,
                 "sources": expat.sources
             },
-            {
-                "target_name": "libsvn_client",
-                "type": "static_library",
-                "include_dirs": client.includes.concat(apr.includes),
-                "defines": client.defines,
-                "sources": client.sources
-            },
-            {
-                "target_name": "libsvn_diff",
-                "type": "static_library",
-                "include_dirs": diff.includes.concat(apr.includes),
-                "defines": diff.defines,
-                "sources": diff.sources
-            },
-            {
-                "target_name": "libsvn_delta",
-                "type": "static_library",
-                "include_dirs": delta.includes.concat(apr.includes),
-                "defines": delta.defines,
-                "sources": delta.sources
-            },
-            {
-                "target_name": "libsvn_fs",
-                "type": "static_library",
-                "include_dirs": svn_fs.includes.concat(apr.includes),
-                "defines": svn_fs.defines,
-                "sources": svn_fs.sources
-            },
-            {
-                "target_name": "libsvn_fs_fs",
-                "type": "static_library",
-                "include_dirs": fs_fs.includes.concat(apr.includes),
-                "defines": fs_fs.defines,
-                "sources": fs_fs.sources
-            },
-            {
-                "target_name": "libsvn_fs_util",
-                "type": "static_library",
-                "include_dirs": fs_util.includes.concat(apr.includes),
-                "defines": fs_util.defines,
-                "sources": fs_util.sources
-            },
-            {
-                "target_name": "libsvn_fs_x",
-                "type": "static_library",
-                "include_dirs": fs_x.includes.concat(apr.includes),
-                "defines": fs_x.defines,
-                "sources": fs_x.sources
-            },
-            {
-                "target_name": "libsvn_ra",
-                "type": "static_library",
-                "include_dirs": ra.includes.concat(apr.includes),
-                "defines": ra.defines,
-                "sources": ra.sources
-            },
-            {
-                "target_name": "libsvn_ra_local",
-                "type": "static_library",
-                "include_dirs": ra_local.includes.concat(apr.includes),
-                "defines": ra_local.defines,
-                "sources": ra_local.sources
-            },
-            {
-                "target_name": "libsvn_ra_svn",
-                "type": "static_library",
-                "include_dirs": ra_svn.includes.concat(apr.includes),
-                "defines": ra_svn.defines,
-                "sources": ra_svn.sources
-            },
-            {
-                "target_name": "libsvn_repos",
-                "type": "static_library",
-                "include_dirs": repos.includes.concat(apr.includes),
-                "defines": repos.defines,
-                "sources": repos.sources
-            },
-            {
-                "target_name": "libsvn_subr",
-                "type": "static_library",
-                "include_dirs": subr.includes.concat(expat.includes, apr.includes),
-                "defines": subr.defines,
-                "sources": subr.sources
-            },
-            {
-                "target_name": "libsvn_wc",
-                "type": "static_library",
-                "include_dirs": wc.includes.concat(apr.includes),
-                "defines": wc.defines,
-                "sources": wc.sources
-            },
+            serf_conf.configuration,
+            client.configuration,
+            diff.configuration,
+            delta.configuration,
+            svn_fs.configuration,
+            fs_fs.configuration,
+            fs_util.configuration,
+            fs_x.configuration,
+            ra.configuration,
+            ra_local.configuration,
+            ra_serf.configuration,
+            ra_svn.configuration,
+            repos.configuration,
+            subr.configuration,
+            wc.configuration,
             {
                 "target_name": "svn",
                 "dependencies": [

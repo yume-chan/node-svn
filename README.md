@@ -78,7 +78,7 @@ git apply --directory=dependencies/libexpat ./dependencies/patches/libexpat.diff
 
 # Generate subversion project files
 cd dependencies/subversion
-python gen-make.py --with-zlib=../zlib --with-apr=../apr --with-apr-util=../apr --with-apr-iconv=../apr-iconv --with-sqlite=../sqlite-amalgamation --disable-shared --with-static-apr --vsnet-version=15 --disable-gmock
+python gen-make.py --with-zlib=../zlib --with-apr=../apr --with-apr-util=../apr --with-apr-iconv=../apr-iconv --with-sqlite=../sqlite-amalgamation --disable-shared --with-static-apr --vsnet-version=15 --disable-gmock --with-serf=../serf
 cd ../..
 
 # Build

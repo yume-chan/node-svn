@@ -22,10 +22,10 @@ module.exports = async function vcxproj(folder, file, condition) {
     const content = fs.readFileSync(path.resolve(project, file), "utf-8");
 
     const { Project } = await parseXml(content);
-    const configuration = Project.ItemDefinitionGroup.find(x => x.$.Condition === `'$(Configuration)|$(Platform)'=='${condition}'`).ClCompile[0];
+    const node = Project.ItemDefinitionGroup.find(x => x.$.Condition === `'$(Configuration)|$(Platform)'=='${condition}'`).ClCompile[0];
 
-    if (configuration.AdditionalIncludeDirectories !== undefined) {
-        const directories = configuration.AdditionalIncludeDirectories[0].split(";");
+    if (node.AdditionalIncludeDirectories !== undefined) {
+        const directories = node.AdditionalIncludeDirectories[0].split(";");
         for (const item of directories) {
             if (item.match(/^%\(.*?\)$/))
                 continue;
@@ -35,7 +35,7 @@ module.exports = async function vcxproj(folder, file, condition) {
         }
     }
 
-    const definitions = configuration.PreprocessorDefinitions[0].split(";");
+    const definitions = node.PreprocessorDefinitions[0].split(";");
     for (const item of definitions) {
         if (item.match(/^%\(.*?\)$/))
             continue;
@@ -46,10 +46,6 @@ module.exports = async function vcxproj(folder, file, condition) {
     const compiles = Project.ItemGroup.find(x => x.ClCompile !== undefined).ClCompile;
     for (const item of compiles) {
         const value = path.resolve(project, item.$.Include);
-
-        if (value.endsWith("inffas8664.c"))
-            continue;
-
         sources.push(path.relative(root, value));
     }
 
