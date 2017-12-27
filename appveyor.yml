@@ -7,6 +7,8 @@ environment:
     - nodejs_arch: x86
     - nodejs_arch: x64
 
+shallow_clone: true
+
 cache:
   - node_modules
 
