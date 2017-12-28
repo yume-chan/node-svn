@@ -25,7 +25,7 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}\\scripts\\preinstall.js",
+            "program": "${workspaceFolder}\\scripts\\configure.js",
             "cwd": "${workspaceFolder}"
         }
     ]

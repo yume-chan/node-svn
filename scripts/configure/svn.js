@@ -1,6 +1,8 @@
 const fs = require("fs");
 const path = require("path");
 
+const normalizePath = require("./normalize-path");
+
 const vcxproj = require("./vcxproj");
 
 const root = path.resolve(__dirname, "../../");

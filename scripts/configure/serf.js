@@ -1,9 +1,15 @@
 const fs = require("fs");
 const path = require("path");
 
-const root = path.resolve(__dirname, "../../");
-const serf = path.resolve(root, "dependencies/serf");
+const normalizePath = require("./normalize-path");
 
+const serf = path.resolve(normalizePath.root, "dependencies/serf");
+
+/**
+ * @param {string} folder
+ * @param {string} extension
+ * @returns {string[]}
+ */
 function find(folder, extension) {
     const result = [];
     for (const name of fs.readdirSync(folder)) {
@@ -24,7 +30,8 @@ module.exports = function configure(platform, arch, apr) {
     const references = [];
 
     includes.push(...apr.references);
-    includes.push(serf);
+    includes.push("dependencies/zlib");
+    includes.push(normalizePath(serf));
 
     // Node's OpenSSL have this
     defines.push("OPENSSL_NO_DEPRECATED");
@@ -38,12 +45,12 @@ module.exports = function configure(platform, arch, apr) {
     defines.push("SERF_HAVE_SSL_LOCKING_CALLBACKS");
     defines.push("SERF_HAVE_OPENSSL_ALPN");
 
-    sources.push(...find(path.resolve(serf, "src"), ".c"));
-    sources.push(...find(path.resolve(serf, "buckets"), ".c"));
-    sources.push(...find(path.resolve(serf, "auth"), ".c"));
-    sources.push(...find(path.resolve(serf, "protocols"), ".c"));
+    sources.push(...find(path.resolve(serf, "src"), ".c").map(normalizePath));
+    sources.push(...find(path.resolve(serf, "buckets"), ".c").map(normalizePath));
+    sources.push(...find(path.resolve(serf, "auth"), ".c").map(normalizePath));
+    sources.push(...find(path.resolve(serf, "protocols"), ".c").map(normalizePath));
 
-    references.push(serf);
+    references.push(normalizePath(serf));
 
     switch (platform) {
         case "win32":
@@ -67,12 +74,19 @@ module.exports = function configure(platform, arch, apr) {
             throw new Error("Serf: Platform not supported!");
     }
 
+    const dependencies = [];
+    if (process.env.npm_config_runtime === "electron") {
+        // Electron doesn't export openssl, compile from source
+        dependencies.push("dependencies/openssl/openssl.gyp:openssl");
+    }
+
     const configuration = {
         "target_name": "serf",
         "type": "static_library",
         "include_dirs": includes,
-        "defines": defines,
-        "sources": sources,
+        dependencies,
+        defines,
+        sources,
     };
 
     return { includes, defines, sources, references, configuration };

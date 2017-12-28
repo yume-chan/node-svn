@@ -30,10 +30,10 @@ try {
 
 async function configure_expat() {
     const { includes, defines, sources } = await vcxproj("dependencies/libexpat/expat/lib", "expat_static.vcxproj", "Release|Win32");
-    includes.push(path.resolve(root, "dependencies/libexpat/expat/lib"));
+    includes.push(path.normalize("dependencies/libexpat/expat/lib"));
 
     const references = [];
-    references.push(path.resolve(root, "dependencies/libexpat/expat/lib"));
+    references.push(path.normalize("dependencies/libexpat/expat/lib"));
 
     const configuration =
         {
@@ -61,14 +61,15 @@ function configure_apr(expat) {
 
     fs.copyFileSync(path.resolve(root, "dependencies/apr", "include/apu_want.hw"), path.resolve(root, "dependencies/include/apu_want.h"));
     fs.copyFileSync(path.resolve(root, "dependencies/apr", "include/private/apu_select_dbm.hw"), path.resolve(root, "dependencies/include/apu_select_dbm.h"));
+
     const { includes, defines, sources } = dsp("dependencies/apr", "apr.dsp", `apr - ${arch === "x64" ? "x64" : "Win32"} Release`);
     includes.push(...expat.references);
-    includes.push(path.resolve(root, "dependencies/include"));
+    includes.push(path.normalize("dependencies/include"));
 
     const references = [];
     references.push(...expat.references);
-    references.push(path.resolve(root, "dependencies/include"));
-    references.push(path.resolve(root, "dependencies/apr/include"));
+    references.push(path.normalize("dependencies/include"));
+    references.push(path.normalize("dependencies/apr/include"));
 
     const configuration = {
         "target_name": "apr",
@@ -87,7 +88,6 @@ function configure_apr_iconv() {
 
 async function main() {
     const expat = await configure_expat();
-    expat.references = ["dependencies/libexpat/expat/lib"];
 
     const apr = configure_apr(expat);
 

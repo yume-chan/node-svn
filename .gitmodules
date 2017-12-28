@@ -22,7 +22,11 @@
 	path = dependencies/serf
 	url = https://github.com/apache/serf.git
 	shallow = true
+[submodule "dependencies/--force"]
+	path = dependencies/--force
+	url = https://github.com/madler/zlib.git
+	branch = master
 [submodule "dependencies/zlib"]
 	path = dependencies/zlib
 	url = https://github.com/madler/zlib.git
-	shallow = true
+	branch = master
