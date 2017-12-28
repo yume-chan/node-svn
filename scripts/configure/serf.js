@@ -30,7 +30,6 @@ module.exports = function configure(platform, arch, apr) {
     const references = [];
 
     includes.push(...apr.references);
-    includes.push("dependencies/zlib");
     includes.push(normalizePath(serf));
 
     // Node's OpenSSL have this
@@ -76,7 +75,8 @@ module.exports = function configure(platform, arch, apr) {
 
     const dependencies = [];
     if (process.env.npm_config_runtime === "electron") {
-        // Electron doesn't export openssl, compile from source
+        // Electron doesn't export openssl and zlib, compile from source
+        includes.push("dependencies/zlib");
         dependencies.push("dependencies/openssl/openssl.gyp:openssl");
     }
 
