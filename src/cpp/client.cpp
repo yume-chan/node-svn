@@ -194,6 +194,8 @@ client::client() {
     svn_auth_set_parameter(_context->auth_baton, SVN_AUTH_PARAM_CONFIG_DIR, path);
 
     _context->log_msg_func3 = invoke_log_message;
+
+    _context->notify_baton2 = this;
     _context->notify_func2  = invoke_notify;
 }
 
