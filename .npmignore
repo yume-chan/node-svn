@@ -55,3 +55,9 @@ dependencies/subversion/**
 !dependencies/**/*.hw
 !dependencies/**/*.vcxproj
 !dependencies/**/*.dsp
+
+!dependencies/serf/buckets/hpack_huffman.inc
+
+!dependencies/openssl/**
+
+.npmrc

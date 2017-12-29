@@ -147,14 +147,25 @@ struct baton_wrapper {
     const T& value;
 };
 
-static svn_error_t* get_commit_message(const char**              log_msg,
+static svn_error_t* invoke_log_message(const char**              log_msg,
                                        const char**              tmp_file,
                                        const apr_array_header_t* commit_items,
                                        void*                     raw_baton,
                                        apr_pool_t*               pool) {
-    auto message_baton = static_cast<baton_wrapper<std::string>*>(raw_baton);
-    *log_msg           = static_cast<const char*>(apr_pmemdup(pool, message_baton->value.c_str(), message_baton->value.size()));
+    auto baton   = static_cast<baton_wrapper<std::string>*>(raw_baton);
+    auto message = baton->value;
+    *log_msg     = static_cast<const char*>(apr_pmemdup(pool, message.c_str(), message.size() + 1));
     return nullptr;
+}
+
+static void invoke_notify(void*                  raw_baton,
+                          const svn_wc_notify_t* notify,
+                          apr_pool_t*            pool) {
+    auto client = static_cast<svn::client*>(raw_baton);
+
+    if (client->notify_function) {
+        client->notify_function(nullptr);
+    }
 }
 
 namespace svn {
@@ -182,7 +193,8 @@ client::client() {
     check_result(svn_config_get_user_config_path(&path, nullptr, nullptr, _pool));
     svn_auth_set_parameter(_context->auth_baton, SVN_AUTH_PARAM_CONFIG_DIR, path);
 
-    _context->log_msg_func3 = get_commit_message;
+    _context->log_msg_func3 = invoke_log_message;
+    _context->notify_func2  = invoke_notify;
 }
 
 client::client(client&& other)

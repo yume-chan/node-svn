@@ -46,6 +46,7 @@ export type Revision = RevisionKind.base |
     { date: number };
 
 export interface DepthOption {
+    /** The depth of the operation. */
     depth: Depth;
 }
 
@@ -62,10 +63,12 @@ export type RemoveFromChangelistsOptions = DepthOption & ChangelistsOption;
 export type AddOptions = DepthOption;
 
 export interface RevisionOption {
+    /** The operative revision. */
     revision: Revision;
 }
 
 export interface PegRevisionOpitons extends RevisionOption {
+    /** The peg revision. */
     peg_revision: Revision;
 }
 
@@ -81,6 +84,7 @@ export type CheckoutOptions = DepthOption & PegRevisionOpitons;
 export type InfoOptions = DepthOption & PegRevisionOpitons;
 
 export type StatusOptions = DepthOption & RevisionOption & {
+    /** If true, don't process externals definitions as part of this operation. */
     ignore_externals: boolean;
 };
 
@@ -117,7 +121,16 @@ export class Client {
 
     add(path: string, options?: Partial<AddOptions>): void;
     cat(path: string, options?: Partial<CatOptions>): CatResult;
-    checkout(url: string, path: string, options?: Partial<CheckoutOptions>): void;
+    /**
+     * Check out a working copy from a repository.
+     *
+     * @param url The repository URL of the checkout source.
+     * @param path The root of the new working copy.
+     * @param options The options of the checkout.
+     *
+     * @returns The value of the revision checked out from the repository.
+     */
+    checkout(url: string, path: string, options?: Partial<CheckoutOptions>): number;
     commit(path: string | string[], message: string, callback: CommitCallback): void;
 
     info(path: string, callback: InfoCallback): void;
@@ -147,7 +160,16 @@ export class AsyncClient {
 
     add(path: string, options?: Partial<AddOptions>): Promise<void>;
     cat(path: string, options?: Partial<CatOptions>): Promise<CatResult>;
-    checkout(url: string, path: string, options?: Partial<CheckoutOptions>): Promise<void>;
+    /**
+     * Check out a working copy from a repository.
+     *
+     * @param url The repository URL of the checkout source.
+     * @param path The root of the new working copy.
+     * @param options The options of the checkout.
+     *
+     * @returns The value of the revision checked out from the repository.
+     */
+    checkout(url: string, path: string, options?: Partial<CheckoutOptions>): Promise<number>;
     commit(path: string | string[], message: string, callback: CommitCallback): Promise<void>;
 
     info(path: string, callback: InfoCallback): Promise<void>;

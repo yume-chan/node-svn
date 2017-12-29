@@ -494,6 +494,7 @@ struct revision {
             case revision_kind::working:
             case revision_kind::head:
                 this->kind = kind;
+                this->date = 0;
                 break;
             default:
                 throw svn_type_error("");
@@ -535,5 +536,8 @@ struct commit_info {
     /** repository root, may be @c NULL if unknown.
     @since New in 1.7. */
     const char* repos_root;
+};
+
+struct notify_info {
 };
 } // namespace svn
