@@ -14,19 +14,17 @@
 	path = dependencies/subversion
 	url = https://github.com/apache/subversion.git
 	shallow = true
-[submodule "dependencies/libexpat"]
-	path = dependencies/libexpat
-	url = https://github.com/libexpat/libexpat.git
-	shallow = true
 [submodule "dependencies/serf"]
 	path = dependencies/serf
 	url = https://github.com/apache/serf.git
 	shallow = true
-[submodule "dependencies/--force"]
-	path = dependencies/--force
-	url = https://github.com/madler/zlib.git
-	branch = master
 [submodule "dependencies/zlib"]
 	path = dependencies/zlib
 	url = https://github.com/madler/zlib.git
 	branch = master
+	shallow = true
+[submodule "dependencies/libexpat"]
+	path = dependencies/libexpat
+	url = https://github.com/libexpat/libexpat.git
+	branch = master
+	shallow = true
