@@ -1,6 +1,6 @@
 # node-svn
 
-[![Maintenance](https://img.shields.io/maintenance/yes/2017.svg)]()
+[![Maintenance](https://img.shields.io/maintenance/yes/2018.svg)]()
 
 **Work In Progress**
 
@@ -17,6 +17,7 @@ Wrap SVN to Node Native Addon.
     - [Docs](#docs)
     - [Thread safety](#thread-safety)
     - [Roadmap](#roadmap)
+    - [License](#license)
 
 ## build-svn branch
 
@@ -40,16 +41,30 @@ In this way, on Windows it won't use dlls from other SVN installations, on Linux
 
 ## Dependencies
 
-| Name                   | Introduction                                    | Usage      | Note                                                                             |
-| ---------------------- | ----------------------------------------------- | ---------- | -------------------------------------------------------------------------------- |
-| zlib                   | ZLib compression library                        | apr, serf  | node.lib includes dynamic version of zlib, so it is only used for configuration. |
-| openssl                | crypto library                                  | apr, serf  | node.lib includes dynamic version of openssl                                     |
-| node-apr-gen-test-char | A node wrapper for apr gen-test-char executable | apr        | Used to generate a header file (apr\_escape\_test_char.h) required by apr        |
-| expat                  | An XML parser                                   | apr        |                                                                                  |
-| apr                    | Apache Portable Runtime                         | subversion | apr-util has been merged into apr-2                                              |
-| sqlite-amalgamation    | SQLite database                                 | subversion | Unofficial mirror for single file version                                        |
-| serf                   | An HTTP client library                          | subversion |                                                                                  |
-| subversion             | Subversion library                              | node-svn   | Only static libraries are used                                                   |
+| Name                   | Introduction                                      | Required by           | Note                                                                      |
+| ---------------------- | ------------------------------------------------- | --------------------- | ------------------------------------------------------------------------- |
+| node-apr-gen-test-char | A node wrapper for apr's gen-test-char executable | apr                   | Used to generate a header file (`apr_escape_test_char.h`) required by apr |
+| zlib                   | ZLib compression library                          | apr, serf, subversion | See below                                                                 |
+| expat                  | An XML parser                                     | apr                   |                                                                           |
+| openssl                | crypto library                                    | serf                  | See below                                                                 |
+| sqlite-amalgamation    | SQLite database                                   | subversion            | Unofficial mirror for amalgamation version                                |
+| apr                    | Apache Portable Runtime                           | subversion            | apr-util has been merged into apr-2                                       |
+| serf                   | An HTTP client library                            | subversion            |                                                                           |
+| subversion             | Subversion library                                | node-svn              | Only static libraries are used                                            |
+
+**Note for ZLib:**
+
+Node.js and Electron all contain ZLib symbols, so this library can dynamic link to `node.lib` or `io.lib` to use ZLib.
+
+But subversion's configuration script need ZLib, so a copy of ZLib is included.
+
+**Note for OpenSSL:**
+
+For Node.js, `node.lib` contains OpenSSL symbols, so this library can dynamic link to `node.lib` to use OpenSSL.
+
+For Electron, `io.lib` doesn't contain OpenSSL symbols (See [this blog post](https://electronjs.org/blog/electron-internals-using-node-as-a-library#shared-library-or-static-library) for more information). So this library need to compile OpenSSL by itself.
+
+The source code in `dependencies/openssl` folder is taken from [nodejs/node repository](https://github.com/nodejs/node/tree/master/deps/openssl), with a modified `openssl.gyp` to generate static library.
 
 ## Requirements
 
@@ -128,3 +143,16 @@ This project includes a patch to use **Serialized** mode instead, so you should 
 - [ ] You name it
 
 **Help wanted!** How to create custom Error class in Node.js Native Addon?
+
+## License
+
+| Name                   | License                                                                            | Note                                                               |
+| ---------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| node-apr-gen-test-char | [MIT](https://github.com/yume-chan/node-apr-gen-test-char/blob/master/LICENSE)     |                                                                    |
+| zlib                   | [zlib](https://github.com/madler/zlib/blob/master/zlib.h)                          |                                                                    |
+| openssl                | [OpenSSL](https://github.com/openssl/openssl/blob/master/LICENSE)                  | Node.js: [MIT](https://github.com/nodejs/node/blob/master/LICENSE) |
+| sqlite-amalgamation    | [BSD-3-clause](https://github.com/azadkuh/sqlite-amalgamation/blob/master/LICENSE) | SQLite: [Public Domain](http://www.sqlite.org/copyright.html)      |
+| apr                    | [Apache 2.0](https://github.com/apache/apr/blob/trunk/LICENSE)                     |                                                                    |
+| serf                   | [Apache 2.0](https://github.com/apache/apr/blob/trunk/LICENSE)                     |                                                                    |
+| subversion             | [Apache 2.0](https://github.com/apache/subversion/blob/trunk/LICENSE)              |                                                                    |
+| node-svn               | [MIT](https://github.com/yume-chan/node-svn/blob/master/LICENSE)                   |                                                                    |
