@@ -531,12 +531,13 @@ METHOD_END
 
 METHOD_BEGIN(update)
     auto paths = convert_array(args[0], false);
+    auto single = args[0]->IsString();
 
     ASYNC_BEGIN(std::vector<int32_t>, paths)
         ASYNC_RETURN(_this->_client->update(paths));
-    ASYNC_END(args)
+    ASYNC_END(single)
 
-    if (args[0]->IsString()) {
+    if (single) {
         auto result = v8::New<v8::Integer>(isolate, ASYNC_RESULT[0]);
         METHOD_RETURN(result);
     } else {

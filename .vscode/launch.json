@@ -5,28 +5,12 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python",
-            "type": "python",
-            "request": "launch",
-            "stopOnEntry": true,
-            "pythonPath": "C:/Python/2.7.14-win-x64/python.exe",
-            "program": "${file}",
-            "cwd": "${workspaceFolder}/dependencies/subversion",
-            "env": {},
-            "envFile": "${workspaceFolder}/.env",
-            "debugOptions": [
-                "RedirectOutput"
-            ],
-            "args": [
-                "--with-apr=../apr --with-apr-util=../apr --with-apr-iconv=../apr-iconv --with-serf=../serf --with-sqlite=../sqlite-amalgamation --disable-shared --with-static-apr --vsnet-version=14 --disable-gmock"
-            ]
-        },
-        {
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}\\scripts\\configure.js",
-            "cwd": "${workspaceFolder}"
+            "program": "${workspaceFolder}\\scripts\\debugger.js",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
         }
     ]
 }

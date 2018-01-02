@@ -870,7 +870,7 @@ std::vector<int32_t> client::update(const string_vector& paths,
 
     auto result = std::vector<int32_t>(raw_result_revs->nelts);
     for (int i = 0; i < raw_result_revs->nelts; i++)
-        result.push_back(APR_ARRAY_IDX(raw_result_revs, i, int32_t));
+        result[i] = APR_ARRAY_IDX(raw_result_revs, i, int32_t);
     return result;
 }
 
