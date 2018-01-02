@@ -8,8 +8,9 @@
             "type": "node",
             "request": "launch",
             "name": "Launch Program",
-            "program": "${workspaceFolder}\\scripts\\configure.js",
-            "cwd": "${workspaceFolder}"
+            "program": "${workspaceFolder}\\scripts\\debugger.js",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
         }
     ]
 }

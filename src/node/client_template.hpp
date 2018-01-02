@@ -70,11 +70,11 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
                                       const char*                  key,
                                       svn::revision_kind           defaultValue) {
     if (options.IsEmpty())
-        return svn::revision{defaultValue};
+        return svn::revision(defaultValue);
 
     auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
-        return svn::revision{defaultValue};
+        return svn::revision(defaultValue);
 
     if (value->IsNumber()) {
         auto simple = static_cast<svn::revision_kind>(value->Int32Value());
@@ -85,7 +85,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
             case svn::revision_kind::base:
             case svn::revision_kind::working:
             case svn::revision_kind::head:
-                return svn::revision{simple};
+                return svn::revision(simple);
             case svn::revision_kind::number:
             case svn::revision_kind::date:
             default:
@@ -358,16 +358,16 @@ METHOD_BEGIN(checkout)
     auto path = convert_string(args[1]);
 
     auto options      = convert_options(args[2]);
-    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
-    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
+    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::head);
+    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::head);
     auto depth        = convert_depth(isolate, options, "depth", svn::depth::infinity);
 
-    ASYNC_BEGIN(void, url, path, peg_revision, revision, depth)
-        _this->_client->checkout(url, path, peg_revision, revision, depth);
+    ASYNC_BEGIN(int32_t, url, path, peg_revision, revision, depth)
+        ASYNC_RETURN(_this->_client->checkout(url, path, peg_revision, revision, depth));
     ASYNC_END()
 
-    ASYNC_RESULT;
-    METHOD_RETURN(v8::Undefined(isolate));
+    auto result = ASYNC_RESULT;
+    METHOD_RETURN(v8::New<v8::Integer>(isolate, result));
 METHOD_END
 
 static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate, const v8::Local<v8::Value>& value) {
@@ -531,12 +531,13 @@ METHOD_END
 
 METHOD_BEGIN(update)
     auto paths = convert_array(args[0], false);
+    auto single = args[0]->IsString();
 
     ASYNC_BEGIN(std::vector<int32_t>, paths)
         ASYNC_RETURN(_this->_client->update(paths));
-    ASYNC_END(args)
+    ASYNC_END(single)
 
-    if (args[0]->IsString()) {
+    if (single) {
         auto result = v8::New<v8::Integer>(isolate, ASYNC_RESULT[0]);
         METHOD_RETURN(result);
     } else {

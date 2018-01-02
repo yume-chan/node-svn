@@ -1,0 +1,59 @@
+﻿diff --git a/build/generator/gen_win_dependencies.py b/build/generator/gen_win_dependencies.py
+index a9ee652567..ab09db43d2 100644
+--- a/build/generator/gen_win_dependencies.py
++++ b/build/generator/gen_win_dependencies.py
+@@ -440,25 +440,25 @@ class GenDependenciesBase(gen_base.GeneratorBase):
+
+     inc_base = os.path.join(self.apr_util_path, 'include')
+
+-    if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apu_version.h')):
++    if os.path.isfile(os.path.join(inc_base, 'apr-1', 'apr_version.h')):
+       inc_path = os.path.join(inc_base, 'apr-1')
+-    elif os.path.isfile(os.path.join(inc_base, 'apu_version.h')):
++    elif os.path.isfile(os.path.join(inc_base, 'apr_version.h')):
+       inc_path = inc_base
+     else:
+-      sys.stderr.write("ERROR: 'apu_version' not found.\n")
++      sys.stderr.write("ERROR: 'apr_version' not found.\n")
+       sys.stderr.write("Use '--with-apr-util' option to configure APR-Util location.\n")
+       sys.exit(1)
+
+-    version_file_path = os.path.join(inc_path, 'apu_version.h')
++    version_file_path = os.path.join(inc_path, 'apr_version.h')
+     txt = open(version_file_path).read()
+
+-    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
++    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
+     major = int(vermatch.group(1))
+
+-    vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
++    vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
+     minor = int(vermatch.group(1))
+
+-    vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
++    vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
+     patch = int(vermatch.group(1))
+
+     version = (major, minor, patch)
+@@ -550,7 +550,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
+       lib_dir = os.path.join(self.apr_util_path, 'xml/expat/lib/LibR')
+       debug_lib_dir = os.path.join(self.apr_util_path, 'xml/expat/lib/LibD')
+     else:
+-      inc_path = os.path.join(self.apr_util_path, 'include')
++      inc_path = os.path.join(self.apr_util_path, '../libexpat/expat/lib')
+       lib_dir = os.path.join(self.apr_util_path, 'lib')
+       debug_lib_dir = None
+
+diff --git a/subversion/libsvn_subr/sqlite.c b/subversion/libsvn_subr/sqlite.c
+index 43c49e30cd..e553b1cda9 100644
+--- a/subversion/libsvn_subr/sqlite.c
++++ b/subversion/libsvn_subr/sqlite.c
+@@ -811,7 +811,7 @@ init_sqlite(void *baton, apr_pool_t *pool)
+   /* If SQLite has been already initialized, sqlite3_config() returns
+      SQLITE_MISUSE. */
+   {
+-    int err = sqlite3_config(SQLITE_CONFIG_MULTITHREAD);
++    int err = sqlite3_config(SQLITE_CONFIG_SERIALIZED);
+     if (err != SQLITE_OK && err != SQLITE_MISUSE)
+       return svn_error_createf(SQLITE_ERROR_CODE(err), NULL,
+                                _("Could not configure SQLite [S%d]"), err);

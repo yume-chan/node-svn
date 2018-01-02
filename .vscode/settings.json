@@ -6,6 +6,9 @@
         "*.gyp": "json",
         "list": "cpp",
         "system_error": "cpp",
-        "xlocale": "cpp"
-    }
+        "xlocale": "cpp",
+        "apr_buckets.h": "c",
+        "gen_test_char.c": "cpp"
+    },
+    "git.ignoreLimitWarning": true
 }

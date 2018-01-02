@@ -6,15 +6,14 @@ bin
 obj
 
 # Node-gyp Output
-build
+/build
 
 # Node-gyp Config
-binding.gyp
+/binding.gyp
 
 # Node Modules
 node_modules
 
-# Node-gyp SDK
-include/node
-lib/node
-lib/node-sdk
+/dependencies/include
+
+/node-svn-*.tgz

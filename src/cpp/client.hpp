@@ -37,6 +37,8 @@ class client : public std::enable_shared_from_this<client> {
 
     ~client();
 
+    std::function<void(notify_info*)> notify_function;
+
     void add_to_changelist(const std::string&   path,
                            const std::string&   changelist,
                            depth                depth       = depth::infinity,

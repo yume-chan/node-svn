@@ -1,0 +1,33 @@
+image: Visual Studio 2017
+
+environment:
+  nodejs_version: "Current"
+
+  matrix:
+    - nodejs_arch: x86
+    - nodejs_arch: x64
+
+clone_depth: 2
+
+cache:
+  - node_modules
+
+install:
+  - ps: Install-Product node $env:nodejs_version $env:nodejs_arch
+  - git submodule update --init
+  - git apply --directory=dependencies/subversion ./dependencies/patches/subversion.diff
+  - git apply --directory=dependencies/libexpat ./dependencies/patches/libexpat.diff
+  - git apply --directory=dependencies/serf ./dependencies/patches/serf.diff
+  - cd dependencies/subversion
+  - python gen-make.py --with-zlib=../zlib --with-apr=../apr --with-apr-util=../apr --with-apr-iconv=../apr-iconv --with-sqlite=../sqlite-amalgamation --disable-shared --with-static-apr --vsnet-version=15 --disable-gmock --with-serf=../serf
+  - cd ../..
+
+build_script: npm install
+
+test_script:
+  - npm test -- --reporter mocha-appveyor-reporter & exit 0
+
+artifacts:
+  - path: build/Release/svn.node
+    name: Binary
+    type: File

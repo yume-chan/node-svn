@@ -6,21 +6,28 @@ bin
 obj
 
 # Node-gyp output
-build
+/build
 
-# (include) Node.js modules
-# node_modules
+# Node-gyp Config
+/binding.gyp
 
-# Node-gyp SDK
-include/node
-lib/node
-lib/node-sdk
+# Node Modules
+#node_modules
+
+/dependencies/include
+
+/node-svn-*.tgz
+
+/dependencies/patches
 
 # Visual Studio Code config
-.vscode
+/.vscode
+
+# Tests
+/test
 
 # Clang-format config
-.clang-format
+/.clang-format
 
 # Visual Studio project files
 node-svn.sln
@@ -28,9 +35,29 @@ node-svn.vcxproj
 node-svn.vcxproj.filters
 node-svn.vcxproj.user
 
-# Node.js include and library
-include/node
-lib/node.lib
+.gitmodules
 
-# Tests
-tests
+appveyor.yml
+
+# Unused dependency files
+dependencies/**
+
+dependencies/libexpat/**
+!dependencies/libexpat/expat/lib/**
+
+dependencies/subversion/**
+!dependencies/subversion/build/win32/vcnet-vcproj/libsvn_*.vcxproj
+!dependencies/subversion/subversion/include/**
+!dependencies/subversion/subversion/libsvn_*/**
+
+!dependencies/**/*.c
+!dependencies/**/*.h
+!dependencies/**/*.hw
+!dependencies/**/*.vcxproj
+!dependencies/**/*.dsp
+
+!dependencies/serf/buckets/hpack_huffman.inc
+
+!dependencies/openssl/**
+
+.npmrc

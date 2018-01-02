@@ -3,9 +3,15 @@
     "bugs": {
         "url": "https://github.com/yume-chan/node-svn/issues"
     },
-    "description": "",
+    "description": "Wrap SVN to Node Native Addon.",
     "devDependencies": {
-        "@types/node": "^8.0.46"
+        "@types/chai": "^4.0.10",
+        "@types/mocha": "^2.2.44",
+        "@types/node": "^8.0.46",
+        "chai": "^4.1.2",
+        "mocha": "^4.0.1",
+        "mocha-appveyor-reporter": "^0.4.0",
+        "xml2js": "^0.4.19"
     },
     "directories": {
         "test": "tests"
@@ -22,11 +28,13 @@
         "url": "git+https://github.com/yume-chan/node-svn.git"
     },
     "scripts": {
-        "install": "node-gyp rebuild",
-        "postinstall": "node scripts/postinstall.js",
-        "preinstall": "node scripts/preinstall.js",
+        "install": "node scripts/configure.js",
+        "postinstall": "node-gyp rebuild",
         "test": "mocha"
     },
     "types": "scripts/index.d.ts",
-    "version": "0.0.1"
+    "version": "0.0.1",
+    "bundleDependencies": [
+        "xml2js"
+    ]
 }
