@@ -4,30 +4,18 @@
 
 **Work In Progress**
 
-Wrap SVN to Node Native Addon.
+Wrap Subversion (SVN) to Node Native Addon.
 
 - [node-svn](#node-svn)
-    - [build-svn branch](#build-svn-branch)
     - [Platform table](#platform-table)
     - [Dependencies](#dependencies)
     - [Requirements](#requirements)
     - [Patches](#patches)
     - [Building](#building)
-    - [Generate patch file on Windows](#generate-patch-file-on-windows)
     - [Docs](#docs)
     - [Thread safety](#thread-safety)
     - [Roadmap](#roadmap)
     - [License](#license)
-
-## build-svn branch
-
-This branch contains source codes for all dependencies.
-
-The `scripts/configure.js` script will configure them into `binding.gyp`.
-
-All dependencies will be built as static library, and linked into a single dynamic library.
-
-In this way, on Windows it won't use dlls from other SVN installations, on Linux the binrary doesn't need to be patched to change their library searching path.
 
 ## Platform table
 
@@ -44,9 +32,9 @@ In this way, on Windows it won't use dlls from other SVN installations, on Linux
 | Name                   | Introduction                                      | Required by           | Note                                                                      |
 | ---------------------- | ------------------------------------------------- | --------------------- | ------------------------------------------------------------------------- |
 | node-apr-gen-test-char | A node wrapper for apr's gen-test-char executable | apr                   | Used to generate a header file (`apr_escape_test_char.h`) required by apr |
-| zlib                   | ZLib compression library                          | apr, serf, subversion | See below                                                                 |
+| zlib                   | ZLib compression library                          | apr, serf, subversion | *See below*                                                               |
 | expat                  | An XML parser                                     | apr                   |                                                                           |
-| openssl                | crypto library                                    | serf                  | See below                                                                 |
+| openssl                | crypto library                                    | serf                  | *See below*                                                               |
 | sqlite-amalgamation    | SQLite database                                   | subversion            | Unofficial mirror for amalgamation version                                |
 | apr                    | Apache Portable Runtime                           | subversion            | apr-util has been merged into apr-2                                       |
 | serf                   | An HTTP client library                            | subversion            |                                                                           |
@@ -54,17 +42,17 @@ In this way, on Windows it won't use dlls from other SVN installations, on Linux
 
 **Note for ZLib:**
 
-Node.js and Electron all contain ZLib symbols, so this library can dynamic link to `node.lib` or `io.lib` to use ZLib.
+Node.js and Electron all export ZLib symbols, so this library can dynamic link to `node.lib` or `io.lib` to use ZLib.
 
 But subversion's configuration script need ZLib, so a copy of ZLib is included.
 
 **Note for OpenSSL:**
 
-For Node.js, `node.lib` contains OpenSSL symbols, so this library can dynamic link to `node.lib` to use OpenSSL.
+For Node.js, `node.lib` exports OpenSSL symbols, so this library can dynamic link to `node.lib` to use OpenSSL.
 
-For Electron, `io.lib` doesn't contain OpenSSL symbols (See [this blog post](https://electronjs.org/blog/electron-internals-using-node-as-a-library#shared-library-or-static-library) for more information). So this library need to compile OpenSSL by itself.
+For Electron, `io.lib` doesn't export OpenSSL symbols (See [this blog post](https://electronjs.org/blog/electron-internals-using-node-as-a-library#shared-library-or-static-library) for more information). So this library need to compile OpenSSL by itself.
 
-The source code in `dependencies/openssl` folder is taken from [nodejs/node repository](https://github.com/nodejs/node/tree/master/deps/openssl), with a modified `openssl.gyp` to generate static library.
+The source code in `dependencies/openssl` folder is taken from [nodejs/node repository](https://github.com/nodejs/node/tree/master/deps/openssl), with a modified `openssl.gyp` to build as static library.
 
 ## Requirements
 
@@ -105,14 +93,11 @@ npm install
 npm test
 ````
 
-## Generate patch file on Windows
+The `scripts/configure.js` script will configure dependencies into `binding.gyp`.
 
-````shell
-cd dependencies/subversion
-git diff --no-color | Out-File -Encoding utf8 ../patches/subversion.diff
-````
+All dependencies will be built as static library, and linked into one single dynamic library.
 
-**Then change the line ending to LF in an editor!**
+In this way, on Windows it won't use dlls from other SVN installations, on Linux the binrary doesn't need to be patched to change their library searching path.
 
 ## Docs
 
@@ -126,7 +111,7 @@ SVN uses SQLite for databasing, SQLite has three different threading modes: (Ori
 1. **Multi-thread**. In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.
 1. **Serialized**. In serialized mode, SQLite can be safely used by multiple threads with no restriction.
 
-Orignally, SVN uses **Multi-thread** mode, means you *can* use a single `AsyncClient` to access multiple repositories concurrently, but *can not* apply multiple operations (even all of them are reading) to a single repository at the same time.
+Orignally, SVN uses **Multi-thread** mode, means you *can* use a single client to access multiple repositories concurrently, but *can not* apply multiple operations (even all of them are reading) to a single repository at the same time.
 
 To make things worse, SQLite will just throw access violation when you try to do this, cause your program to crash.
 

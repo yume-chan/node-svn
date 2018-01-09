@@ -52,10 +52,10 @@ function configure_apr(expat) {
 
     const h = path.resolve(root, "dependencies/include/apr.h");
 
-    // Modify APR_HAVE_IPV6 to 0
-    // Or it cannot find `IF_NAMESIZE`
     fs.copyFileSync(path.resolve(root, "dependencies/apr", "include/apr.hw"), h);
     let content = fs.readFileSync(h, "utf-8");
+    // Change APR_HAVE_IPV6 to 0
+    // Or it cannot find `IF_NAMESIZE`
     content = content.replace(/APR_HAVE_IPV6\s+1/, "APR_HAVE_IPV6 0");
     fs.writeFileSync(h, content);
 
@@ -63,6 +63,8 @@ function configure_apr(expat) {
     fs.copyFileSync(path.resolve(root, "dependencies/apr", "include/private/apu_select_dbm.hw"), path.resolve(root, "dependencies/include/apu_select_dbm.h"));
 
     const { includes, defines, sources } = dsp("dependencies/apr", "apr.dsp", `apr - ${arch === "x64" ? "x64" : "Win32"} Release`);
+    // Target Windows 7
+    defines.push("_WIN32_WINNT=0x0601");
     includes.push(...expat.references);
     includes.push(path.normalize("dependencies/include"));
 
