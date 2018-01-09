@@ -4,7 +4,7 @@
 
 **Work In Progress**
 
-Wrap Subversion (SVN) to Node Native Addon.
+Wrap Subversion (SVN) to Node Native Addon
 
 - [node-svn](#node-svn)
     - [Platform table](#platform-table)

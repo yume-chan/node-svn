@@ -3,13 +3,13 @@
     "bugs": {
         "url": "https://github.com/yume-chan/node-svn/issues"
     },
-    "description": "Wrap SVN to Node Native Addon.",
+    "description": "Wrap Subversion (SVN) to Node Native Addon",
     "devDependencies": {
-        "@types/chai": "^4.0.10",
-        "@types/mocha": "^2.2.44",
-        "@types/node": "^8.0.46",
+        "@types/chai": "^4.1.0",
+        "@types/mocha": "^2.2.46",
+        "@types/node": "^9.3.0",
         "chai": "^4.1.2",
-        "mocha": "^4.0.1",
+        "mocha": "^4.1.0",
         "mocha-appveyor-reporter": "^0.4.0",
         "xml2js": "^0.4.19"
     },
