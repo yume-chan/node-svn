@@ -6,17 +6,17 @@
 	path = deps/apr-iconv/apr-iconv
 	url = https://github.com/apache/apr-iconv.git
 	branch = trunk
-[submodule "deps/subversion/sqlite-amalgamation"]
-	path = deps/subversion/sqlite-amalgamation
-	url = https://github.com/azadkuh/sqlite-amalgamation.git
-[submodule "deps/subversion/subversion"]
-	path = deps/subversion/subversion
-	url = https://github.com/apache/subversion.git
-	branch = trunk
 [submodule "deps/serf/serf"]
 	path = deps/serf/serf
 	url = https://github.com/apache/serf.git
 	branch = trunk
+[submodule "deps/subversion/subversion"]
+	path = deps/subversion/subversion
+	url = https://github.com/apache/subversion.git
+	branch = trunk
+[submodule "deps/subversion/sqlite-amalgamation"]
+	path = deps/subversion/sqlite-amalgamation
+	url = https://github.com/azadkuh/sqlite-amalgamation.git
 [submodule "deps/libexpat/libexpat"]
 	path = deps/libexpat/libexpat
 	url = https://github.com/libexpat/libexpat.git

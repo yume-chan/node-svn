@@ -1,19 +1,7 @@
-# Visual Studio Cache
-.vs
-
-# Visual Studio Output
-bin
-obj
-
 # Node-gyp Output
-/build
-
-# Node-gyp Config
-/binding.gyp
+build
 
 # Node Modules
 node_modules
-
-/dependencies/include
 
 /node-svn-*.tgz
