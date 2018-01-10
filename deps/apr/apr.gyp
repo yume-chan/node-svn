@@ -103,11 +103,6 @@
                 "apr/xml/apr_xml_expat.c"
             ],
             "configurations": {
-                "Debug": {
-                    "defines": [
-                        "_DEBUG"
-                    ]
-                },
                 "Release": {
                     "defines": [
                         "NDEBUG"
