@@ -1,34 +1,23 @@
-[submodule "dependencies/apr-iconv"]
-	path = dependencies/apr-iconv
-	url = https://github.com/apache/apr-iconv.git
-	branch = trunk
-	shallow = true
-[submodule "dependencies/apr"]
-	path = dependencies/apr
+[submodule "deps/apr/apr"]
+	path = deps/apr/apr
 	url = https://github.com/apache/apr.git
 	branch = trunk
-	shallow = true
-[submodule "dependencies/sqlite-amalgamation"]
-	path = dependencies/sqlite-amalgamation
+[submodule "deps/apr-iconv/apr-iconv"]
+	path = deps/apr-iconv/apr-iconv
+	url = https://github.com/apache/apr-iconv.git
+	branch = trunk
+[submodule "deps/subversion/sqlite-amalgamation"]
+	path = deps/subversion/sqlite-amalgamation
 	url = https://github.com/azadkuh/sqlite-amalgamation.git
-	shallow = true
-[submodule "dependencies/subversion"]
-	path = dependencies/subversion
+[submodule "deps/subversion/subversion"]
+	path = deps/subversion/subversion
 	url = https://github.com/apache/subversion.git
 	branch = trunk
-	shallow = true
-[submodule "dependencies/serf"]
-	path = dependencies/serf
+[submodule "deps/serf/serf"]
+	path = deps/serf/serf
 	url = https://github.com/apache/serf.git
 	branch = trunk
-	shallow = true
-[submodule "dependencies/zlib"]
-	path = dependencies/zlib
-	url = https://github.com/madler/zlib.git
-	branch = master
-	shallow = true
-[submodule "dependencies/libexpat"]
-	path = dependencies/libexpat
+[submodule "deps/libexpat/libexpat"]
+	path = deps/libexpat/libexpat
 	url = https://github.com/libexpat/libexpat.git
 	branch = master
-	shallow = true
