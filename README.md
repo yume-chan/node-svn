@@ -9,7 +9,6 @@ Wrap Subversion (SVN) to Node Native Addon
 - [node-svn](#node-svn)
     - [Platform table](#platform-table)
     - [Dependencies](#dependencies)
-    - [Requirements](#requirements)
     - [Patches](#patches)
     - [Building](#building)
     - [Docs](#docs)
@@ -47,12 +46,6 @@ For Electron, `io.lib` doesn't export OpenSSL symbols (See [this blog post](http
 
 The source code in `dependencies/openssl` folder is taken from [nodejs/node repository](https://github.com/nodejs/node/tree/master/deps/openssl), with a modified `openssl.gyp` to build as static library.
 
-## Requirements
-
-| Name   | Usage                             |
-| ------ | --------------------------------- |
-| Python | Generate subversion project files |
-
 ## Patches
 
 2. Patch subversion SQLite initialization to use **Serialize** mode (see [Thread Safety](#Thread-safey)).
@@ -74,8 +67,6 @@ npm install
 # Tests
 npm test
 ````
-
-The `scripts/configure.js` script will configure dependencies into `binding.gyp`.
 
 All dependencies will be built as static library, and linked into one single dynamic library.
 
