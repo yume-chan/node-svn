@@ -70,14 +70,6 @@ cd node-svn
 
 # Clone and patch submodules
 git submodule update --init
-git apply --directory=dependencies/subversion ./dependencies/patches/subversion.diff
-git apply --directory=dependencies/libexpat ./dependencies/patches/libexpat.diff
-git apply --directory=dependencies/serf ./dependencies/patches/serf.diff
-
-# Generate subversion project files
-cd dependencies/subversion
-python gen-make.py --with-zlib=../zlib --with-apr=../apr --with-apr-util=../apr --with-apr-iconv=../apr-iconv --with-sqlite=../sqlite-amalgamation --disable-shared --with-static-apr --vsnet-version=15 --disable-gmock --with-serf=../serf
-cd ../..
 
 # Build
 npm install
