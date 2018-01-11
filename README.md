@@ -19,25 +19,25 @@ Wrap Subversion (SVN) to Node Native Addon
 
 ## Platform table
 
-|         | x86                                                                                                                                                                            | x64                                                                                                                                                                            |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|         | x86                                                                                                                                                                      | x64                                                                                                                                                                      |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | Windows | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/master?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/master) | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/master?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/master) |
-| Linux   | No                                                                                                                                                                             | No                                                                                                                                                                             |
-| macOS   | No                                                                                                                                                                             | No                                                                                                                                                                             |
+| Linux   | No                                                                                                                                                                       | No                                                                                                                                                                       |
+| macOS   | No                                                                                                                                                                       | No                                                                                                                                                                       |
 
 **Help wanted!** I have no idea how to configure it on Linux and macOS, they may both require a complex configure script.
 
 ## Dependencies
 
-| Name                   | Introduction                                      | Required by           | Note                                                                      |
-| ---------------------- | ------------------------------------------------- | --------------------- | ------------------------------------------------------------------------- |
-| node-apr-gen-test-char | A node wrapper for apr's gen-test-char executable | apr                   | Used to generate a header file (`apr_escape_test_char.h`) required by apr |
-| expat                  | An XML parser                                     | apr                   |                                                                           |
-| openssl                | crypto library                                    | serf                  | *See below*                                                               |
-| sqlite-amalgamation    | SQLite database                                   | subversion            | Unofficial mirror for amalgamation version                                |
-| apr                    | Apache Portable Runtime                           | subversion            | apr-util has been merged into apr-2                                       |
-| serf                   | An HTTP client library                            | subversion            |                                                                           |
-| subversion             | Subversion library                                | node-svn              | Only static libraries are used                                            |
+| Name                   | Introduction                                      | Required by | Note                                                                      |
+| ---------------------- | ------------------------------------------------- | ----------- | ------------------------------------------------------------------------- |
+| node-apr-gen-test-char | A node wrapper for apr's gen-test-char executable | apr         | Used to generate a header file (`apr_escape_test_char.h`) required by apr |
+| expat                  | An XML parser                                     | apr         |                                                                           |
+| openssl                | crypto library                                    | serf        | *See below*                                                               |
+| sqlite-amalgamation    | SQLite database                                   | subversion  | Unofficial mirror for amalgamation version                                |
+| apr                    | Apache Portable Runtime                           | subversion  | apr-util has been merged into apr-2                                       |
+| serf                   | An HTTP client library                            | subversion  |                                                                           |
+| subversion             | Subversion library                                | node-svn    | Only static libraries are used                                            |
 
 **Note for OpenSSL:**
 
@@ -55,10 +55,7 @@ The source code in `dependencies/openssl` folder is taken from [nodejs/node repo
 
 ## Patches
 
-1. Patch subversion configuration script to support new apr-util header format from apr-2.
-1. Patch subversion configuration script to change the hardcoded expat searching path.
 2. Patch subversion SQLite initialization to use **Serialize** mode (see [Thread Safety](#Thread-safey)).
-1. Patch libexpat to include `expat.h` in package.
 1. Patch serf to support new version of OpenSSL (with `OPENSSL_NO_DEPRECATED` on)
 
 ## Building

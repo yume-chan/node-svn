@@ -20,9 +20,8 @@ test_script:
   - npm test -- --reporter mocha-appveyor-reporter
 
 after_test:
-  - npm pack
-
-artifacts:
-  - path: node-svn-*.tgz
-    name: Package
-    type: File
+  - ps: |
+      if ($env:APPVEYOR_JOB_NAME -eq "Environment: arch=x86") {
+        npm pack
+        Get-ChildItem node-svn-*.tgz | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
+      }
