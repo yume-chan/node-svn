@@ -1,4 +1,7 @@
 {
+    "variables": {
+        "runtime%": "node"
+    },
     "targets": [
         {
             "target_name": "serf",

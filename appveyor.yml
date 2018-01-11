@@ -17,9 +17,12 @@ install:
 build_script: npm install
 
 test_script:
-  - npm test -- --reporter mocha-appveyor-reporter & exit 0
+  - npm test -- --reporter mocha-appveyor-reporter
+
+after_test:
+  - npm pack
 
 artifacts:
-  - path: build/Release/svn.node
-    name: Binary
+  - path: node-svn-*.tgz
+    name: Package
     type: File
