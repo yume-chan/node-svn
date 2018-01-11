@@ -3,6 +3,7 @@
         {
             "target_name": "apr",
             "type": "static_library",
+            "win_delay_load_hook": "false",
             "dependencies": [
                 "../libexpat/expat.gyp:expat"
             ],
@@ -109,7 +110,7 @@
                     ]
                 }
             },
-            "all_dependent_settings": {
+            "direct_dependent_settings": {
                 "defines": [
                     "APR_DECLARE_STATIC"
                 ],
@@ -126,8 +127,8 @@
                         ],
                         "include_dirs": [
                             "../apr-gen-test-char/win32",
-                            "include/win32",
-                            "include/win32/private",
+                            "include/win",
+                            "include/win/private",
                             "apr/include/arch/win32",
                             "apr/include/arch/unix"
                         ],
@@ -171,9 +172,9 @@
                             "apr/user/win32/groupinfo.c",
                             "apr/user/win32/userinfo.c"
                         ],
-                        "all_dependent_settings": {
+                        "direct_dependent_settings": {
                             "include_dirs": [
-                                "include/win32",
+                                "include/win",
                                 "apr/include/arch/win32",
                                 "apr/include/arch/unix"
                             ]
@@ -184,7 +185,7 @@
                             "../apr-gen-test-char/linux",
                             "apr/include/arch/unix"
                         ],
-                        "all_dependent_settings": {
+                        "direct_dependent_settings": {
                             "include_dirs": [
                                 "apr/include/arch/unix"
                             ]

@@ -2,9 +2,9 @@
     "targets": [
         {
             "target_name": "svn",
-            "type": "shared_library",
             "dependencies": [
-                "deps/apr/apr.gyp:apr"
+                "deps/apr/apr.gyp:apr",
+                "deps/subversion/client.gyp:libsvn_client"
             ],
             "include_dirs": [
                 "src"

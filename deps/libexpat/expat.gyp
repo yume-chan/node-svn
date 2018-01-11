@@ -3,6 +3,7 @@
         {
             "target_name": "expat",
             "type": "static_library",
+            "win_delay_load_hook": "false",
             "include_dirs": [
                 "include",
                 "libexpat/expat/lib"

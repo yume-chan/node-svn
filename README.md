@@ -32,19 +32,12 @@ Wrap Subversion (SVN) to Node Native Addon
 | Name                   | Introduction                                      | Required by           | Note                                                                      |
 | ---------------------- | ------------------------------------------------- | --------------------- | ------------------------------------------------------------------------- |
 | node-apr-gen-test-char | A node wrapper for apr's gen-test-char executable | apr                   | Used to generate a header file (`apr_escape_test_char.h`) required by apr |
-| zlib                   | ZLib compression library                          | apr, serf, subversion | *See below*                                                               |
 | expat                  | An XML parser                                     | apr                   |                                                                           |
 | openssl                | crypto library                                    | serf                  | *See below*                                                               |
 | sqlite-amalgamation    | SQLite database                                   | subversion            | Unofficial mirror for amalgamation version                                |
 | apr                    | Apache Portable Runtime                           | subversion            | apr-util has been merged into apr-2                                       |
 | serf                   | An HTTP client library                            | subversion            |                                                                           |
 | subversion             | Subversion library                                | node-svn              | Only static libraries are used                                            |
-
-**Note for ZLib:**
-
-Node.js and Electron all export ZLib symbols, so this library can dynamic link to `node.lib` or `io.lib` to use ZLib.
-
-But subversion's configuration script need ZLib, so a copy of ZLib is included.
 
 **Note for OpenSSL:**
 
@@ -134,7 +127,6 @@ This project includes a patch to use **Serialized** mode instead, so you should 
 | Name                   | License                                                                            | Note                                                               |
 | ---------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | node-apr-gen-test-char | [MIT](https://github.com/yume-chan/node-apr-gen-test-char/blob/master/LICENSE)     |                                                                    |
-| zlib                   | [zlib](https://github.com/madler/zlib/blob/master/zlib.h)                          |                                                                    |
 | openssl                | [OpenSSL](https://github.com/openssl/openssl/blob/master/LICENSE)                  | Node.js: [MIT](https://github.com/nodejs/node/blob/master/LICENSE) |
 | sqlite-amalgamation    | [BSD-3-clause](https://github.com/azadkuh/sqlite-amalgamation/blob/master/LICENSE) | SQLite: [Public Domain](http://www.sqlite.org/copyright.html)      |
 | apr                    | [Apache 2.0](https://github.com/apache/apr/blob/trunk/LICENSE)                     |                                                                    |

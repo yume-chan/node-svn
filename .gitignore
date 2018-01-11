@@ -4,4 +4,4 @@ build
 # Node Modules
 node_modules
 
-/node-svn-*.tgz
+node-svn-*.tgz

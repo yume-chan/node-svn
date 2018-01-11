@@ -1,63 +1,31 @@
-# Visual Studio cache
-.vs
-
-# Visual Studio output
-bin
-obj
-
 # Node-gyp output
-/build
-
-# Node-gyp Config
-/binding.gyp
+build
 
 # Node Modules
 #node_modules
 
-/dependencies/include
-
-/node-svn-*.tgz
-
-/dependencies/patches
+node-svn-*.tgz
 
 # Visual Studio Code config
-/.vscode
+.vscode
 
 # Tests
-/test
+test
 
 # Clang-format config
-/.clang-format
-
-# Visual Studio project files
-node-svn.sln
-node-svn.vcxproj
-node-svn.vcxproj.filters
-node-svn.vcxproj.user
+.clang-format
 
 .gitmodules
 
 appveyor.yml
 
-# Unused dependency files
-dependencies/**
-
-dependencies/libexpat/**
-!dependencies/libexpat/expat/lib/**
-
-dependencies/subversion/**
-!dependencies/subversion/build/win32/vcnet-vcproj/libsvn_*.vcxproj
-!dependencies/subversion/subversion/include/**
-!dependencies/subversion/subversion/libsvn_*/**
-
-!dependencies/**/*.c
-!dependencies/**/*.h
-!dependencies/**/*.hw
-!dependencies/**/*.vcxproj
-!dependencies/**/*.dsp
-
-!dependencies/serf/buckets/hpack_huffman.inc
-
-!dependencies/openssl/**
+deps/**
+!deps/**/*.c
+!deps/**/*.h
+!deps/**/*.inc
+!deps/**/*.S
+!deps/**/*.asm
+!deps/**/*.gyp
+!deps/**/*.gypi
 
 .npmrc
