@@ -9,7 +9,6 @@ Wrap Subversion (SVN) to Node Native Addon
 - [node-svn](#node-svn)
     - [Platform table](#platform-table)
     - [Dependencies](#dependencies)
-    - [Requirements](#requirements)
     - [Patches](#patches)
     - [Building](#building)
     - [Docs](#docs)
@@ -19,32 +18,25 @@ Wrap Subversion (SVN) to Node Native Addon
 
 ## Platform table
 
-|         | x86                                                                                                                                                                            | x64                                                                                                                                                                            |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Windows | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/build-svn?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/build-svn) | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/build-svn?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/build-svn) |
-| Linux   | No                                                                                                                                                                             | No                                                                                                                                                                             |
-| macOS   | No                                                                                                                                                                             | No                                                                                                                                                                             |
+|         | x86                                                                                                                                                                      | x64                                                                                                                                                                      |
+| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Windows | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/master?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/master) | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/master?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/master) |
+| Linux   | No                                                                                                                                                                       | No                                                                                                                                                                       |
+| macOS   | No                                                                                                                                                                       | No                                                                                                                                                                       |
 
 **Help wanted!** I have no idea how to configure it on Linux and macOS, they may both require a complex configure script.
 
 ## Dependencies
 
-| Name                   | Introduction                                      | Required by           | Note                                                                      |
-| ---------------------- | ------------------------------------------------- | --------------------- | ------------------------------------------------------------------------- |
-| node-apr-gen-test-char | A node wrapper for apr's gen-test-char executable | apr                   | Used to generate a header file (`apr_escape_test_char.h`) required by apr |
-| zlib                   | ZLib compression library                          | apr, serf, subversion | *See below*                                                               |
-| expat                  | An XML parser                                     | apr                   |                                                                           |
-| openssl                | crypto library                                    | serf                  | *See below*                                                               |
-| sqlite-amalgamation    | SQLite database                                   | subversion            | Unofficial mirror for amalgamation version                                |
-| apr                    | Apache Portable Runtime                           | subversion            | apr-util has been merged into apr-2                                       |
-| serf                   | An HTTP client library                            | subversion            |                                                                           |
-| subversion             | Subversion library                                | node-svn              | Only static libraries are used                                            |
-
-**Note for ZLib:**
-
-Node.js and Electron all export ZLib symbols, so this library can dynamic link to `node.lib` or `io.lib` to use ZLib.
-
-But subversion's configuration script need ZLib, so a copy of ZLib is included.
+| Name                   | Introduction                                      | Required by | Note                                                                      |
+| ---------------------- | ------------------------------------------------- | ----------- | ------------------------------------------------------------------------- |
+| node-apr-gen-test-char | A node wrapper for apr's gen-test-char executable | apr         | Used to generate a header file (`apr_escape_test_char.h`) required by apr |
+| expat                  | An XML parser                                     | apr         |                                                                           |
+| openssl                | crypto library                                    | serf        | *See below*                                                               |
+| sqlite-amalgamation    | SQLite database                                   | subversion  | Unofficial mirror for amalgamation version                                |
+| apr                    | Apache Portable Runtime                           | subversion  | apr-util has been merged into apr-2                                       |
+| serf                   | An HTTP client library                            | subversion  |                                                                           |
+| subversion             | Subversion library                                | node-svn    | Only static libraries are used                                            |
 
 **Note for OpenSSL:**
 
@@ -54,18 +46,9 @@ For Electron, `io.lib` doesn't export OpenSSL symbols (See [this blog post](http
 
 The source code in `dependencies/openssl` folder is taken from [nodejs/node repository](https://github.com/nodejs/node/tree/master/deps/openssl), with a modified `openssl.gyp` to build as static library.
 
-## Requirements
-
-| Name   | Usage                             |
-| ------ | --------------------------------- |
-| Python | Generate subversion project files |
-
 ## Patches
 
-1. Patch subversion configuration script to support new apr-util header format from apr-2.
-1. Patch subversion configuration script to change the hardcoded expat searching path.
 2. Patch subversion SQLite initialization to use **Serialize** mode (see [Thread Safety](#Thread-safey)).
-1. Patch libexpat to include `expat.h` in package.
 1. Patch serf to support new version of OpenSSL (with `OPENSSL_NO_DEPRECATED` on)
 
 ## Building
@@ -77,14 +60,6 @@ cd node-svn
 
 # Clone and patch submodules
 git submodule update --init
-git apply --directory=dependencies/subversion ./dependencies/patches/subversion.diff
-git apply --directory=dependencies/libexpat ./dependencies/patches/libexpat.diff
-git apply --directory=dependencies/serf ./dependencies/patches/serf.diff
-
-# Generate subversion project files
-cd dependencies/subversion
-python gen-make.py --with-zlib=../zlib --with-apr=../apr --with-apr-util=../apr --with-apr-iconv=../apr-iconv --with-sqlite=../sqlite-amalgamation --disable-shared --with-static-apr --vsnet-version=15 --disable-gmock --with-serf=../serf
-cd ../..
 
 # Build
 npm install
@@ -92,8 +67,6 @@ npm install
 # Tests
 npm test
 ````
-
-The `scripts/configure.js` script will configure dependencies into `binding.gyp`.
 
 All dependencies will be built as static library, and linked into one single dynamic library.
 
@@ -134,7 +107,6 @@ This project includes a patch to use **Serialized** mode instead, so you should 
 | Name                   | License                                                                            | Note                                                               |
 | ---------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
 | node-apr-gen-test-char | [MIT](https://github.com/yume-chan/node-apr-gen-test-char/blob/master/LICENSE)     |                                                                    |
-| zlib                   | [zlib](https://github.com/madler/zlib/blob/master/zlib.h)                          |                                                                    |
 | openssl                | [OpenSSL](https://github.com/openssl/openssl/blob/master/LICENSE)                  | Node.js: [MIT](https://github.com/nodejs/node/blob/master/LICENSE) |
 | sqlite-amalgamation    | [BSD-3-clause](https://github.com/azadkuh/sqlite-amalgamation/blob/master/LICENSE) | SQLite: [Public Domain](http://www.sqlite.org/copyright.html)      |
 | apr                    | [Apache 2.0](https://github.com/apache/apr/blob/trunk/LICENSE)                     |                                                                    |
