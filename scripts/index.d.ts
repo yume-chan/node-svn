@@ -203,13 +203,21 @@ export enum NodeKind {
 }
 
 export enum RevisionKind {
+    /** No revision information given */
     unspecified = 0,
+    /** revision given as number */
     number = 1,
+    /** revision given as date */
     date = 2,
+    /** rev of most recent change */
     committed = 3,
+    /** (rev of most recent change) - 1 */
     previous = 4,
+    /** .svn/entries current revision */
     base = 5,
+    /** current, plus local mods */
     working = 6,
+    /** repository youngest */
     head = 7,
 }
 

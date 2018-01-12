@@ -7,6 +7,8 @@ environment:
     - arch: x86
     - arch: x64
 
+clone_depth: 2
+
 cache:
   - node_modules
 
