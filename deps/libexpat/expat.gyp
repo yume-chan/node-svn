@@ -31,7 +31,20 @@
                 "defines": [
                     "XML_STATIC"
                 ]
-            }
+            },
+            "conditions": [
+                [
+                    "OS != \"win\"",
+                    {
+                        "defines": [
+                            "HAVE_EXPAT_CONFIG_H"
+                        ],
+                        "include_dirs": [
+                            "include/unix"
+                        ]
+                    }
+                ]
+            ]
         }
     ]
 }
