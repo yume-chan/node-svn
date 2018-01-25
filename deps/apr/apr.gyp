@@ -174,20 +174,20 @@
                         ],
                         "direct_dependent_settings": {
                             "include_dirs": [
-                                "include/win",
-                                "apr/include/arch/win32",
-                                "apr/include/arch/unix"
+                                "include/win"
                             ]
                         }
                     },
                     {
                         "include_dirs": [
                             "../apr-gen-test-char/linux",
-                            "apr/include/arch/unix"
+                            "apr/include/arch/unix",
+                            "include/unix",
+                            "include/unix/private"
                         ],
                         "direct_dependent_settings": {
                             "include_dirs": [
-                                "apr/include/arch/unix"
+                                "include/unix"
                             ]
                         }
                     }
