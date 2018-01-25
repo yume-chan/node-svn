@@ -29,7 +29,7 @@
  * @file apr.h
  * @brief APR Platform Definitions
  * @remark This is a generated header generated from include/apr.h.in by
- * ./configure, or copied from include/apr.hw or include/apr.hnw 
+ * ./configure, or copied from include/apr.hw or include/apr.hnw
  * for Win32 or Netware by those build environments, respectively.
  */
 
@@ -116,8 +116,8 @@
 /** @} */
 /** @} */
 
-/* We don't include our conditional headers within the doxyblocks 
- * or the extern "C" namespace 
+/* We don't include our conditional headers within the doxyblocks
+ * or the extern "C" namespace
  */
 
 #if APR_HAVE_WINDOWS_H && defined(WIN32)
@@ -187,7 +187,7 @@
 #endif
 
 #if defined(__cplusplus) && !defined(__STDC_CONSTANT_MACROS)
-/* C99 7.18.4 requires that stdint.h only exposes INT64_C 
+/* C99 7.18.4 requires that stdint.h only exposes INT64_C
  * and UINT64_C for C++ implementations if this is defined: */
 #define __STDC_CONSTANT_MACROS
 #endif
@@ -222,7 +222,7 @@ extern "C" {
 
 /**
  * @addtogroup apr_platform
- * @ingroup APR 
+ * @ingroup APR
  * @{
  */
 
@@ -242,12 +242,12 @@ extern "C" {
 #define APR_USE_SHMEM_MMAP_ANON    1
 #define APR_USE_SHMEM_BEOS         0
 
-#define APR_USE_FLOCK_SERIALIZE           0 
+#define APR_USE_FLOCK_SERIALIZE           0
 #define APR_USE_SYSVSEM_SERIALIZE         1
 #define APR_USE_POSIXSEM_SERIALIZE        0
 #define APR_USE_FCNTL_SERIALIZE           0
-#define APR_USE_PROC_PTHREAD_SERIALIZE    0 
-#define APR_USE_PTHREAD_SERIALIZE         1 
+#define APR_USE_PROC_PTHREAD_SERIALIZE    0
+#define APR_USE_PTHREAD_SERIALIZE         1
 
 #define APR_HAS_FLOCK_SERIALIZE           1
 #define APR_HAS_SYSVSEM_SERIALIZE         1
@@ -257,7 +257,7 @@ extern "C" {
 
 #define APR_PROCESS_LOCK_IS_GLOBAL        0
 
-#define APR_HAVE_CORKABLE_TCP   1 
+#define APR_HAVE_CORKABLE_TCP   1
 #define APR_HAVE_GETRLIMIT      1
 #define APR_HAVE_IN_ADDR        1
 #define APR_HAVE_INET_ADDR      1
@@ -463,8 +463,8 @@ typedef  apr_int32_t             apr_intptr_t;
 #define APR_END_DECLS
 #endif
 
-/** 
- * Thread callbacks from APR functions must be declared with APR_THREAD_FUNC, 
+/**
+ * Thread callbacks from APR functions must be declared with APR_THREAD_FUNC,
  * so that they follow the platform's calling convention.
  * <PRE>
  *
@@ -472,13 +472,13 @@ typedef  apr_int32_t             apr_intptr_t;
  *
  * </PRE>
  */
-#define APR_THREAD_FUNC       
+#define APR_THREAD_FUNC
 
 #if defined(DOXYGEN) || !defined(WIN32)
 
 /**
  * The public APR functions are declared with APR_DECLARE(), so they may
- * use the most appropriate calling convention.  Public APR functions with 
+ * use the most appropriate calling convention.  Public APR functions with
  * variable arguments must use APR_DECLARE_NONSTD().
  *
  * @remark Both the declaration and implementations must use the same macro.
@@ -487,20 +487,20 @@ typedef  apr_int32_t             apr_intptr_t;
  * APR_DECLARE(rettype) apr_func(args)
  * </PRE>
  * @see APR_DECLARE_NONSTD @see APR_DECLARE_DATA
- * @remark Note that when APR compiles the library itself, it passes the 
- * symbol -DAPR_DECLARE_EXPORT to the compiler on some platforms (e.g. Win32) 
+ * @remark Note that when APR compiles the library itself, it passes the
+ * symbol -DAPR_DECLARE_EXPORT to the compiler on some platforms (e.g. Win32)
  * to export public symbols from the dynamic library build.\n
  * The user must define the APR_DECLARE_STATIC when compiling to target
- * the static APR library on some platforms (e.g. Win32.)  The public symbols 
+ * the static APR library on some platforms (e.g. Win32.)  The public symbols
  * are neither exported nor imported when APR_DECLARE_STATIC is defined.\n
  * By default, compiling an application and including the APR public
  * headers, without defining APR_DECLARE_STATIC, will prepare the code to be
  * linked to the dynamic library.
  */
-#define APR_DECLARE(type)            type 
+#define APR_DECLARE(type)            type
 
 /**
- * The public APR functions using variable arguments are declared with 
+ * The public APR functions using variable arguments are declared with
  * APR_DECLARE_NONSTD(), as they must follow the C language calling convention.
  * @see APR_DECLARE @see APR_DECLARE_DATA
  * @remark Both the declaration and implementations must use the same macro.
@@ -518,7 +518,7 @@ typedef  apr_int32_t             apr_intptr_t;
  * @see APR_DECLARE @see APR_DECLARE_NONSTD
  * @remark Note that the declaration and implementations use different forms,
  * but both must include the macro.
- * 
+ *
  * <PRE>
  *
  * extern APR_DECLARE_DATA type apr_variable;\n
@@ -546,7 +546,7 @@ typedef  apr_int32_t             apr_intptr_t;
 /**
  * Declare a dso module's exported module structure as APR_MODULE_DECLARE_DATA.
  *
- * Unless APR_MODULE_DECLARE_STATIC is defined at compile time, symbols 
+ * Unless APR_MODULE_DECLARE_STATIC is defined at compile time, symbols
  * declared with APR_MODULE_DECLARE_DATA are always exported.
  * @code
  * module APR_MODULE_DECLARE_DATA mod_tag
@@ -563,7 +563,7 @@ typedef  apr_int32_t             apr_intptr_t;
  */
 #define APU_MODULE_DECLARE_DATA           APR_MODULE_DECLARE_DATA
 
-/* Define APR_SSIZE_T_FMT.  
+/* Define APR_SSIZE_T_FMT.
  * If ssize_t is an integer we define it to be "d",
  * if ssize_t is a long int we define it to be "ld",
  * if ssize_t is neither we declare an error here.
@@ -677,7 +677,7 @@ typedef int apr_wait_t;
 
 #define APU_HAVE_PGSQL         0
 #define APU_HAVE_MYSQL         0
-#define APU_HAVE_SQLITE3       1
+#define APU_HAVE_SQLITE3       0
 #define APU_HAVE_SQLITE2       0
 #define APU_HAVE_ORACLE        0
 #define APU_HAVE_ODBC          0

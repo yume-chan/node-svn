@@ -8,7 +8,6 @@
             "type": "static_library",
             "win_delay_load_hook": "false",
             "dependencies": [
-                "../openssl/openssl.gyp:openssl",
                 "../apr/apr.gyp:apr"
             ],
             "defines": [
