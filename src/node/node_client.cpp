@@ -58,4 +58,4 @@ class future<void> {
     }                                                                                                  \
     }
 
-#include "client_template.hpp"
+#include "template/client.cpp"

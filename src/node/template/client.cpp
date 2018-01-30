@@ -1,3 +1,7 @@
+#ifndef CLASS_NAME
+#error "client.cpp cannot be compiled directly!"
+#endif
+
 #include <cstring>
 
 #include <node_buffer.h>
@@ -233,6 +237,7 @@ void CLASS_NAME::init(v8::Local<v8::Object>   exports,
     SetPrototypeMethod(signature, prototype, "commit", commit, 3);
     SetPrototypeMethod(signature, prototype, "info", info, 2);
     SetPrototypeMethod(signature, prototype, "remove", remove, 2);
+    SetPrototypeMethod(signature, prototype, "resolve", resolve, 1);
     SetPrototypeMethod(signature, prototype, "revert", revert, 1);
     SetPrototypeMethod(signature, prototype, "status", status, 2);
     SetPrototypeMethod(signature, prototype, "update", update, 1);
@@ -461,6 +466,17 @@ METHOD_BEGIN(remove)
 
     ASYNC_BEGIN(void, paths, callback)
         _this->_client->remove(paths, callback);
+    ASYNC_END()
+
+    ASYNC_RESULT;
+    METHOD_RETURN(v8::Undefined(isolate));
+METHOD_END
+
+METHOD_BEGIN(resolve)
+    auto path    = convert_string(args[0]);
+
+    ASYNC_BEGIN(void, path)
+        _this->_client->resolve(path);
     ASYNC_END()
 
     ASYNC_RESULT;

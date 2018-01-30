@@ -3,13 +3,16 @@
 #include <svn_client.h>
 #include <svn_version.h>
 
-#include <node/async_client.hpp>
-#include <node/depth.hpp>
-#include <node/node_client.hpp>
-#include <node/node_kind.hpp>
-#include <node/revision_kind.hpp>
-#include <node/status_kind.hpp>
 #include <node/v8.hpp>
+
+#include <node/async_client.hpp>
+#include <node/node_client.hpp>
+
+#include <node/enum/conflict_choose.hpp>
+#include <node/enum/depth.hpp>
+#include <node/enum/node_kind.hpp>
+#include <node/enum/revision_kind.hpp>
+#include <node/enum/status_kind.hpp>
 
 #define InternalizedString(value) v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
 
@@ -76,6 +79,7 @@ void init(v8::Local<v8::Object> exports) {
     async_client::init(exports, isolate, context);
     client::init(exports, isolate, context);
 
+    conflict_choose::init(exports, isolate, context);
     depth::init(exports, isolate, context);
     node_kind::init(exports, isolate, context);
     revision_kind::init(exports, isolate, context);

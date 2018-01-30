@@ -129,6 +129,10 @@ class client : public std::enable_shared_from_this<client> {
                 bool                   keep_local    = false,
                 const string_map&      revprop_table = string_map()) const;
 
+    void resolve(const std::string& path,
+                 depth              depth  = depth::empty,
+                 conflict_choose    choose = conflict_choose::merged) const;
+
     void revert(const std::string&   path,
                 depth                depth             = depth::infinity,
                 const string_vector& changelists       = string_vector(),

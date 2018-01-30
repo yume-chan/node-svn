@@ -679,6 +679,21 @@ void client::remove(const string_vector&   paths,
                                     pool));
 }
 
+void client::resolve(const std::string& path,
+                     depth              depth,
+                     conflict_choose    choose) const {
+    auto pool_ptr = create_pool(_pool);
+    auto pool     = pool_ptr.get();
+
+    auto raw_path = convert_path(path, pool);
+
+    check_result(svn_client_resolve(raw_path,
+                                    static_cast<svn_depth_t>(depth),
+                                    static_cast<svn_wc_conflict_choice_t>(choose),
+                                    _context,
+                                    pool));
+}
+
 void client::revert(const std::string&   path,
                     depth                depth,
                     const string_vector& changelists,

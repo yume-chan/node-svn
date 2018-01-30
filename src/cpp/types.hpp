@@ -540,4 +540,15 @@ struct commit_info {
 
 struct notify_info {
 };
+
+enum class conflict_choose {
+    postpone,
+    base,
+    theirs_full,
+    mine_full,
+    theirs_conflict,
+    mine_conflict,
+    merged,
+    unspecified
+};
 } // namespace svn

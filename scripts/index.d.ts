@@ -137,6 +137,7 @@ export class Client {
     info(path: string, options: Partial<InfoOptions> | undefined, callback: InfoCallback): void;
 
     remove(path: string | string[], callback: CommitCallback): void;
+    resolve(path: string): void;
     revert(path: string | string[]): void;
 
     status(path: string, callback: StatusCallback): void;
@@ -176,6 +177,7 @@ export class AsyncClient {
     info(path: string, options: Partial<InfoOptions> | undefined, callback: InfoCallback): Promise<void>;
 
     remove(path: string | string[], callback: CommitCallback): Promise<void>;
+    resolve(path: string): Promise<void>;
     revert(path: string | string[]): Promise<void>;
 
     status(path: string, callback: StatusCallback): Promise<void>;
@@ -185,6 +187,17 @@ export class AsyncClient {
     update(path: string[]): Promise<number[]>;
 
     get_working_copy_root(path: string): Promise<string>;
+}
+
+export enum ConflictChoose {
+    postpone,
+    base,
+    theirs_full,
+    mine_full,
+    theirs_conflict,
+    mine_conflict,
+    merged,
+    unspecified,
 }
 
 export enum Depth {

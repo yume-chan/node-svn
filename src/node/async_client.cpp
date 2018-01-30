@@ -91,4 +91,4 @@
     REPORT_ERROR                                               \
     }
 
-#include "client_template.hpp"
+#include "template/client.cpp"

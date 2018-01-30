@@ -12,13 +12,14 @@
             "sources": [
                 "src/cpp/client.cpp",
                 "src/cpp/svn_error.cpp",
+                "src/node/enum/conflict_choose.cpp",
+                "src/node/enum/depth.cpp",
+                "src/node/enum/node_kind.cpp",
+                "src/node/enum/revision_kind.cpp",
+                "src/node/enum/status_kind.cpp",
                 "src/node/async_client.cpp",
-                "src/node/depth.cpp",
                 "src/node/export.cpp",
-                "src/node/node_client.cpp",
-                "src/node/node_kind.cpp",
-                "src/node/revision_kind.cpp",
-                "src/node/status_kind.cpp"
+                "src/node/node_client.cpp"
             ],
             "libraries": [
                 "ws2_32.lib",
