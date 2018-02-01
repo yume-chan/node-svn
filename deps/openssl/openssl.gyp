@@ -14,8 +14,7 @@
   'targets': [
     {
       'target_name': 'openssl',
-      'type': 'static_library',
-      "win_delay_load_hook": "false",
+      'type': '<(library)',
       'includes': ['openssl.gypi'],
       'sources': ['<@(openssl_sources)'],
       'sources/': [
