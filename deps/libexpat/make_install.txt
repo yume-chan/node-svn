@@ -1,0 +1,63 @@
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..   -DHAVE_EXPAT_CONFIG_H  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -MT loadlibrary.lo -MD -MP -MF .deps/loadlibrary.Tpo -c -o loadlibrary.lo loadlibrary.c
+mv -f .deps/loadlibrary.Tpo .deps/loadlibrary.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..   -DHAVE_EXPAT_CONFIG_H  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -MT xmlparse.lo -MD -MP -MF .deps/xmlparse.Tpo -c -o xmlparse.lo xmlparse.c
+mv -f .deps/xmlparse.Tpo .deps/xmlparse.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..   -DHAVE_EXPAT_CONFIG_H  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -MT xmltok.lo -MD -MP -MF .deps/xmltok.Tpo -c -o xmltok.lo xmltok.c
+mv -f .deps/xmltok.Tpo .deps/xmltok.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..   -DHAVE_EXPAT_CONFIG_H  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -MT xmlrole.lo -MD -MP -MF .deps/xmlrole.Tpo -c -o xmlrole.lo xmlrole.c
+mv -f .deps/xmlrole.Tpo .deps/xmlrole.Plo
+/bin/sh ../libtool  --tag=CC   --mode=link gcc  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -no-undefined -version-info 7:7:6 -fno-strict-aliasing -o libexpat.la -rpath /Users/aidai/Desktop/build/lib loadlibrary.lo xmlparse.lo xmltok.lo xmlrole.lo  
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  install-exec-am install-data-am
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..   -DHAVE_EXPAT_CONFIG_H  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -MT loadlibrary.lo -MD -MP -MF .deps/loadlibrary.Tpo -c -o loadlibrary.lo loadlibrary.c
+mv -f .deps/loadlibrary.Tpo .deps/loadlibrary.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..   -DHAVE_EXPAT_CONFIG_H  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -MT xmlparse.lo -MD -MP -MF .deps/xmlparse.Tpo -c -o xmlparse.lo xmlparse.c
+mv -f .deps/xmlparse.Tpo .deps/xmlparse.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..   -DHAVE_EXPAT_CONFIG_H  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -MT xmltok.lo -MD -MP -MF .deps/xmltok.Tpo -c -o xmltok.lo xmltok.c
+mv -f .deps/xmltok.Tpo .deps/xmltok.Plo
+/bin/sh ../libtool  --tag=CC   --mode=compile gcc -DHAVE_CONFIG_H -I. -I..   -DHAVE_EXPAT_CONFIG_H  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -MT xmlrole.lo -MD -MP -MF .deps/xmlrole.Tpo -c -o xmlrole.lo xmlrole.c
+mv -f .deps/xmlrole.Tpo .deps/xmlrole.Plo
+/bin/sh ../libtool  --tag=CC   --mode=link gcc  -g -O2 -Wall -Wmissing-prototypes -Wstrict-prototypes -fexceptions -fno-strict-aliasing -no-undefined -version-info 7:7:6 -fno-strict-aliasing -o libexpat.la -rpath /Users/aidai/Desktop/build/lib loadlibrary.lo xmlparse.lo xmltok.lo xmlrole.lo  
+:
+list='libexpat.la'; test -n "/Users/aidai/Desktop/build/lib" || list=; \
+	list2=; for p in $list; do \
+	  if test -f $p; then \
+	    list2="$list2 $p"; \
+	  else :; fi; \
+	done; \
+	test -z "$list2" || { \
+	  echo " ../conftools/install-sh -c -d '/Users/aidai/Desktop/build/lib'"; \
+	  ../conftools/install-sh -c -d "/Users/aidai/Desktop/build/lib" || exit 1; \
+	  echo " /bin/sh ../libtool   --mode=install /usr/bin/install -c  $list2 '/Users/aidai/Desktop/build/lib'"; \
+	  /bin/sh ../libtool   --mode=install /usr/bin/install -c  $list2 "/Users/aidai/Desktop/build/lib"; \
+	}
+:
+list='../AUTHORS ../Changes'; test -n "/Users/aidai/Desktop/build/share/doc/expat" || list=; \
+	if test -n "$list"; then \
+	  echo " ../conftools/install-sh -c -d '/Users/aidai/Desktop/build/share/doc/expat'"; \
+	  ../conftools/install-sh -c -d "/Users/aidai/Desktop/build/share/doc/expat" || exit 1; \
+	fi; \
+	for p in $list; do \
+	  if test -f "$p"; then d=; else d="./"; fi; \
+	  echo "$d$p"; \
+	done | sed '$!N;$!N;$!N;$!N;$!N;$!N;$!N;s/\n/ /g' | sed '$!N;$!N;$!N;$!N;s/\n/ /g' | \
+	while read files; do \
+	  echo " /usr/bin/install -c -m 644 $files '/Users/aidai/Desktop/build/share/doc/expat'"; \
+	  /usr/bin/install -c -m 644 $files "/Users/aidai/Desktop/build/share/doc/expat" || exit $?; \
+	done
+:
+list='../expat_config.h expat.h expat_external.h'; test -n "/Users/aidai/Desktop/build/include" || list=; \
+	if test -n "$list"; then \
+	  echo " ../conftools/install-sh -c -d '/Users/aidai/Desktop/build/include'"; \
+	  ../conftools/install-sh -c -d "/Users/aidai/Desktop/build/include" || exit 1; \
+	fi; \
+	for p in $list; do \
+	  if test -f "$p"; then d=; else d="./"; fi; \
+	  echo "$d$p"; \
+	done | sed '$!N;$!N;$!N;$!N;$!N;$!N;$!N;s/\n/ /g' | sed '$!N;$!N;$!N;$!N;s/\n/ /g' | \
+	while read files; do \
+	  echo " /usr/bin/install -c -m 644 $files '/Users/aidai/Desktop/build/include'"; \
+	  /usr/bin/install -c -m 644 $files "/Users/aidai/Desktop/build/include" || exit $?; \
+	done
+:
+/Applications/Xcode.app/Contents/Developer/usr/bin/make  install-data-hook
+cd "/Users/aidai/Desktop/build/share/doc/expat" && mv -f Changes changelog
