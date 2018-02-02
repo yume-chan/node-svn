@@ -185,6 +185,7 @@
                             "apr/atomic/unix/s390.c",
                             "apr/atomic/unix/solaris.c",
                             "apr/dso/unix/dso.c",
+                            "apr/file_io/unix/buffer.c",
                             "apr/file_io/unix/dir.c",
                             "apr/file_io/unix/filedup.c",
                             "apr/file_io/unix/filepath.c",
@@ -229,6 +230,14 @@
                                 "include/unix"
                             ]
                         }
+                    }
+                ],
+                [
+                    "OS == 'mac'",
+                    {
+                        "defines": [
+                            "DARWIN"
+                        ]
                     }
                 ]
             ]

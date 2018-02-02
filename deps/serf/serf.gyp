@@ -21,15 +21,12 @@
                 "serf"
             ],
             "sources": [
-                "serf/src/config_store.c",
-                "serf/src/context.c",
-                "serf/src/deprecated.c",
-                "serf/src/incoming.c",
-                "serf/src/logging.c",
-                "serf/src/outgoing.c",
-                "serf/src/outgoing_request.c",
-                "serf/src/pump.c",
-                "serf/src/ssltunnel.c",
+                "serf/auth/auth.c",
+                "serf/auth/auth_basic.c",
+                "serf/auth/auth_digest.c",
+                "serf/auth/auth_spnego.c",
+                "serf/auth/auth_spnego_gss.c",
+                "serf/auth/auth_spnego_sspi.c",
                 "serf/buckets/aggregate_buckets.c",
                 "serf/buckets/allocator.c",
                 "serf/buckets/barrier_buckets.c",
@@ -57,25 +54,21 @@
                 "serf/buckets/simple_buckets.c",
                 "serf/buckets/socket_buckets.c",
                 "serf/buckets/split_buckets.c",
-                "serf/auth/auth.c",
-                "serf/auth/auth_basic.c",
-                "serf/auth/auth_digest.c",
-                "serf/auth/auth_spnego.c",
-                "serf/auth/auth_spnego_gss.c",
-                "serf/auth/auth_spnego_sspi.c",
                 "serf/protocols/fcgi_protocol.c",
                 "serf/protocols/fcgi_stream.c",
                 "serf/protocols/http2_protocol.c",
                 "serf/protocols/http2_stream.c",
+                "serf/src/config_store.c",
+                "serf/src/context.c",
+                "serf/src/deprecated.c",
+                "serf/src/incoming.c",
+                "serf/src/logging.c",
+                "serf/src/outgoing.c",
+                "serf/src/outgoing_request.c",
+                "serf/src/pump.c",
+                "serf/src/ssltunnel.c",
                 "src/ssl_buckets.c"
             ],
-            "configurations": {
-                "Release": {
-                    "defines": [
-                        "NDEBUG"
-                    ]
-                }
-            },
             "direct_dependent_settings": {
                 "defines": [
                     "OPENSSL_NO_DEPRECATED",
@@ -105,6 +98,11 @@
                     {
                         "defines": [
                             "SERF_HAVE_SSPI"
+                        ]
+                    },
+                    {
+                        "defines": [
+                            "HAVE_STDBOOL_H"
                         ]
                     }
                 ]
