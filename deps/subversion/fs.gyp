@@ -40,6 +40,11 @@
                         "include_dirs": [
                             "include/win"
                         ]
+                    },
+                    {
+                        "include_dirs": [
+                            "include/unix"
+                        ]
                     }
                 ]
             ]

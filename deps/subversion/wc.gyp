@@ -11,7 +11,7 @@
             "include_dirs": [
                 "subversion/subversion/include",
                 "subversion/subversion/include/private",
-                "include"
+                "include/wc"
             ],
             "defines": [
                 "SVN_HAVE_MEMCACHE",
@@ -74,6 +74,11 @@
                     {
                         "include_dirs": [
                             "include/win"
+                        ]
+                    },
+                    {
+                        "include_dirs": [
+                            "include/unix"
                         ]
                     }
                 ]

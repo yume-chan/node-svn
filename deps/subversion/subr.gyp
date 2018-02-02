@@ -15,7 +15,7 @@
                 "subversion/subversion/include",
                 "subversion/subversion/include/private",
                 "sqlite-amalgamation",
-                "include"
+                "include/subr"
             ],
             "defines": [
                 "alloca=_alloca",
@@ -140,6 +140,11 @@
                     {
                         "include_dirs": [
                             "include/win"
+                        ]
+                    },
+                    {
+                        "include_dirs": [
+                            "include/unix"
                         ]
                     }
                 ]

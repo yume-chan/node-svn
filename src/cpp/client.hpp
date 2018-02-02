@@ -70,17 +70,17 @@ class client : public std::enable_shared_from_this<client> {
     string_map cat(const std::string&  path,
                    const cat_callback& callback,
                    const revision&     peg_revision    = revision(revision_kind::working),
-                   const revision&     revision        = revision(revision_kind::working),
+                   const revision&     op_revision     = revision(revision_kind::working),
                    bool                expand_keywords = true) const;
     cat_result cat(const std::string& path,
                    const revision&    peg_revision    = revision(revision_kind::working),
-                   const revision&    revision        = revision(revision_kind::working),
+                   const revision&    op_revision     = revision(revision_kind::working),
                    bool               expand_keywords = true) const;
 
     int32_t checkout(const std::string& url,
                      const std::string& path,
                      const revision&    peg_revision             = revision(revision_kind::working),
-                     const revision&    revision                 = revision(revision_kind::working),
+                     const revision&    op_revision              = revision(revision_kind::working),
                      depth              depth                    = depth::infinity,
                      bool               ignore_externals         = false,
                      bool               allow_unver_obstructions = false) const;
@@ -111,7 +111,7 @@ class client : public std::enable_shared_from_this<client> {
     void info(const std::string&   path,
               const info_callback& callback,
               const revision&      peg_revision      = revision(revision_kind::working),
-              const revision&      revision          = revision(revision_kind::working),
+              const revision&      op_revision       = revision(revision_kind::working),
               depth                depth             = depth::empty,
               bool                 fetch_excluded    = true,
               bool                 fetch_actual_only = true,
@@ -137,16 +137,18 @@ class client : public std::enable_shared_from_this<client> {
                 depth                depth             = depth::infinity,
                 const string_vector& changelists       = string_vector(),
                 bool                 clear_changelists = true,
-                bool                 metadata_only     = true) const;
+                bool                 metadata_only     = false,
+                bool                 added_keep_local  = false) const;
     void revert(const string_vector& paths,
                 depth                depth             = depth::infinity,
                 const string_vector& changelists       = string_vector(),
                 bool                 clear_changelists = true,
-                bool                 metadata_only     = true) const;
+                bool                 metadata_only     = false,
+                bool                 added_keep_local  = false) const;
 
     int32_t status(const std::string&     path,
                    const status_callback& callback,
-                   const revision&        revision           = revision(revision_kind::working),
+                   const revision&        op_revision        = revision(revision_kind::working),
                    depth                  depth              = depth::infinity,
                    bool                   get_all            = false,
                    bool                   check_out_of_date  = false,
@@ -157,7 +159,7 @@ class client : public std::enable_shared_from_this<client> {
                    const string_vector&   changelists        = string_vector()) const;
 
     int32_t              update(const std::string& path,
-                                const revision&    revision                 = revision(revision_kind::head),
+                                const revision&    op_revision              = revision(revision_kind::head),
                                 depth              depth                    = depth::infinity,
                                 bool               depth_is_sticky          = false,
                                 bool               ignore_externals         = false,
@@ -165,7 +167,7 @@ class client : public std::enable_shared_from_this<client> {
                                 bool               adds_as_modification     = false,
                                 bool               make_parents             = true) const;
     std::vector<int32_t> update(const string_vector& paths,
-                                const revision&      revision                 = revision(revision_kind::head),
+                                const revision&      op_revision              = revision(revision_kind::head),
                                 depth                depth                    = depth::infinity,
                                 bool                 depth_is_sticky          = false,
                                 bool                 ignore_externals         = false,

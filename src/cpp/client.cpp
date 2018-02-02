@@ -698,18 +698,20 @@ void client::revert(const std::string&   path,
                     depth                depth,
                     const string_vector& changelists,
                     bool                 clear_changelists,
-                    bool                 metadata_only) const {
+                    bool                 metadata_only,
+                    bool                 added_keep_local) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
     auto raw_paths       = convert_vector(path, pool);
     auto raw_changelists = convert_vector(changelists, pool, true, false);
 
-    check_result(svn_client_revert3(raw_paths,
+    check_result(svn_client_revert4(raw_paths,
                                     static_cast<svn_depth_t>(depth),
                                     raw_changelists,
                                     clear_changelists,
                                     metadata_only,
+                                    added_keep_local,
                                     _context,
                                     pool));
 }
@@ -718,18 +720,20 @@ void client::revert(const string_vector& paths,
                     depth                depth,
                     const string_vector& changelists,
                     bool                 clear_changelists,
-                    bool                 metadata_only) const {
+                    bool                 metadata_only,
+                    bool                 added_keep_local) const {
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
     auto raw_paths       = convert_vector(paths, pool, false, true);
     auto raw_changelists = convert_vector(changelists, pool, true, false);
 
-    check_result(svn_client_revert3(raw_paths,
+    check_result(svn_client_revert4(raw_paths,
                                     static_cast<svn_depth_t>(depth),
                                     raw_changelists,
                                     clear_changelists,
                                     metadata_only,
+                                    added_keep_local,
                                     _context,
                                     pool));
 }
