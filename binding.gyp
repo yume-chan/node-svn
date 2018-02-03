@@ -31,10 +31,18 @@
             "cflags_cc!": [
                 "-fno-rtti"
             ],
+            "ldflags": [
+                "-static-libstdc++",
+                "-static-libgcc"
+            ],
             "xcode_settings": {
                 "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
                 "CLANG_CXX_LANGUAGE_STANDARD": "gnu++17",
-                "MACOSX_DEPLOYMENT_TARGET": "10.7"
+                "MACOSX_DEPLOYMENT_TARGET": "10.7",
+                "OTHER_LDFLAGS": [
+                    "-static-libstdc++",
+                    "-static-libgcc"
+                ]
             },
             "msvs_settings": {
                 "VCCLCompilerTool": {
