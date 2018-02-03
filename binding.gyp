@@ -1,4 +1,7 @@
 {
+    "variables": {
+        "clang": 0
+    },
     "targets": [
         {
             "target_name": "svn",
@@ -21,10 +24,6 @@
                 "src/node/export.cpp",
                 "src/node/node_client.cpp"
             ],
-            "libraries": [
-                "ws2_32.lib",
-                "Mincore.lib"
-            ],
             "cflags_cc": [
                 "-std=gnu++17",
                 "-fexceptions"
@@ -34,8 +33,7 @@
             ],
             "xcode_settings": {
                 "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
-                "CLANG_CXX_LIBRARY": "libc++",
-                "CLANG_CXX_LANGUAGE_STANDARD": "gnu++1z",
+                "CLANG_CXX_LANGUAGE_STANDARD": "gnu++17",
                 "MACOSX_DEPLOYMENT_TARGET": "10.7"
             },
             "msvs_settings": {
@@ -48,7 +46,18 @@
                     ],
                     "ExceptionHandling": 1
                 }
-            }
+            },
+            "conditions": [
+                [
+                    "OS == 'win'",
+                    {
+                        "libraries": [
+                            "ws2_32.lib",
+                            "Mincore.lib"
+                        ]
+                    }
+                ]
+            ]
         }
     ]
 }

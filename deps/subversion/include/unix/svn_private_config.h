@@ -168,7 +168,7 @@
 #define SVN_HAVE_GPG_AGENT 1
 
 /* Is Mac OS KeyChain support enabled? */
-#define SVN_HAVE_KEYCHAIN_SERVICES 1
+/* #define SVN_HAVE_KEYCHAIN_SERVICES 1 */
 
 /* Defined if KF5 available */
 /* #undef SVN_HAVE_KF5 */
