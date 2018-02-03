@@ -61,6 +61,7 @@
                 "${workspaceRoot}/deps/serf/serf",
                 "${workspaceRoot}/deps/subversion/include",
                 "${workspaceRoot}/deps/subversion/include/win",
+                "${workspaceRoot}/deps/subversion/sqlite-amalgamation",
                 "${workspaceRoot}/deps/subversion/subversion/subversion/include",
                 "${workspaceRoot}/src"
             ],
@@ -88,6 +89,7 @@
                     "${workspaceRoot}/deps/serf/serf",
                     "${workspaceRoot}/deps/subversion/include",
                     "${workspaceRoot}/deps/subversion/include/win",
+                    "${workspaceRoot}/deps/subversion/sqlite-amalgamation",
                     "${workspaceRoot}/deps/subversion/subversion/subversion/include",
                     "${workspaceRoot}"
                 ],
