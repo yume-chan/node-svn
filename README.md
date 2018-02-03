@@ -18,13 +18,16 @@ Wrap Subversion (SVN) to Node Native Addon
 
 ## Platform table
 
-|         | x86                                                                                                                                                                      | x64                                                                                                                                                                      |
-| ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Windows | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/master?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/master) | [![Build status](https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/master?svg=true)](https://ci.appveyor.com/project/yume-chan/node-svn/branch/master) |
-| Linux   | No                                                                                                                                                                       | No                                                                                                                                                                       |
-| macOS   | No                                                                                                                                                                       | No                                                                                                                                                                       |
+|         | x86                     | x64                     |
+| ------- | ----------------------- | ----------------------- |
+| Windows | [![Build status][1]][2] | [![Build status][1]][2] |
+| Linux   | No                      | No                      |
+| macOS   | N/A                     | [![Build status][3]][4] |
 
-**Help wanted!** I have no idea how to configure it on Linux and macOS, they may both require a complex configure script.
+[1]: https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/master?svg=true
+[2]: https://ci.appveyor.com/project/yume-chan/node-svn/branch/master
+[3]: https://travis-ci.org/yume-chan/node-svn.svg?branch=master
+[4]: https://travis-ci.org/yume-chan/node-svn
 
 ## Dependencies
 
