@@ -112,7 +112,7 @@
             },
             "conditions": [
                 [
-                    "OS == \"win\"",
+                    "OS == 'win'",
                     {
                         "defines": [
                             "_WIN32_WINNT=0x0601"
