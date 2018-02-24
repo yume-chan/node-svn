@@ -35,30 +35,14 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
     SetReadOnly(object, "patch", v8::New<v8::Integer>(isolate, version->patch));
     args.GetReturnValue().Set(object);
 }
-//
-//static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
-//    auto isolate = args.GetIsolate();
-//    auto context = isolate->GetCurrentContext();
-//
-//    auto object = args[0].As<v8::Object>();
-//
-//    auto isEmpty = object.IsEmpty();
-//    if (isEmpty)
-//        return;
-//
-//    auto isUndefined = object->IsUndefined();
-//    if (isUndefined)
-//        return;
-//
-//    auto value = object->Get(context, v8::New<v8::String>(isolate, "test"));
-//    isEmpty    = value.IsEmpty();
-//    if (isEmpty)
-//        return;
-//
-//    isUndefined = value.ToLocalChecked()->IsUndefined();
-//    if (isUndefined)
-//        return;
-//}
+
+static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    auto context = isolate->GetCurrentContext();
+
+    auto callback = args[0].As<v8::Function>();
+	callback->Call(callback->CreationContext(), v8::Undefined(isolate), 0, nullptr);
+}
 
 #include <type_traits>
 
@@ -74,7 +58,7 @@ void init(v8::Local<v8::Object> exports) {
                          v8::AccessControl::ALL_CAN_READ,              // settings
                          v8::PropertyAttributeEx::ReadOnlyDontDelete); // attribute
 
-    //NODE_SET_METHOD(exports, "test", Test);
+    NODE_SET_METHOD(exports, "test", Test);
 
     async_client::init(exports, isolate, context);
     client::init(exports, isolate, context);

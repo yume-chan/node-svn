@@ -6,12 +6,21 @@
 
 #include <uv.h>
 
+template <int>
+struct placeholder_template {};
+
+namespace std {
+template <int N>
+struct is_placeholder<placeholder_template<N>>
+    : integral_constant<int, N + 1> {};
+} // namespace std
+
 namespace uv {
 template <class Callback, class Result, class... Args>
-class async : public std::enable_shared_from_this<async<Callback, Result, Args...>> {
+class async {
   public:
     async(Callback callback)
-        : callback(std::move(callback))
+        : callback(callback)
         , uv_async(new uv_async_t) {
         static_assert(std::is_invocable_v<Callback, Args...>, "callback must be invocable");
 
@@ -19,12 +28,16 @@ class async : public std::enable_shared_from_this<async<Callback, Result, Args..
         uv_async_init(uv_default_loop(), uv_async, invoke_async);
     }
 
+    async(const async&) = delete;
+
     ~async() {
         uv_close(reinterpret_cast<uv_handle_t*>(uv_async), delete_async);
     }
 
     Result operator()(Args... args) {
-        this->args = std::make_tuple<Args...>(std::forward<Args>(args)...);
+        this->args = std::make_unique<std::tuple<Args...>>(std::forward<Args>(args)...);
+
+        promise = std::promise<Result>();
 
         uv_async_send(uv_async);
 
@@ -34,30 +47,22 @@ class async : public std::enable_shared_from_this<async<Callback, Result, Args..
         } else {
             return future.get();
         }
-
-        promise = std::promise<Result>();
     }
 
-    std::function<Result(Args...)> to_function() {
-        auto _this = this->shared_from_this();
-        return [_this](Args... args) -> Result {
-            return _this->operator()(args...);
-        };
+    std::function<Result(Args...)> bind() {
+        return bind_impl(std::make_integer_sequence<int, sizeof...(Args)>{});
     }
 
   private:
-    template <int... Is>
-    struct index {};
-
-    template <int N, int... Is>
-    struct gen_seq : gen_seq<N - 1, N - 1, Is...> {};
-
-    template <int... Is>
-    struct gen_seq<0, Is...> : index<Is...> {};
-
     static void invoke_async(uv_async_t* handle) {
         auto _this = static_cast<async*>(handle->data);
-        _this->invoke_callback(_this->args, gen_seq<sizeof...(Args)>{});
+        if constexpr (std::is_void_v<Result>) {
+            std::apply(_this->callback, *(_this->args));
+            _this->promise.set_value();
+        } else {
+            auto result = std::apply(_this->callback, *(_this->args));
+            _this->promise.set_value(std::move(result));
+        }
     }
 
     static void delete_async(uv_handle_t* handle) {
@@ -65,20 +70,15 @@ class async : public std::enable_shared_from_this<async<Callback, Result, Args..
     }
 
     template <int... Is>
-    void invoke_callback(std::tuple<Args...>& tup, index<Is...>) {
-        if constexpr (std::is_void_v<Result>) {
-            callback(std::get<Is>(tup)...);
-            promise.set_value();
-        } else {
-            auto result = callback(std::get<Is>(tup)...);
-            promise.set_value(result);
-        }
+    decltype(auto) bind_impl(std::integer_sequence<int, Is...>) {
+        auto shared = std::shared_ptr<async>(this);
+        return std::bind(&async::operator(), shared, placeholder_template<Is>{}...);
     }
 
     uv_async_t* uv_async;
 
-    Callback            callback;
-    std::tuple<Args...> args;
+    Callback                             callback;
+    std::unique_ptr<std::tuple<Args...>> args;
 
     std::promise<Result> promise;
 };
@@ -86,6 +86,6 @@ class async : public std::enable_shared_from_this<async<Callback, Result, Args..
 template <class Callback, class... Args>
 static decltype(auto) make_async(Callback callback) {
     using Result = std::invoke_result_t<Callback, Args...>;
-    return std::make_shared<async<Callback, Result, Args...>>(callback);
+    return (new async<Callback, Result, Args...>(callback))->bind();
 }
 } // namespace uv

@@ -2,6 +2,7 @@
 
 #define CLASS_NAME client
 #define EXPORT_NAME "Client"
+#define ASYNC false
 
 #define METHOD_BEGIN(name)                                               \
     void client::name(const v8::FunctionCallbackInfo<v8::Value>& args) { \
@@ -10,7 +11,7 @@
         try {                                                            \
             auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
 
-#define TO_ASYNC_CALLBACK(callback, ...) \
+#define CONVERT_CALLBACK(callback, ...) \
     std::function<std::invoke_result_t<decltype(callback), __VA_ARGS__>(__VA_ARGS__)>(callback)
 
 template <class T>

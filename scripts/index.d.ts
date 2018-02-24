@@ -88,20 +88,10 @@ export type StatusOptions = DepthOption & RevisionOption & {
     ignore_externals: boolean;
 };
 
-type CredentialProviderResult<T> =
-    undefined |
-    T |
-    Promise<undefined> |
-    Promise<T>
-
-interface SimpleCredential {
+interface SimpleAuth {
     username: string;
     password: string;
-    save: boolean;
-}
-
-interface SimpleCredentialProvider {
-    provide_simple_provider(realm: string, username?: string): CredentialProviderResult<SimpleCredential>;
+    may_save: boolean;
 }
 
 type GetChangelistCallback = (path: string, changelist: string) => void;
@@ -111,6 +101,8 @@ type CommitCallback = (info: Readonly<CommitInfo>) => void;
 
 export class Client {
     constructor();
+
+    add_simple_auth_provider(provider: (realm: string, username: string, may_save: boolean) => undefined | SimpleAuth): void;
 
     add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): void;
 
@@ -131,6 +123,7 @@ export class Client {
      * @returns The value of the revision checked out from the repository.
      */
     checkout(url: string, path: string, options?: Partial<CheckoutOptions>): number;
+    cleanup(path: string): void;
     commit(path: string | string[], message: string, callback: CommitCallback): void;
 
     info(path: string, callback: InfoCallback): void;
@@ -152,6 +145,8 @@ export class Client {
 export class AsyncClient {
     constructor();
 
+    add_simple_auth_provider(provider: (realm: string, username: string, may_save: boolean) => undefined | SimpleAuth | Promise<undefined | SimpleAuth>): void;
+
     add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): Promise<void>;
 
     get_changelists(path: string, callback: GetChangelistCallback): Promise<void>;
@@ -171,6 +166,7 @@ export class AsyncClient {
      * @returns The value of the revision checked out from the repository.
      */
     checkout(url: string, path: string, options?: Partial<CheckoutOptions>): Promise<number>;
+    cleanup(path: string): Promise<void>;
     commit(path: string | string[], message: string, callback: CommitCallback): Promise<void>;
 
     info(path: string, callback: InfoCallback): Promise<void>;

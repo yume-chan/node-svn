@@ -50,7 +50,7 @@
                 "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/ucrt",
                 "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/shared",
                 "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/winrt",
-                "C:/Users/Simon/.node-gyp/9.3.0/include/node",
+                "C:/Users/Simon/.node-gyp/9.5.0/include/node",
                 "${workspaceRoot}/deps/apr/include/win",
                 "${workspaceRoot}/deps/apr/include/win/private",
                 "${workspaceRoot}/deps/apr/apr/include",
@@ -66,7 +66,9 @@
                 "${workspaceRoot}/src"
             ],
             "defines": [
+                "_HAS_CXX17",
                 "_DEBUG",
+                "WIN32",
                 "UNICODE",
                 "APR_DECLARE_STATIC"
             ],
@@ -78,7 +80,7 @@
                     "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/ucrt",
                     "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/shared",
                     "C:/Program Files (x86)/Windows Kits/10/Include/10.0.16299.0/winrt",
-                    "C:/Users/Simon/.node-gyp/9.3.0/include/node",
+                    "C:/Users/Simon/.node-gyp/9.5.0/include/node",
                     "${workspaceRoot}/deps/apr/include/win",
                     "${workspaceRoot}/deps/apr/include/win/private",
                     "${workspaceRoot}/deps/apr/apr/include",

@@ -70,7 +70,7 @@
                 "subversion/subversion/libsvn_client/resolved.c",
                 "subversion/subversion/libsvn_client/revert.c",
                 "subversion/subversion/libsvn_client/revisions.c",
-                "subversion/subversion/libsvn_client/shelve.c",
+                "subversion/subversion/libsvn_client/shelf.c",
                 "subversion/subversion/libsvn_client/status.c",
                 "subversion/subversion/libsvn_client/switch.c",
                 "subversion/subversion/libsvn_client/update.c",

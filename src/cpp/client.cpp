@@ -147,6 +147,10 @@ struct baton_wrapper {
     const T& value;
 };
 
+static const char* dup_string(apr_pool_t* pool, const std::string& string) {
+    return static_cast<const char*>(apr_pmemdup(pool, string.c_str(), string.size() + 1));
+}
+
 static svn_error_t* invoke_log_message(const char**              log_msg,
                                        const char**              tmp_file,
                                        const apr_array_header_t* commit_items,
@@ -154,7 +158,7 @@ static svn_error_t* invoke_log_message(const char**              log_msg,
                                        apr_pool_t*               pool) {
     auto baton   = static_cast<baton_wrapper<std::string>*>(raw_baton);
     auto message = baton->value;
-    *log_msg     = static_cast<const char*>(apr_pmemdup(pool, message.c_str(), message.size() + 1));
+    *log_msg     = dup_string(pool, message);
     return nullptr;
 }
 
@@ -166,6 +170,28 @@ static void invoke_notify(void*                  raw_baton,
     if (client->notify_function) {
         client->notify_function(nullptr);
     }
+}
+
+static svn_error_t* invoke_get_simple_prompt_provider(svn_auth_cred_simple_t** credential,
+                                                      void*                    raw_baton,
+                                                      const char*              raw_realm,
+                                                      const char*              raw_username,
+                                                      svn_boolean_t            may_save,
+                                                      apr_pool_t*              pool) {
+    auto client   = static_cast<svn::client*>(raw_baton);
+    auto realm    = std::string(raw_realm);
+    auto username = std::string(raw_username);
+
+    auto result = client->invoke_simple_auth_providers(realm, username, may_save);
+    if (result) {
+        auto value      = static_cast<svn_auth_cred_simple_t*>(apr_palloc(pool, sizeof(svn_auth_cred_simple_t)));
+        value->username = dup_string(pool, result->username);
+        value->password = dup_string(pool, result->password);
+        value->may_save = result->may_save;
+        *credential     = value;
+    }
+
+    return SVN_NO_ERROR;
 }
 
 namespace svn {
@@ -180,6 +206,9 @@ client::client() {
 
     svn_auth_provider_object_t* provider;
     svn_auth_get_simple_provider2(&provider, nullptr, nullptr, _pool);
+    APR_ARRAY_PUSH(providers, svn_auth_provider_object_t*) = provider;
+
+    svn_auth_get_simple_prompt_provider(&provider, invoke_get_simple_prompt_provider, this, 0, _pool);
     APR_ARRAY_PUSH(providers, svn_auth_provider_object_t*) = provider;
 
     svn_auth_get_username_provider(&provider, _pool);
@@ -222,6 +251,25 @@ client::~client() {
         apr_pool_destroy(_pool);
         apr_terminate();
     }
+}
+
+void client::add_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider) {
+    _simple_auth_providers.insert(provider);
+}
+
+void client::remove_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider) {
+    _simple_auth_providers.erase(provider);
+}
+
+std::unique_ptr<simple_auth> client::invoke_simple_auth_providers(const std::string& realm,
+                                                                  const std::string& username,
+                                                                  bool               may_save) {
+    for (auto provider : _simple_auth_providers) {
+        auto auth = (*provider)(realm, username, may_save);
+        if (auth)
+            return auth;
+    }
+    return std::unique_ptr<simple_auth>();
 }
 
 void client::add_to_changelist(const std::string&   path,
@@ -452,6 +500,27 @@ int32_t client::checkout(const std::string& url,
                                       pool));
 
     return result_rev;
+}
+
+void client::cleanup(const std::string& path,
+                     bool               break_locks,
+                     bool               fix_recorded_timestamps,
+                     bool               clear_dav_cache,
+                     bool               vacuum_pristines,
+                     bool               include_externals) const {
+    auto pool_ptr = create_pool(_pool);
+    auto pool     = pool_ptr.get();
+
+    auto raw_path = convert_path(path, pool);
+
+    check_result(svn_client_cleanup2(raw_path,
+                                     break_locks,
+                                     fix_recorded_timestamps,
+                                     clear_dav_cache,
+                                     vacuum_pristines,
+                                     include_externals,
+                                     _context,
+                                     pool));
 }
 
 static commit_info* copy_commit_info(const svn_commit_info_t* raw) {

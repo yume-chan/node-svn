@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <set>
 #include <unordered_map>
 #include <vector>
 
@@ -19,6 +20,19 @@ struct cat_result {
     string_map        properties;
 };
 
+struct simple_auth {
+    simple_auth(const std::string& username, const std::string& password, bool may_save)
+        : username(std::move(username))
+        , password(std::move(password))
+        , may_save(may_save) {}
+
+    ~simple_auth() {}
+
+    const std::string username;
+    const std::string password;
+    const bool        may_save;
+};
+
 class client : public std::enable_shared_from_this<client> {
   public:
     using get_changelists_callback = std::function<void(const char*, const char*)>;
@@ -27,6 +41,7 @@ class client : public std::enable_shared_from_this<client> {
     using info_callback            = std::function<void(const char*, const info*)>;
     using remove_callback          = std::function<void(const commit_info*)>;
     using status_callback          = std::function<void(const char*, const status*)>;
+    using simple_auth_provider     = std::function<std::unique_ptr<simple_auth>(const std::string&, const std::string&, bool)>;
 
     explicit client();
     client(client&&);
@@ -38,6 +53,12 @@ class client : public std::enable_shared_from_this<client> {
     ~client();
 
     std::function<void(notify_info*)> notify_function;
+
+    void                         add_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
+    void                         remove_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
+    std::unique_ptr<simple_auth> invoke_simple_auth_providers(const std::string& realm,
+                                                              const std::string& username,
+                                                              bool               may_save);
 
     void add_to_changelist(const std::string&   path,
                            const std::string&   changelist,
@@ -84,6 +105,13 @@ class client : public std::enable_shared_from_this<client> {
                      depth              depth                    = depth::infinity,
                      bool               ignore_externals         = false,
                      bool               allow_unver_obstructions = false) const;
+
+    void cleanup(const std::string& path,
+                 bool               break_locks,
+                 bool               fix_recorded_timestamps,
+                 bool               clear_dav_cache,
+                 bool               vacuum_pristines,
+                 bool               include_externals) const;
 
     void commit(const std::string&     path,
                 const std::string&     message,
@@ -180,5 +208,7 @@ class client : public std::enable_shared_from_this<client> {
   private:
     apr_pool_t*       _pool;
     svn_client_ctx_t* _context;
+
+    std::set<std::shared_ptr<simple_auth_provider>> _simple_auth_providers;
 };
 } // namespace svn

@@ -5,6 +5,7 @@
 
 #define CLASS_NAME async_client
 #define EXPORT_NAME "AsyncClient"
+#define ASYNC true
 
 #define REPORT_ERROR                                                                            \
     }                                                                                           \
@@ -27,14 +28,14 @@
         try {                                                                  \
             auto _this = node::ObjectWrap::Unwrap<async_client>(args.Holder());
 
-#define TO_ASYNC_CALLBACK(callback, ...) \
-    uv::make_async<decltype(callback), __VA_ARGS__>(callback)->to_function();
+#define CONVERT_CALLBACK(callback, ...) \
+    uv::make_async<decltype(callback), __VA_ARGS__>(callback);
 
 #define EXPAND(x) x
 
 #ifdef __GNUC__
 #define NUM_ARGS_IMPL(_0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, N, ...) N
-#define NUM_ARGS(...) NUM_ARGS_IMPL(_, ## __VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
+#define NUM_ARGS(...) NUM_ARGS_IMPL(_, ##__VA_ARGS__, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0)
 #else
 #define NUM_ARGS_COUNT(x0, x1, x2, x3, x4, x5, n, ...) n
 #define NUM_ARGS_PAD(...) 0, __VA_ARGS__
@@ -64,14 +65,14 @@
 
 // clang-format off
 
-#define ASYNC_END(...)                                                                                                                           \
-    };                                                                                                                                           \
-                                                                                                                                                 \
-    v8::Global<v8::Promise::Resolver> _resolver(isolate, resolver);                                                                              \
+#define ASYNC_END(...)                                                                                                                    \
+    };                                                                                                                                    \
+                                                                                                                                          \
+    v8::Global<v8::Promise::Resolver> _resolver(isolate, resolver);                                                                       \
     auto after_work = [CAPTURE(__VA_ARGS__) isolate, _resolver = std::move(_resolver)](std::future<decltype(do_work())> future) -> void { \
-        v8::HandleScope scope(isolate);                                                                                                          \
-                                                                                                                                                 \
-        auto resolver = _resolver.Get(isolate);                                                                                                  \
+        v8::HandleScope scope(isolate);                                                                                                   \
+                                                                                                                                          \
+        auto resolver = _resolver.Get(isolate);                                                                                           \
         try {
 
 // clang-format on

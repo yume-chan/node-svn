@@ -1,5 +1,5 @@
 #pragma once
 
-#define NAME client
+#define CLASS_NAME client
 
 #include "template/client.hpp"

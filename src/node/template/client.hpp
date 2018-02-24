@@ -5,11 +5,14 @@ class client;
 }
 
 namespace node {
-class NAME : public node::ObjectWrap {
+class CLASS_NAME : public node::ObjectWrap {
   public:
     static void init(v8::Local<v8::Object> exports, v8::Isolate* isolate, v8::Local<v8::Context>& context);
 
     static void create_instance(const v8::FunctionCallbackInfo<v8::Value>& args);
+
+    static void add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void remove_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args);
 
     static void add_to_changelist(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void get_changelists(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -18,6 +21,7 @@ class NAME : public node::ObjectWrap {
     static void add(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void cat(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void checkout(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void cleanup(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void commit(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void info(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void remove(const v8::FunctionCallbackInfo<v8::Value>& args);
@@ -28,11 +32,11 @@ class NAME : public node::ObjectWrap {
 
     static void get_working_copy_root(const v8::FunctionCallbackInfo<v8::Value>& args);
 
-    explicit NAME();
-    NAME(const NAME&) = delete;
-    NAME(NAME&&)      = delete;
+    explicit CLASS_NAME();
+    CLASS_NAME(const CLASS_NAME&) = delete;
+    CLASS_NAME(CLASS_NAME&&)      = delete;
 
-    ~NAME();
+    ~CLASS_NAME();
 
   private:
     std::unique_ptr<svn::client> _client;

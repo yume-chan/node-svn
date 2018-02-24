@@ -15,6 +15,7 @@
             "sources": [
                 "src/cpp/client.cpp",
                 "src/cpp/svn_error.cpp",
+                "src/node/auth/simple.cpp",
                 "src/node/enum/conflict_choose.cpp",
                 "src/node/enum/depth.cpp",
                 "src/node/enum/node_kind.cpp",

@@ -1,5 +1,63 @@
 #ifndef CLASS_NAME
-#error "client.cpp cannot be compiled directly!"
+#include "../node_client.hpp"
+
+#define EXPORT_NAME "Client"
+#define ASYNC false
+
+#define METHOD_BEGIN(name)                                               \
+    void client::name(const v8::FunctionCallbackInfo<v8::Value>& args) { \
+        auto isolate = args.GetIsolate();                                \
+        auto context = isolate->GetCurrentContext();                     \
+        try {                                                            \
+            auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+
+#define CONVERT_CALLBACK(callback, ...) \
+    std::function<std::invoke_result_t<decltype(callback), __VA_ARGS__>(__VA_ARGS__)>(callback)
+
+template <class T>
+class future {
+  public:
+    future() {}
+
+    T value;
+
+    T get() {
+        return value;
+    }
+};
+
+template <>
+class future<void> {
+  public:
+    future() {}
+
+    void get() {}
+};
+
+#define ASYNC_BEGIN(result, ...) \
+    future<result> future;
+
+#define ASYNC_RETURN(result) \
+    future.value = result;
+
+#define ASYNC_END(...)
+
+#define ASYNC_RESULT \
+    future.get()
+
+#define METHOD_RETURN(value) \
+    args.GetReturnValue().Set(value);
+
+#define METHOD_END                                                                                     \
+    }                                                                                                  \
+    catch (svn::svn_type_error & error) {                                                              \
+        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what()))); \
+    }                                                                                                  \
+    catch (svn::svn_error & raw_error) {                                                               \
+        auto error = copy_error(isolate, raw_error);                                                   \
+        isolate->ThrowException(error);                                                                \
+    }                                                                                                  \
+    }
 #endif
 
 #include <cstring>
@@ -9,17 +67,11 @@
 #include <cpp/client.hpp>
 #include <cpp/svn_type_error.hpp>
 
+#include <node/auth/simple.hpp>
 #include <node/v8.hpp>
 
-#define InternalizedString(value) \
+#define INTERNALIZED_STRING(value) \
     v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
-
-static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, svn::svn_error& raw_error) {
-    auto error = v8::Exception::Error(v8::New<v8::String>(isolate, raw_error.what()));
-    if (raw_error.child != nullptr)
-        error.As<v8::Object>()->Set(InternalizedString("child"), copy_error(isolate, *raw_error.child));
-    return error;
-}
 
 static std::string convert_string(const v8::Local<v8::Value>& value) {
     if (!value->IsString())
@@ -32,6 +84,13 @@ static std::string convert_string(const v8::Local<v8::Value>& value) {
         throw svn::svn_type_error("");
 
     return std::string(*utf8, length);
+}
+
+static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, svn::svn_error& raw_error) {
+    auto error = v8::Exception::Error(v8::New<v8::String>(isolate, raw_error.what()));
+    if (raw_error.child != nullptr)
+        error.As<v8::Object>()->Set(INTERNALIZED_STRING("child"), copy_error(isolate, *raw_error.child));
+    return error;
 }
 
 static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value, bool allowEmpty) {
@@ -183,22 +242,22 @@ static v8::Local<v8::Object> buffer_from_vector(v8::Isolate* isolate, std::vecto
 #define STRINGIFY_INTERNAL(X) #X
 #define STRINGIFY(X) STRINGIFY_INTERNAL(X)
 
-#define SetReadOnly(object, name, value)                  \
-    (object)->DefineOwnProperty(context,                  \
-                                InternalizedString(name), \
-                                value,                    \
+#define SET_READ_ONLY(object, name, value)                 \
+    (object)->DefineOwnProperty(context,                   \
+                                INTERNALIZED_STRING(name), \
+                                value,                     \
                                 v8::PropertyAttributeEx::ReadOnlyDontDelete)
 
-#define SetPrototypeMethod(signature, prototype, name, callback, length)                     \
-    /* Add a scope to hide extra variables */                                                \
-    {                                                                                        \
-        auto function = v8::FunctionTemplate::New(isolate,                /* isolate */      \
-                                                  callback,               /* callback */     \
-                                                  v8::Local<v8::Value>(), /* data */         \
-                                                  signature,              /* signature */    \
-                                                  length);                /* length */       \
-        function->RemovePrototype();                                                         \
-        prototype->Set(InternalizedString(name), function, v8::PropertyAttribute::DontEnum); \
+#define SET_PROTOTYPE_METHOD(signature, prototype, name, callback, length)                    \
+    /* Add a scope to hide extra variables */                                                 \
+    {                                                                                         \
+        auto function = v8::FunctionTemplate::New(isolate,                /* isolate */       \
+                                                  callback,               /* callback */      \
+                                                  v8::Local<v8::Value>(), /* data */          \
+                                                  signature,              /* signature */     \
+                                                  length);                /* length */        \
+        function->RemovePrototype();                                                          \
+        prototype->Set(INTERNALIZED_STRING(name), function, v8::PropertyAttribute::DontEnum); \
     }
 
 #define CONVERT_OPTIONS_AND_CALLBACK(index)                \
@@ -221,30 +280,33 @@ void CLASS_NAME::init(v8::Local<v8::Object>   exports,
     auto client    = v8::New<v8::FunctionTemplate>(isolate, create_instance);
     auto signature = v8::Signature::New(isolate, client);
 
-    client->SetClassName(InternalizedString(EXPORT_NAME));
+    client->SetClassName(INTERNALIZED_STRING(EXPORT_NAME));
     client->ReadOnlyPrototype();
 
     client->InstanceTemplate()->SetInternalFieldCount(1);
 
     auto prototype = client->PrototypeTemplate();
-    SetPrototypeMethod(signature, prototype, "add_to_changelist", add_to_changelist, 2);
-    SetPrototypeMethod(signature, prototype, "get_changelists", get_changelists, 2);
-    SetPrototypeMethod(signature, prototype, "remove_from_changelists", remove_from_changelists, 2);
+    SET_PROTOTYPE_METHOD(signature, prototype, "add_simple_auth_provider", add_simple_auth_provider, 2);
 
-    SetPrototypeMethod(signature, prototype, "add", add, 1);
-    SetPrototypeMethod(signature, prototype, "cat", cat, 1);
-    SetPrototypeMethod(signature, prototype, "checkout", checkout, 2);
-    SetPrototypeMethod(signature, prototype, "commit", commit, 3);
-    SetPrototypeMethod(signature, prototype, "info", info, 2);
-    SetPrototypeMethod(signature, prototype, "remove", remove, 2);
-    SetPrototypeMethod(signature, prototype, "resolve", resolve, 1);
-    SetPrototypeMethod(signature, prototype, "revert", revert, 1);
-    SetPrototypeMethod(signature, prototype, "status", status, 2);
-    SetPrototypeMethod(signature, prototype, "update", update, 1);
+    SET_PROTOTYPE_METHOD(signature, prototype, "add_to_changelist", add_to_changelist, 2);
+    SET_PROTOTYPE_METHOD(signature, prototype, "get_changelists", get_changelists, 2);
+    SET_PROTOTYPE_METHOD(signature, prototype, "remove_from_changelists", remove_from_changelists, 2);
 
-    SetPrototypeMethod(signature, prototype, "get_working_copy_root", get_working_copy_root, 1);
+    SET_PROTOTYPE_METHOD(signature, prototype, "add", add, 1);
+    SET_PROTOTYPE_METHOD(signature, prototype, "cat", cat, 1);
+    SET_PROTOTYPE_METHOD(signature, prototype, "checkout", checkout, 2);
+    SET_PROTOTYPE_METHOD(signature, prototype, "cleanup", cleanup, 1);
+    SET_PROTOTYPE_METHOD(signature, prototype, "commit", commit, 3);
+    SET_PROTOTYPE_METHOD(signature, prototype, "info", info, 2);
+    SET_PROTOTYPE_METHOD(signature, prototype, "remove", remove, 2);
+    SET_PROTOTYPE_METHOD(signature, prototype, "resolve", resolve, 1);
+    SET_PROTOTYPE_METHOD(signature, prototype, "revert", revert, 1);
+    SET_PROTOTYPE_METHOD(signature, prototype, "status", status, 2);
+    SET_PROTOTYPE_METHOD(signature, prototype, "update", update, 1);
 
-    SetReadOnly(exports, EXPORT_NAME, client->GetFunction());
+    SET_PROTOTYPE_METHOD(signature, prototype, "get_working_copy_root", get_working_copy_root, 1);
+
+    SET_READ_ONLY(exports, EXPORT_NAME, client->GetFunction());
 }
 
 void CLASS_NAME::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -257,6 +319,28 @@ void CLASS_NAME::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args
 
     auto result = new CLASS_NAME();
     result->Wrap(args.This());
+}
+
+static std::shared_ptr<svn::client::simple_auth_provider> convert_simple_provider(node::simple_auth_provider* provider) {
+    auto shared = std::shared_ptr<simple_auth_provider>(provider);
+    auto bind   = std::bind(&simple_auth_provider::operator(), shared, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+    return std::make_shared<svn::client::simple_auth_provider>(bind);
+}
+
+void CLASS_NAME::add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    auto context = isolate->GetCurrentContext();
+
+    auto _this = node::ObjectWrap::Unwrap<CLASS_NAME>(args.Holder());
+
+    if (!args[0]->IsFunction()) {
+        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, "")));
+        return;
+    }
+
+    auto callback = args[0].As<v8::Function>();
+    auto provider = new node::simple_auth_provider(isolate, callback, ASYNC);
+    _this->_client->add_simple_auth_provider(convert_simple_provider(provider));
 }
 
 METHOD_BEGIN(add_to_changelist)
@@ -291,7 +375,7 @@ METHOD_BEGIN(get_changelists)
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto callback = TO_ASYNC_CALLBACK(_callback, const char*, const char*);
+    auto callback = CONVERT_CALLBACK(_callback, const char*, const char*);
 
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
     auto changelists = convert_array(isolate, options, "changelists");
@@ -347,13 +431,13 @@ METHOD_BEGIN(cat)
     auto raw_result = ASYNC_RESULT;
 
     auto result = v8::New<v8::Object>(isolate);
-    result->Set(InternalizedString("content"), buffer_from_vector(isolate, raw_result.content));
+    result->Set(INTERNALIZED_STRING("content"), buffer_from_vector(isolate, raw_result.content));
 
     auto properties = v8::New<v8::Object>(isolate);
     for (auto pair : raw_result.properties) {
         properties->Set(v8::New<v8::String>(isolate, pair.first), v8::New<v8::String>(isolate, pair.second));
     }
-    result->Set(InternalizedString("properties"), properties);
+    result->Set(INTERNALIZED_STRING("properties"), properties);
 
     METHOD_RETURN(result);
 METHOD_END
@@ -375,6 +459,17 @@ METHOD_BEGIN(checkout)
     METHOD_RETURN(v8::New<v8::Integer>(isolate, result));
 METHOD_END
 
+METHOD_BEGIN(cleanup)
+    auto path = convert_string(args[0]);
+
+    ASYNC_BEGIN(void, path)
+        _this->_client->cleanup(path, true, true, true, true, true);
+    ASYNC_END()
+
+    ASYNC_RESULT;
+    METHOD_RETURN(v8::Undefined(isolate));
+METHOD_END
+
 static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate, const v8::Local<v8::Value>& value) {
     if (!value->IsFunction())
         throw svn::svn_type_error("");
@@ -385,13 +480,13 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
-        info->Set(InternalizedString("author"), v8::New<v8::String>(isolate, raw_info->author));
-        info->Set(InternalizedString("date"), v8::New<v8::String>(isolate, raw_info->date));
-        info->Set(InternalizedString("repos_root"), v8::New<v8::String>(isolate, raw_info->repos_root));
-        info->Set(InternalizedString("revision"), v8::New<v8::Integer>(isolate, raw_info->revision));
+        info->Set(INTERNALIZED_STRING("author"), v8::New<v8::String>(isolate, raw_info->author));
+        info->Set(INTERNALIZED_STRING("date"), v8::New<v8::String>(isolate, raw_info->date));
+        info->Set(INTERNALIZED_STRING("repos_root"), v8::New<v8::String>(isolate, raw_info->repos_root));
+        info->Set(INTERNALIZED_STRING("revision"), v8::New<v8::Integer>(isolate, raw_info->revision));
 
         if (raw_info->post_commit_error != nullptr)
-            info->Set(InternalizedString("post_commit_error"), v8::New<v8::String>(isolate, raw_info->post_commit_error));
+            info->Set(INTERNALIZED_STRING("post_commit_error"), v8::New<v8::String>(isolate, raw_info->post_commit_error));
 
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
@@ -400,7 +495,7 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
 
-    return TO_ASYNC_CALLBACK(_callback, const svn::commit_info*);
+    return CONVERT_CALLBACK(_callback, const svn::commit_info*);
 }
 
 METHOD_BEGIN(commit)
@@ -432,13 +527,13 @@ METHOD_BEGIN(info)
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
-        info->Set(InternalizedString("path"), v8::New<v8::String>(isolate, path));
-        info->Set(InternalizedString("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
-        info->Set(InternalizedString("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
-        info->Set(InternalizedString("last_changed_date"), copy_int64(isolate, raw_info->last_changed_date));
-        info->Set(InternalizedString("last_changed_rev"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->last_changed_rev)));
-        info->Set(InternalizedString("repos_root_url"), v8::New<v8::String>(isolate, raw_info->repos_root_URL));
-        info->Set(InternalizedString("url"), v8::New<v8::String>(isolate, raw_info->URL));
+        info->Set(INTERNALIZED_STRING("path"), v8::New<v8::String>(isolate, path));
+        info->Set(INTERNALIZED_STRING("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
+        info->Set(INTERNALIZED_STRING("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
+        info->Set(INTERNALIZED_STRING("last_changed_date"), copy_int64(isolate, raw_info->last_changed_date));
+        info->Set(INTERNALIZED_STRING("last_changed_rev"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->last_changed_rev)));
+        info->Set(INTERNALIZED_STRING("repos_root_url"), v8::New<v8::String>(isolate, raw_info->repos_root_URL));
+        info->Set(INTERNALIZED_STRING("url"), v8::New<v8::String>(isolate, raw_info->URL));
 
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
@@ -446,7 +541,7 @@ METHOD_BEGIN(info)
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto callback = TO_ASYNC_CALLBACK(_callback, const char*, const svn::info*);
+    auto callback = CONVERT_CALLBACK(_callback, const char*, const svn::info*);
 
     auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
     auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
@@ -473,7 +568,7 @@ METHOD_BEGIN(remove)
 METHOD_END
 
 METHOD_BEGIN(resolve)
-    auto path    = convert_string(args[0]);
+    auto path = convert_string(args[0]);
 
     ASYNC_BEGIN(void, path)
         _this->_client->resolve(path);
@@ -509,21 +604,21 @@ METHOD_BEGIN(status)
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
-        info->Set(InternalizedString("path"), v8::New<v8::String>(isolate, path));
-        info->Set(InternalizedString("changelist"), copy_string(isolate, raw_info->changelist));
-        info->Set(InternalizedString("changed_author"), copy_string(isolate, raw_info->changed_author));
-        info->Set(InternalizedString("changed_date"), copy_int64(isolate, raw_info->changed_date));
-        info->Set(InternalizedString("changed_rev"), v8::New<v8::Integer>(isolate, raw_info->changed_rev));
-        info->Set(InternalizedString("conflicted"), v8::New<v8::Boolean>(isolate, raw_info->conflicted));
-        info->Set(InternalizedString("copied"), v8::New<v8::Boolean>(isolate, raw_info->copied));
-        info->Set(InternalizedString("depth"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_depth)));
-        info->Set(InternalizedString("file_external"), v8::New<v8::Boolean>(isolate, raw_info->file_external));
-        info->Set(InternalizedString("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
-        info->Set(InternalizedString("node_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_status)));
-        info->Set(InternalizedString("prop_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->prop_status)));
-        info->Set(InternalizedString("revision"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->revision)));
-        info->Set(InternalizedString("text_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->text_status)));
-        info->Set(InternalizedString("versioned"), v8::New<v8::Boolean>(isolate, raw_info->versioned));
+        info->Set(INTERNALIZED_STRING("path"), v8::New<v8::String>(isolate, path));
+        info->Set(INTERNALIZED_STRING("changelist"), copy_string(isolate, raw_info->changelist));
+        info->Set(INTERNALIZED_STRING("changed_author"), copy_string(isolate, raw_info->changed_author));
+        info->Set(INTERNALIZED_STRING("changed_date"), copy_int64(isolate, raw_info->changed_date));
+        info->Set(INTERNALIZED_STRING("changed_rev"), v8::New<v8::Integer>(isolate, raw_info->changed_rev));
+        info->Set(INTERNALIZED_STRING("conflicted"), v8::New<v8::Boolean>(isolate, raw_info->conflicted));
+        info->Set(INTERNALIZED_STRING("copied"), v8::New<v8::Boolean>(isolate, raw_info->copied));
+        info->Set(INTERNALIZED_STRING("depth"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_depth)));
+        info->Set(INTERNALIZED_STRING("file_external"), v8::New<v8::Boolean>(isolate, raw_info->file_external));
+        info->Set(INTERNALIZED_STRING("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
+        info->Set(INTERNALIZED_STRING("node_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_status)));
+        info->Set(INTERNALIZED_STRING("prop_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->prop_status)));
+        info->Set(INTERNALIZED_STRING("revision"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->revision)));
+        info->Set(INTERNALIZED_STRING("text_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->text_status)));
+        info->Set(INTERNALIZED_STRING("versioned"), v8::New<v8::Boolean>(isolate, raw_info->versioned));
 
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
@@ -531,7 +626,7 @@ METHOD_BEGIN(status)
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto callback = TO_ASYNC_CALLBACK(_callback, const char*, const svn::status*);
+    auto callback = CONVERT_CALLBACK(_callback, const char*, const svn::status*);
 
     auto revision         = convert_revision(isolate, options, "revision", svn::revision_kind::working);
     auto depth            = convert_depth(isolate, options, "depth", svn::depth::infinity);
@@ -546,7 +641,7 @@ METHOD_BEGIN(status)
 METHOD_END
 
 METHOD_BEGIN(update)
-    auto paths = convert_array(args[0], false);
+    auto paths  = convert_array(args[0], false);
     auto single = args[0]->IsString();
 
     ASYNC_BEGIN(std::vector<int32_t>, paths)
