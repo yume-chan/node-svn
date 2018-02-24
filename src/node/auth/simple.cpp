@@ -1,3 +1,5 @@
+#include <cstring>
+
 #include "simple.hpp"
 
 #define INTERNALIZED_STRING(value) \
