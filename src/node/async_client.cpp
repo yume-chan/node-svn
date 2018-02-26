@@ -71,6 +71,7 @@
     v8::Global<v8::Promise::Resolver> _resolver(isolate, resolver);                                                                       \
     auto after_work = [CAPTURE(__VA_ARGS__) isolate, _resolver = std::move(_resolver)](std::future<decltype(do_work())> future) -> void { \
         v8::HandleScope scope(isolate);                                                                                                   \
+		auto context = isolate->GetCurrentContext();                                                                                      \
                                                                                                                                           \
         auto resolver = _resolver.Get(isolate);                                                                                           \
         try {
@@ -81,7 +82,7 @@
     future.get()
 
 #define METHOD_RETURN(value) \
-    resolver->Resolve(value);
+    resolver->Resolve(context, value);
 
 #define METHOD_END                                             \
     REPORT_ERROR                                               \

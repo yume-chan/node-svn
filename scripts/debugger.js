@@ -13,28 +13,40 @@ function test(svn) {
 }
 
 async function testAsync(svn) {
-    const asyncClient = new svn.AsyncClient();
-    asyncClient.cleanup("c:/Users/Simon/Desktop/dev/webchat");
-    asyncClient.add_simple_auth_provider((realm, username, may_save) => {
-        return Promise.resolve({
-            username: "ad_cxm",
-            password: "cxm123",
-            may_save: false
+    try {
+        const client = new svn.AsyncClient();
+        await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
+        await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
+        client.add_simple_auth_provider((realm, username, may_save) => {
+            // return Promise.resolve({
+            //     username: "ad_cxm",
+            //     password: "cxm123",
+            //     may_save: false
+            // });
+            return new Promise((resolve) => {
+                resolve({
+                    username: "ad_cxm",
+                    password: "cxm123",
+                    may_save: false
+                });
+            });
         });
-    });
-    const revision = await asyncClient.update("c:/Users/Simon/Desktop/dev/webchat");
-    await asyncClient.update("c:/Users/Simon/Desktop/dev/webchat");
-    console.log(revision);
+        const revision = await client.update("c:/Users/Simon/Desktop/dev/webchat");
+        // const revision = await Promise.resolve(1);
+        console.log(revision);
+    } catch (e) {
+        console.error(e);
+    }
 }
 
 try {
     const svn = require("..");
     console.log(process.pid);
 
-    process.stdin.resume();
-    process.stdin.on("data", async () => {
-        testAsync(svn);
-    });
+    // process.stdin.resume();
+    // process.stdin.on("data", () => {
+    testAsync(svn);
+    // });
 } catch (err) {
     console.log(err.stack);
 }

@@ -321,9 +321,8 @@ void CLASS_NAME::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args
     result->Wrap(args.This());
 }
 
-static std::shared_ptr<svn::client::simple_auth_provider> convert_simple_provider(node::simple_auth_provider* provider) {
-    auto shared = std::shared_ptr<simple_auth_provider>(provider);
-    auto bind   = std::bind(&simple_auth_provider::operator(), shared, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
+static std::shared_ptr<svn::client::simple_auth_provider> convert_simple_provider(std::shared_ptr<node::simple_auth_provider> provider) {
+    auto bind = std::bind(&node::simple_auth_provider::operator(), provider, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
     return std::make_shared<svn::client::simple_auth_provider>(bind);
 }
 
@@ -339,7 +338,7 @@ void CLASS_NAME::add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Val
     }
 
     auto callback = args[0].As<v8::Function>();
-    auto provider = new node::simple_auth_provider(isolate, callback, ASYNC);
+    auto provider = std::make_shared<node::simple_auth_provider>(isolate, callback, ASYNC);
     _this->_client->add_simple_auth_provider(convert_simple_provider(provider));
 }
 

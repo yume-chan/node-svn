@@ -6,6 +6,12 @@
 
 #include <uv.h>
 
+static void check_uv_error(int error) {
+    if (error != 0) {
+        throw std::runtime_error(uv_strerror(error));
+    }
+}
+
 template <int>
 struct placeholder_template {};
 
@@ -21,17 +27,18 @@ class async {
   public:
     async(Callback callback)
         : callback(callback)
-        , uv_async(new uv_async_t) {
+        , handle(new uv_async_t) {
         static_assert(std::is_invocable_v<Callback, Args...>, "callback must be invocable");
 
-        uv_async->data = this;
-        uv_async_init(uv_default_loop(), uv_async, invoke_async);
+        check_uv_error(uv_async_init(uv_default_loop(), handle, invoke_async));
+        uv_unref(reinterpret_cast<uv_handle_t*>(handle));
+        handle->data = this;
     }
 
     async(const async&) = delete;
 
     ~async() {
-        uv_close(reinterpret_cast<uv_handle_t*>(uv_async), delete_async);
+        uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async);
     }
 
     Result operator()(Args... args) {
@@ -39,7 +46,7 @@ class async {
 
         promise = std::promise<Result>();
 
-        uv_async_send(uv_async);
+        check_uv_error(uv_async_send(handle));
 
         auto future = promise.get_future();
         if constexpr (std::is_void_v<Result>) {
@@ -75,7 +82,7 @@ class async {
         return std::bind(&async::operator(), shared, placeholder_template<Is>{}...);
     }
 
-    uv_async_t* uv_async;
+    uv_async_t* handle;
 
     Callback                             callback;
     std::unique_ptr<std::tuple<Args...>> args;

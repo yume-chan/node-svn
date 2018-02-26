@@ -26,10 +26,10 @@ struct simple_auth_provider {
     using simple_auth_promise   = std::promise<std::unique_ptr<svn::simple_auth>>;
     using invoke_function_async = uv::async<invoke_function, void, simple_auth_provider*, const std::string&, const std::string&, bool>;
 
-    v8::Isolate*                  _isolate;
-    v8::Persistent<v8::Function>* _callback;
-    bool                          _is_async;
-    invoke_function               _invoke;
-    simple_auth_promise           _promise;
+    v8::Isolate*             _isolate;
+    v8::Global<v8::Function> _callback;
+    bool                     _is_async;
+    invoke_function          _invoke;
+    simple_auth_promise      _promise;
 };
 } // namespace node

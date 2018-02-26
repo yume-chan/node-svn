@@ -56,7 +56,7 @@ static void simple_auth_then(const v8::FunctionCallbackInfo<v8::Value>& args) {
 namespace node {
 simple_auth_provider::simple_auth_provider(v8::Isolate* isolate, v8::Local<v8::Function>& callback, bool is_async)
     : _isolate(isolate)
-    , _callback(new v8::Persistent<v8::Function>(isolate, callback))
+    , _callback(v8::Global<v8::Function>(isolate, callback))
     , _is_async(is_async) {
     if (is_async) {
         auto async = new invoke_function_async(_invoke_sync);
@@ -67,13 +67,12 @@ simple_auth_provider::simple_auth_provider(v8::Isolate* isolate, v8::Local<v8::F
 }
 
 simple_auth_provider::~simple_auth_provider() {
-    _callback->Reset();
-    delete _callback;
 }
 
 std::unique_ptr<svn::simple_auth> simple_auth_provider::operator()(const std::string& realm,
                                                                    const std::string& username,
                                                                    bool               may_save) {
+    _promise = simple_auth_promise();
     _invoke(this, realm, username, may_save);
     return _promise.get_future().get();
 }
@@ -92,7 +91,7 @@ void simple_auth_provider::_invoke_sync(simple_auth_provider* _this,
         v8::New<v8::String>(isolate, username.c_str(), v8::NewStringType::kNormal, username.size()),
         v8::New<v8::Boolean>(isolate, may_save)};
 
-    auto callback = _this->_callback->Get(isolate);
+    auto callback = _this->_callback.Get(isolate);
     auto result   = callback->Call(context, v8::Undefined(isolate), argc, argv).ToLocalChecked();
 
     if (_this->_is_async && result->IsPromise()) {

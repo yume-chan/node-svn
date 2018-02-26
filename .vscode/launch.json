@@ -7,10 +7,26 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Program",
+            "name": "Debug Node",
             "program": "${workspaceFolder}\\scripts\\debugger.js",
             "cwd": "${workspaceFolder}",
+            "stopOnEntry": true,
             "console": "integratedTerminal"
+        },
+        {
+            "type": "cppvsdbg",
+            "name": "Attach Native",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Both Node and Native",
+            "configurations": [
+                "Debug Node",
+                "Attach Native"
+            ]
         }
     ]
 }
