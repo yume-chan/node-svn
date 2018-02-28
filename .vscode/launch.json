@@ -10,7 +10,6 @@
             "name": "Debug Node",
             "program": "${workspaceFolder}\\scripts\\debugger.js",
             "cwd": "${workspaceFolder}",
-            "stopOnEntry": true,
             "console": "integratedTerminal"
         },
         {

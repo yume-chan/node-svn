@@ -18,18 +18,18 @@ async function testAsync(svn) {
         await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
         await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
         client.add_simple_auth_provider((realm, username, may_save) => {
-            // return Promise.resolve({
-            //     username: "ad_cxm",
-            //     password: "cxm123",
-            //     may_save: false
-            // });
-            return new Promise((resolve) => {
-                resolve({
-                    username: "ad_cxm",
-                    password: "cxm123",
-                    may_save: false
-                });
+            return Promise.resolve({
+                username: "ad_cxm",
+                password: "cxm123",
+                may_save: false
             });
+            // return new Promise((resolve) => {
+            //     resolve({
+            //         username: "ad_cxm",
+            //         password: "cxm123",
+            //         may_save: false
+            //     });
+            // });
         });
         const revision = await client.update("c:/Users/Simon/Desktop/dev/webchat");
         // const revision = await Promise.resolve(1);
