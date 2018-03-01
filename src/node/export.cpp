@@ -14,11 +14,11 @@
 #include <node/enum/revision_kind.hpp>
 #include <node/enum/status_kind.hpp>
 
-#define InternalizedString(value) v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
+#define INTERNALIZED_STRING(value) v8::New(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
 
 #define SetReadOnly(object, name, value)                  \
     (object)->DefineOwnProperty(context,                  \
-                                InternalizedString(name), \
+                                INTERNALIZED_STRING(name), \
                                 (value),                  \
                                 v8::PropertyAttributeEx::ReadOnlyDontDelete)
 
@@ -30,9 +30,9 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
     auto version = svn_client_version();
 
     auto object = v8::Object::New(isolate);
-    SetReadOnly(object, "major", v8::New<v8::Integer>(isolate, version->major));
-    SetReadOnly(object, "minor", v8::New<v8::Integer>(isolate, version->minor));
-    SetReadOnly(object, "patch", v8::New<v8::Integer>(isolate, version->patch));
+    SetReadOnly(object, "major", v8::New(isolate, version->major));
+    SetReadOnly(object, "minor", v8::New(isolate, version->minor));
+    SetReadOnly(object, "patch", v8::New(isolate, version->patch));
     args.GetReturnValue().Set(object);
 }
 
@@ -51,7 +51,7 @@ void init(v8::Local<v8::Object> exports) {
     auto context = isolate->GetCurrentContext();
 
     exports->SetAccessor(context,                                      // context
-                         InternalizedString("version"),                // name
+                         INTERNALIZED_STRING("version"),                // name
                          version,                                      // getter
                          nullptr,                                      // setter
                          v8::MaybeLocal<v8::Value>(),                  // data

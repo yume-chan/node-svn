@@ -538,7 +538,60 @@ struct commit_info {
     const char* repos_root;
 };
 
+enum class notify_action {
+    add = 0,
+    copy,
+    remove,
+    restore,
+    revert,
+    failed_revert,
+    resolved,
+    skip,
+
+    update_delete,
+    update_add,
+    update_update,
+    update_completed,
+    update_external,
+
+    status_completed,
+    status_external,
+
+    commit_modified,
+    commit_added,
+    commit_deleted,
+    commit_replaced,
+    commit_postfix_txdelta,
+
+    blame_revision,
+
+    locked,
+    unlocked,
+    failed_lock,
+    failed_unlock,
+
+    exists,
+
+    changelist_set,
+    changelist_clear,
+    changelist_moved,
+
+    merge_begin,
+    foreign_merge_begin,
+
+    update_replace,
+
+    property_added,
+    property_modified,
+    property_deleted,
+    property_deleted_nonexistent,
+
+    revprop_set,
+    revprop_deleted,
+};
+
 struct notify_info {
+    const notify_action action;
 };
 
 enum class conflict_choose {

@@ -3,7 +3,7 @@
 #include "simple.hpp"
 
 #define INTERNALIZED_STRING(value) \
-    v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
+    v8::New(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
 
 namespace v8 {
 namespace PromiseEx {
@@ -139,9 +139,9 @@ simple_auth_future simple_auth_provider::_invoke_sync(simple_auth_provider* _thi
 
     const auto           argc       = 3;
     v8::Local<v8::Value> argv[argc] = {
-        v8::New<v8::String>(isolate, realm.c_str(), v8::NewStringType::kNormal, realm.size()),
-        v8::New<v8::String>(isolate, username.c_str(), v8::NewStringType::kNormal, username.size()),
-        v8::New<v8::Boolean>(isolate, may_save)};
+        v8::New(isolate, realm),
+        v8::New(isolate, username),
+        v8::New(isolate, may_save)};
 
     auto callback = _this->_callback.Get(isolate);
     auto result   = callback->Call(context, v8::Undefined(isolate), argc, argv).ToLocalChecked();

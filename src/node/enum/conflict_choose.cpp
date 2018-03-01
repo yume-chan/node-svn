@@ -2,27 +2,27 @@
 
 #include <cpp/types.hpp>
 
-#define InternalizedString(value) \
-    v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
+#define INTERNALIZED_STRING(value) \
+    v8::New(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
 
-#define SET_ENUM(target, prefix, name)                                                                                   \
-    {                                                                                                                    \
-        auto key   = InternalizedString(#name);                                                                          \
-        auto value = static_cast<int32_t>(prefix::name);                                                                 \
-        target->DefineOwnProperty(context,                                                                               \
-                                  key,                                                                                   \
-                                  v8::New<v8::Integer>(isolate, value),                                                  \
-                                  v8::PropertyAttributeEx::ReadOnlyDontDelete);                                          \
-        target->DefineOwnProperty(context,                                                                               \
-                                  v8::New<v8::String>(isolate, std::to_string(value), v8::NewStringType::kInternalized), \
-                                  key,                                                                                   \
-                                  v8::PropertyAttributeEx::ReadOnlyDontDelete);                                          \
+#define SET_ENUM(target, prefix, name)                                                                       \
+    {                                                                                                        \
+        auto key   = INTERNALIZED_STRING(#name);                                                             \
+        auto value = static_cast<int32_t>(prefix::name);                                                     \
+        target->DefineOwnProperty(context,                                                                   \
+                                  key,                                                                       \
+                                  v8::New(isolate, value),                                                   \
+                                  v8::PropertyAttributeEx::ReadOnlyDontDelete);                              \
+        target->DefineOwnProperty(context,                                                                   \
+                                  v8::New(isolate, std::to_string(value), v8::NewStringType::kInternalized), \
+                                  key,                                                                       \
+                                  v8::PropertyAttributeEx::ReadOnlyDontDelete);                              \
     }
 
-#define SetReadOnly(object, name, value)                  \
-    (object)->DefineOwnProperty(context,                  \
-                                InternalizedString(name), \
-                                value,                    \
+#define SetReadOnly(object, name, value)                   \
+    (object)->DefineOwnProperty(context,                   \
+                                INTERNALIZED_STRING(name), \
+                                value,                     \
                                 v8::PropertyAttributeEx::ReadOnlyDontDelete)
 
 #define SET_CONFLICT_CHOOSE(name) SET_ENUM(object, svn::conflict_choose, name)
@@ -45,5 +45,5 @@ void init(v8::Local<v8::Object>   exports,
 
     SetReadOnly(exports, "ConflictChoose", object);
 }
-} // namespace status_kind
+} // namespace conflict_choose
 } // namespace node

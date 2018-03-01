@@ -48,15 +48,15 @@ class future<void> {
 #define METHOD_RETURN(value) \
     args.GetReturnValue().Set(value);
 
-#define METHOD_END                                                                                     \
-    }                                                                                                  \
-    catch (svn::svn_type_error & error) {                                                              \
-        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what()))); \
-    }                                                                                                  \
-    catch (svn::svn_error & raw_error) {                                                               \
-        auto error = copy_error(isolate, raw_error);                                                   \
-        isolate->ThrowException(error);                                                                \
-    }                                                                                                  \
+#define METHOD_END                                                                         \
+    }                                                                                      \
+    catch (svn::svn_type_error & error) {                                                  \
+        isolate->ThrowException(v8::Exception::TypeError(v8::New(isolate, error.what()))); \
+    }                                                                                      \
+    catch (svn::svn_error & raw_error) {                                                   \
+        auto error = copy_error(isolate, raw_error);                                       \
+        isolate->ThrowException(error);                                                    \
+    }                                                                                      \
     }
 #endif
 
@@ -71,7 +71,7 @@ class future<void> {
 #include <node/v8.hpp>
 
 #define INTERNALIZED_STRING(value) \
-    v8::New<v8::String>(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
+    v8::New(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
 
 static std::string convert_string(const v8::Local<v8::Value>& value) {
     if (!value->IsString())
@@ -87,7 +87,7 @@ static std::string convert_string(const v8::Local<v8::Value>& value) {
 }
 
 static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, svn::svn_error& raw_error) {
-    auto error = v8::Exception::Error(v8::New<v8::String>(isolate, raw_error.what()));
+    auto error = v8::Exception::Error(v8::New(isolate, raw_error.what()));
     if (raw_error.child != nullptr)
         error.As<v8::Object>()->Set(INTERNALIZED_STRING("child"), copy_error(isolate, *raw_error.child));
     return error;
@@ -135,7 +135,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
     if (options.IsEmpty())
         return svn::revision(defaultValue);
 
-    auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(v8::New(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
         return svn::revision(defaultValue);
 
@@ -158,7 +158,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
 
     if (value->IsObject()) {
         auto object = value.As<v8::Object>();
-        auto number = object->Get(v8::New<v8::String>(isolate, "number", v8::NewStringType::kInternalized));
+        auto number = object->Get(INTERNALIZED_STRING("number"));
         if (!number->IsUndefined()) {
             if (!number->IsNumber())
                 throw svn::svn_type_error("");
@@ -166,7 +166,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
             return svn::revision(number->Int32Value());
         }
 
-        auto date = object->Get(v8::New<v8::String>(isolate, "date", v8::NewStringType::kInternalized));
+        auto date = object->Get(INTERNALIZED_STRING("date"));
         if (!date->IsUndefined()) {
             if (!date->IsNumber())
                 throw svn::svn_type_error("");
@@ -185,7 +185,7 @@ static svn::depth convert_depth(v8::Isolate*                 isolate,
     if (options.IsEmpty())
         return defaultValue;
 
-    auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(v8::New(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
         return defaultValue;
 
@@ -202,7 +202,7 @@ static bool convert_boolean(v8::Isolate*                 isolate,
     if (options.IsEmpty())
         return defaultValue;
 
-    auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(v8::New(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
         return defaultValue;
 
@@ -218,7 +218,7 @@ static std::vector<std::string> convert_array(v8::Isolate*          isolate,
     if (options.IsEmpty())
         return std::vector<std::string>();
 
-    auto value = options->Get(v8::New<v8::String>(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(v8::New(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
         return std::vector<std::string>();
 
@@ -313,7 +313,7 @@ void CLASS_NAME::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args
     if (!args.IsConstructCall()) {
         auto isolate = args.GetIsolate();
         auto message = "Class constructor " STRINGIFY(CLASS_NAME) " cannot be invoked without 'new'";
-        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, message)));
+        isolate->ThrowException(v8::Exception::TypeError(v8::New(isolate, message)));
         return;
     }
 
@@ -321,9 +321,9 @@ void CLASS_NAME::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args
     result->Wrap(args.This());
 }
 
-static std::shared_ptr<svn::client::simple_auth_provider> convert_simple_provider(std::shared_ptr<node::simple_auth_provider> provider) {
+static std::shared_ptr<svn::simple_auth_provider> convert_simple_provider(std::shared_ptr<node::simple_auth_provider> provider) {
     auto bind = std::bind(&node::simple_auth_provider::operator(), provider, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-    return std::make_shared<svn::client::simple_auth_provider>(bind);
+    return std::make_shared<svn::simple_auth_provider>(bind);
 }
 
 void CLASS_NAME::add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -333,7 +333,7 @@ void CLASS_NAME::add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Val
     auto _this = node::ObjectWrap::Unwrap<CLASS_NAME>(args.Holder());
 
     if (!args[0]->IsFunction()) {
-        isolate->ThrowException(v8::Exception::TypeError(v8::New<v8::String>(isolate, "")));
+        isolate->ThrowException(v8::Exception::TypeError(v8::String::Empty(isolate)));
         return;
     }
 
@@ -368,8 +368,8 @@ METHOD_BEGIN(get_changelists)
 
         const auto           argc       = 2;
         v8::Local<v8::Value> argv[argc] = {
-            v8::New<v8::String>(isolate, path),
-            v8::New<v8::String>(isolate, changelist)};
+            v8::New(isolate, path),
+            v8::New(isolate, changelist)};
 
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
@@ -434,7 +434,7 @@ METHOD_BEGIN(cat)
 
     auto properties = v8::New<v8::Object>(isolate);
     for (auto pair : raw_result.properties) {
-        properties->Set(v8::New<v8::String>(isolate, pair.first), v8::New<v8::String>(isolate, pair.second));
+        properties->Set(v8::New(isolate, pair.first), v8::New(isolate, pair.second));
     }
     result->Set(INTERNALIZED_STRING("properties"), properties);
 
@@ -455,7 +455,7 @@ METHOD_BEGIN(checkout)
     ASYNC_END()
 
     auto result = ASYNC_RESULT;
-    METHOD_RETURN(v8::New<v8::Integer>(isolate, result));
+    METHOD_RETURN(v8::New(isolate, result));
 METHOD_END
 
 METHOD_BEGIN(cleanup)
@@ -479,13 +479,13 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
-        info->Set(INTERNALIZED_STRING("author"), v8::New<v8::String>(isolate, raw_info->author));
-        info->Set(INTERNALIZED_STRING("date"), v8::New<v8::String>(isolate, raw_info->date));
-        info->Set(INTERNALIZED_STRING("repos_root"), v8::New<v8::String>(isolate, raw_info->repos_root));
-        info->Set(INTERNALIZED_STRING("revision"), v8::New<v8::Integer>(isolate, raw_info->revision));
+        info->Set(INTERNALIZED_STRING("author"), v8::New(isolate, raw_info->author));
+        info->Set(INTERNALIZED_STRING("date"), v8::New(isolate, raw_info->date));
+        info->Set(INTERNALIZED_STRING("repos_root"), v8::New(isolate, raw_info->repos_root));
+        info->Set(INTERNALIZED_STRING("revision"), v8::New(isolate, raw_info->revision));
 
         if (raw_info->post_commit_error != nullptr)
-            info->Set(INTERNALIZED_STRING("post_commit_error"), v8::New<v8::String>(isolate, raw_info->post_commit_error));
+            info->Set(INTERNALIZED_STRING("post_commit_error"), v8::New(isolate, raw_info->post_commit_error));
 
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
@@ -512,9 +512,9 @@ METHOD_END
 
 static v8::Local<v8::Value> copy_int64(v8::Isolate* isolate, int64_t value) {
     if (value <= INT32_MAX)
-        return v8::New<v8::Integer>(isolate, static_cast<int32_t>(value));
+        return v8::New(isolate, static_cast<int32_t>(value));
     else
-        return v8::New<v8::String>(isolate, std::to_string(value));
+        return v8::New(isolate, std::to_string(value));
 }
 
 METHOD_BEGIN(info)
@@ -526,13 +526,13 @@ METHOD_BEGIN(info)
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
-        info->Set(INTERNALIZED_STRING("path"), v8::New<v8::String>(isolate, path));
-        info->Set(INTERNALIZED_STRING("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
-        info->Set(INTERNALIZED_STRING("last_changed_author"), v8::New<v8::String>(isolate, raw_info->last_changed_author));
+        info->Set(INTERNALIZED_STRING("path"), v8::New(isolate, path));
+        info->Set(INTERNALIZED_STRING("kind"), v8::New(isolate, static_cast<int32_t>(raw_info->kind)));
+        info->Set(INTERNALIZED_STRING("last_changed_author"), v8::New(isolate, raw_info->last_changed_author));
         info->Set(INTERNALIZED_STRING("last_changed_date"), copy_int64(isolate, raw_info->last_changed_date));
-        info->Set(INTERNALIZED_STRING("last_changed_rev"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->last_changed_rev)));
-        info->Set(INTERNALIZED_STRING("repos_root_url"), v8::New<v8::String>(isolate, raw_info->repos_root_URL));
-        info->Set(INTERNALIZED_STRING("url"), v8::New<v8::String>(isolate, raw_info->URL));
+        info->Set(INTERNALIZED_STRING("last_changed_rev"), v8::New(isolate, static_cast<int32_t>(raw_info->last_changed_rev)));
+        info->Set(INTERNALIZED_STRING("repos_root_url"), v8::New(isolate, raw_info->repos_root_URL));
+        info->Set(INTERNALIZED_STRING("url"), v8::New(isolate, raw_info->URL));
 
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
@@ -591,7 +591,7 @@ METHOD_END
 static v8::Local<v8::Value> copy_string(v8::Isolate* isolate, const char* value) {
     if (value == nullptr)
         return v8::Undefined(isolate);
-    return v8::New<v8::String>(isolate, value);
+    return v8::New(isolate, value);
 }
 
 METHOD_BEGIN(status)
@@ -603,21 +603,21 @@ METHOD_BEGIN(status)
         v8::HandleScope scope(isolate);
 
         auto info = v8::New<v8::Object>(isolate);
-        info->Set(INTERNALIZED_STRING("path"), v8::New<v8::String>(isolate, path));
+        info->Set(INTERNALIZED_STRING("path"), v8::New(isolate, path));
         info->Set(INTERNALIZED_STRING("changelist"), copy_string(isolate, raw_info->changelist));
         info->Set(INTERNALIZED_STRING("changed_author"), copy_string(isolate, raw_info->changed_author));
         info->Set(INTERNALIZED_STRING("changed_date"), copy_int64(isolate, raw_info->changed_date));
-        info->Set(INTERNALIZED_STRING("changed_rev"), v8::New<v8::Integer>(isolate, raw_info->changed_rev));
-        info->Set(INTERNALIZED_STRING("conflicted"), v8::New<v8::Boolean>(isolate, raw_info->conflicted));
-        info->Set(INTERNALIZED_STRING("copied"), v8::New<v8::Boolean>(isolate, raw_info->copied));
-        info->Set(INTERNALIZED_STRING("depth"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_depth)));
-        info->Set(INTERNALIZED_STRING("file_external"), v8::New<v8::Boolean>(isolate, raw_info->file_external));
-        info->Set(INTERNALIZED_STRING("kind"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->kind)));
-        info->Set(INTERNALIZED_STRING("node_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->node_status)));
-        info->Set(INTERNALIZED_STRING("prop_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->prop_status)));
-        info->Set(INTERNALIZED_STRING("revision"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->revision)));
-        info->Set(INTERNALIZED_STRING("text_status"), v8::New<v8::Integer>(isolate, static_cast<int32_t>(raw_info->text_status)));
-        info->Set(INTERNALIZED_STRING("versioned"), v8::New<v8::Boolean>(isolate, raw_info->versioned));
+        info->Set(INTERNALIZED_STRING("changed_rev"), v8::New(isolate, raw_info->changed_rev));
+        info->Set(INTERNALIZED_STRING("conflicted"), v8::New(isolate, raw_info->conflicted));
+        info->Set(INTERNALIZED_STRING("copied"), v8::New(isolate, raw_info->copied));
+        info->Set(INTERNALIZED_STRING("depth"), v8::New(isolate, static_cast<int32_t>(raw_info->node_depth)));
+        info->Set(INTERNALIZED_STRING("file_external"), v8::New(isolate, raw_info->file_external));
+        info->Set(INTERNALIZED_STRING("kind"), v8::New(isolate, static_cast<int32_t>(raw_info->kind)));
+        info->Set(INTERNALIZED_STRING("node_status"), v8::New(isolate, static_cast<int32_t>(raw_info->node_status)));
+        info->Set(INTERNALIZED_STRING("prop_status"), v8::New(isolate, static_cast<int32_t>(raw_info->prop_status)));
+        info->Set(INTERNALIZED_STRING("revision"), v8::New(isolate, static_cast<int32_t>(raw_info->revision)));
+        info->Set(INTERNALIZED_STRING("text_status"), v8::New(isolate, static_cast<int32_t>(raw_info->text_status)));
+        info->Set(INTERNALIZED_STRING("versioned"), v8::New(isolate, raw_info->versioned));
 
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
@@ -648,13 +648,13 @@ METHOD_BEGIN(update)
     ASYNC_END(single)
 
     if (single) {
-        auto result = v8::New<v8::Integer>(isolate, ASYNC_RESULT[0]);
+        auto result = v8::New(isolate, ASYNC_RESULT[0]);
         METHOD_RETURN(result);
     } else {
         auto vector = ASYNC_RESULT;
         auto result = v8::New<v8::Array>(isolate, static_cast<int32_t>(vector.size()));
         for (uint32_t i = 0; i < vector.size(); i++)
-            result->Set(i, v8::New<v8::Integer>(isolate, vector[i]));
+            result->Set(i, v8::New(isolate, vector[i]));
         METHOD_RETURN(result);
     }
 METHOD_END
@@ -666,7 +666,7 @@ METHOD_BEGIN(get_working_copy_root)
         ASYNC_RETURN(_this->_client->get_working_copy_root(path));
     ASYNC_END()
 
-    auto result = v8::New<v8::String>(isolate, ASYNC_RESULT);
+    auto result = v8::New(isolate, ASYNC_RESULT);
     METHOD_RETURN(result);
 METHOD_END
 

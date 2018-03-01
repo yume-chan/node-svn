@@ -7,14 +7,14 @@
 #define EXPORT_NAME "AsyncClient"
 #define ASYNC true
 
-#define REPORT_ERROR                                                                            \
-    }                                                                                           \
-    catch (svn::svn_type_error & error) {                                                       \
-        resolver->Reject(v8::Exception::TypeError(v8::New<v8::String>(isolate, error.what()))); \
-    }                                                                                           \
-    catch (svn::svn_error & raw_error) {                                                        \
-        auto error = copy_error(isolate, raw_error);                                            \
-        resolver->Reject(error);                                                                \
+#define REPORT_ERROR                                                                \
+    }                                                                               \
+    catch (svn::svn_type_error & error) {                                           \
+        resolver->Reject(v8::Exception::TypeError(v8::New(isolate, error.what()))); \
+    }                                                                               \
+    catch (svn::svn_error & raw_error) {                                            \
+        auto error = copy_error(isolate, raw_error);                                \
+        resolver->Reject(error);                                                    \
     }
 
 #define METHOD_BEGIN(name)                                                     \

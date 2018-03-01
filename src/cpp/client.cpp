@@ -167,9 +167,9 @@ static void invoke_notify(void*                  raw_baton,
                           apr_pool_t*            pool) {
     auto client = static_cast<svn::client*>(raw_baton);
 
-    if (client->notify_function) {
-        client->notify_function(nullptr);
-    }
+    svn::notify_info info{static_cast<svn::notify_action>(notify->action)};
+
+    client->invoke_notify_function(info);
 }
 
 static svn_error_t* invoke_get_simple_prompt_provider(svn_auth_cred_simple_t** credential,
@@ -250,6 +250,26 @@ client::~client() {
     if (_pool != nullptr) {
         apr_pool_destroy(_pool);
         apr_terminate();
+    }
+}
+
+void client::add_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function) {
+    for (auto action : actions) {
+        auto set = _notify_functions[action];
+        set.insert(function);
+    }
+}
+
+void client::remove_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function) {
+    for (auto action : actions) {
+        auto set = _notify_functions[action];
+        set.insert(function);
+    }
+}
+
+void client::invoke_notify_function(const notify_info& info) {
+    for (auto function : _notify_functions[info.action]) {
+        (*function)(info);
     }
 }
 

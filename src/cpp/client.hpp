@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <map>
 #include <memory>
 #include <set>
 #include <unordered_map>
@@ -33,6 +34,8 @@ struct simple_auth {
     const bool        may_save;
 };
 
+using simple_auth_provider = std::function<std::unique_ptr<simple_auth>(const std::string&, const std::string&, bool)>;
+
 class client : public std::enable_shared_from_this<client> {
   public:
     using get_changelists_callback = std::function<void(const char*, const char*)>;
@@ -41,7 +44,7 @@ class client : public std::enable_shared_from_this<client> {
     using info_callback            = std::function<void(const char*, const info*)>;
     using remove_callback          = std::function<void(const commit_info*)>;
     using status_callback          = std::function<void(const char*, const status*)>;
-    using simple_auth_provider     = std::function<std::unique_ptr<simple_auth>(const std::string&, const std::string&, bool)>;
+    using notify_function          = std::function<void(const notify_info&)>;
 
     explicit client();
     client(client&&);
@@ -52,7 +55,9 @@ class client : public std::enable_shared_from_this<client> {
 
     ~client();
 
-    std::function<void(notify_info*)> notify_function;
+    void add_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function);
+    void remove_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function);
+    void invoke_notify_function(const notify_info& info);
 
     void                         add_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
     void                         remove_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
@@ -209,6 +214,7 @@ class client : public std::enable_shared_from_this<client> {
     apr_pool_t*       _pool;
     svn_client_ctx_t* _context;
 
-    std::set<std::shared_ptr<simple_auth_provider>> _simple_auth_providers;
+    std::set<std::shared_ptr<simple_auth_provider>>                          _simple_auth_providers;
+    std::map<svn::notify_action, std::set<std::shared_ptr<notify_function>>> _notify_functions;
 };
 } // namespace svn
