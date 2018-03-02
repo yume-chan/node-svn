@@ -64,7 +64,8 @@
         "xmemory0": "cpp",
         "xstddef": "cpp",
         "xtr1common": "cpp",
-        "xutility": "cpp"
+        "xutility": "cpp",
+        "optional": "cpp"
     },
     "git.ignoreLimitWarning": true,
     "python.formatting.provider": "autopep8",

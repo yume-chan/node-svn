@@ -140,12 +140,22 @@ static std::unique_ptr<apr_pool_t, decltype(&apr_pool_destroy)> create_pool(apr_
 }
 
 template <class T>
-struct baton_wrapper {
-    baton_wrapper(const T& value)
+struct const_ref {
+    const_ref(const T& value)
         : value(value) {}
 
     const T& value;
 };
+
+template <class T>
+auto make_const_ref(const T& value) {
+    return const_ref<T>(value);
+}
+
+template <class T>
+auto get_const_ref(void* ref) {
+    return static_cast<const_ref<T>*>(ref)->value;
+}
 
 static const char* dup_string(apr_pool_t* pool, const std::string& string) {
     return static_cast<const char*>(apr_pmemdup(pool, string.c_str(), string.size() + 1));
@@ -156,8 +166,7 @@ static svn_error_t* invoke_log_message(const char**              log_msg,
                                        const apr_array_header_t* commit_items,
                                        void*                     raw_baton,
                                        apr_pool_t*               pool) {
-    auto baton   = static_cast<baton_wrapper<std::string>*>(raw_baton);
-    auto message = baton->value;
+    auto message = get_const_ref<std::string>(raw_baton);
     *log_msg     = dup_string(pool, message);
     return nullptr;
 }
@@ -216,11 +225,12 @@ client::client() {
 
     svn_auth_baton_t* auth_baton;
     svn_auth_open(&auth_baton, providers, _pool);
-    _context->auth_baton = auth_baton;
 
     const char* path;
     check_result(svn_config_get_user_config_path(&path, nullptr, nullptr, _pool));
-    svn_auth_set_parameter(_context->auth_baton, SVN_AUTH_PARAM_CONFIG_DIR, path);
+    svn_auth_set_parameter(auth_baton, SVN_AUTH_PARAM_CONFIG_DIR, path);
+
+    _context->auth_baton = auth_baton;
 
     _context->log_msg_func3 = invoke_log_message;
 
@@ -253,6 +263,12 @@ client::~client() {
     }
 }
 
+bool client::has_config(const std::optional<const std::string>& path) {
+}
+
+void client::ensure_config(const std::optional<const std::string>& path) {
+}
+
 void client::add_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function) {
     for (auto action : actions) {
         auto set = _notify_functions[action];
@@ -281,15 +297,15 @@ void client::remove_simple_auth_provider(const std::shared_ptr<simple_auth_provi
     _simple_auth_providers.erase(provider);
 }
 
-std::unique_ptr<simple_auth> client::invoke_simple_auth_providers(const std::string& realm,
-                                                                  const std::string& username,
-                                                                  bool               may_save) {
+std::optional<simple_auth> client::invoke_simple_auth_providers(const std::string&                      realm,
+                                                                const std::optional<const std::string>& username,
+                                                                bool                                    may_save) {
     for (auto provider : _simple_auth_providers) {
         auto auth = (*provider)(realm, username, may_save);
         if (auth)
             return auth;
     }
-    return std::unique_ptr<simple_auth>();
+    return {};
 }
 
 void client::add_to_changelist(const std::string&   path,
@@ -334,8 +350,8 @@ static svn_error_t* invoke_get_changelists(void*       raw_baton,
                                            const char* path,
                                            const char* changelist,
                                            apr_pool_t* pool) {
-    auto callback_baton = static_cast<baton_wrapper<client::get_changelists_callback>*>(raw_baton);
-    callback_baton->value(path, changelist);
+    auto callback = get_const_ref<client::get_changelists_callback>(raw_baton);
+    callback(path, changelist);
     return nullptr;
 }
 
@@ -348,13 +364,13 @@ void client::get_changelists(const std::string&              path,
 
     auto raw_path        = convert_path(path, pool);
     auto raw_changelists = convert_vector(changelists, pool, true, false);
-    auto callback_baton  = std::make_unique<baton_wrapper<get_changelists_callback>>(callback);
+    auto callback_ref    = make_const_ref(callback);
 
     check_result(svn_client_get_changelists(raw_path,
                                             raw_changelists,
                                             static_cast<svn_depth_t>(depth),
                                             invoke_get_changelists,
-                                            callback_baton.get(),
+                                            &callback_ref,
                                             _context,
                                             pool));
 }
@@ -415,8 +431,8 @@ void client::add(const std::string& path,
 svn_error_t* invoke_cat_callback(void*       raw_baton,
                                  const char* data,
                                  apr_size_t* len) {
-    auto callback_baton = static_cast<baton_wrapper<client::cat_callback>*>(raw_baton);
-    callback_baton->value(data, *len);
+    auto callback = get_const_ref<client::cat_callback>(raw_baton);
+    callback(data, *len);
 
     return nullptr;
 }
@@ -439,11 +455,11 @@ string_map client::cat(const std::string&  path,
     apr_hash_t* raw_properties;
 
     auto raw_path         = convert_path(path, pool);
-    auto raw_callback     = std::make_unique<baton_wrapper<cat_callback>>(callback);
+    auto raw_callback     = make_const_ref(callback);
     auto raw_peg_revision = convert_revision(peg_revision);
     auto raw_revision     = convert_revision(revision);
 
-    auto stream = svn_stream_create(raw_callback.get(), pool);
+    auto stream = svn_stream_create(&raw_callback, pool);
     svn_stream_set_write(stream, invoke_cat_callback);
 
     auto scratch_pool_ptr = create_pool(_pool);
@@ -560,8 +576,8 @@ static commit_info* copy_commit_info(const svn_commit_info_t* raw) {
 static svn_error_t* invoke_commit(const svn_commit_info_t* commit_info,
                                   void*                    raw_baton,
                                   apr_pool_t*              raw_pool) {
-    auto callback_baton = static_cast<baton_wrapper<client::commit_callback>*>(raw_baton);
-    callback_baton->value(copy_commit_info(commit_info));
+    auto callback = get_const_ref<client::commit_callback>(raw_baton);
+    callback(copy_commit_info(commit_info));
     return nullptr;
 }
 
@@ -601,14 +617,14 @@ void client::commit(const string_vector&   paths,
                     bool                   include_file_externals,
                     bool                   include_dir_externals) const {
     check_string(message);
-    auto message_baton       = std::make_unique<baton_wrapper<std::string>>(message);
-    _context->log_msg_baton3 = message_baton.get();
+    auto message_ref         = make_const_ref(message);
+    _context->log_msg_baton3 = &message_ref;
 
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
     auto raw_paths       = convert_vector(paths, pool, false, true);
-    auto raw_callback    = std::make_unique<baton_wrapper<commit_callback>>(callback);
+    auto callback_ref    = make_const_ref(callback);
     auto raw_changelists = convert_vector(changelists, pool, true, false);
     auto raw_props       = convert_map(revprop_table, _pool);
 
@@ -622,7 +638,7 @@ void client::commit(const string_vector&   paths,
                                     raw_changelists,
                                     raw_props,
                                     invoke_commit,
-                                    raw_callback.get(),
+                                    &callback_ref,
                                     _context,
                                     pool));
 }
@@ -697,8 +713,8 @@ static svn_error_t* invoke_info(void*                     raw_baton,
                                 const char*               path,
                                 const svn_client_info2_t* raw_info,
                                 apr_pool_t*               raw_scratch_pool) {
-    auto callback_baton = static_cast<baton_wrapper<client::info_callback>*>(raw_baton);
-    callback_baton->value(path, copy_info(raw_info));
+    auto callback = get_const_ref<client::info_callback>(raw_baton);
+    callback(path, copy_info(raw_info));
     return nullptr;
 }
 
@@ -715,7 +731,7 @@ void client::info(const std::string&   path,
     auto pool     = pool_ptr.get();
 
     auto raw_path         = convert_path(path, pool);
-    auto raw_callback     = std::make_unique<baton_wrapper<info_callback>>(callback);
+    auto callback_ref     = make_const_ref(callback);
     auto raw_peg_revision = convert_revision(peg_revision);
     auto raw_revision     = convert_revision(revision);
     auto raw_changelists  = convert_vector(changelists, pool, true, false);
@@ -729,7 +745,7 @@ void client::info(const std::string&   path,
                                   include_externals,
                                   raw_changelists,
                                   invoke_info,
-                                  raw_callback.get(),
+                                  &callback_ref,
                                   _context,
                                   pool));
 }
@@ -755,7 +771,7 @@ void client::remove(const string_vector&   paths,
     auto pool     = pool_ptr.get();
 
     auto raw_paths    = convert_vector(paths, pool, false, true);
-    auto raw_callback = std::make_unique<baton_wrapper<remove_callback>>(callback);
+    auto callback_ref = make_const_ref(callback);
     auto raw_props    = convert_map(revprop_table, _pool);
 
     check_result(svn_client_delete4(raw_paths,
@@ -763,7 +779,7 @@ void client::remove(const string_vector&   paths,
                                     keep_local,
                                     raw_props,
                                     invoke_commit,
-                                    raw_callback.get(),
+                                    &callback_ref,
                                     _context,
                                     pool));
 }
@@ -872,8 +888,8 @@ static svn_error_t* invoke_status(void*                      raw_baton,
                                   const char*                path,
                                   const svn_client_status_t* raw_status,
                                   apr_pool_t*                raw_scratch_pool) {
-    auto callback_baton = static_cast<baton_wrapper<client::status_callback>*>(raw_baton);
-    callback_baton->value(path, copy_status(raw_status));
+    auto callback = get_const_ref<client::status_callback>(raw_baton);
+    callback(path, copy_status(raw_status));
     return nullptr;
 }
 
@@ -892,7 +908,7 @@ int32_t client::status(const std::string&     path,
     auto pool     = pool_ptr.get();
 
     auto raw_path        = convert_path(path, pool);
-    auto raw_callback    = std::make_unique<baton_wrapper<status_callback>>(callback);
+    auto callback_ref    = make_const_ref(callback);
     auto raw_revision    = convert_revision(revision);
     auto raw_changelists = convert_vector(changelists, pool, true, false);
 
@@ -911,7 +927,7 @@ int32_t client::status(const std::string&     path,
                                     depth_as_sticky,
                                     raw_changelists,
                                     invoke_status,
-                                    raw_callback.get(),
+                                    &callback_ref,
                                     pool));
 
     return result_rev;

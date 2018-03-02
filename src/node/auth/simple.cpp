@@ -80,12 +80,10 @@ static std::string convert_string(const v8::Local<v8::Value>& value) {
     return std::string(*utf8, length);
 }
 
-using simple_auth_promise = std::promise<std::unique_ptr<svn::simple_auth>>;
-
-static std::unique_ptr<svn::simple_auth> convert_simple_auth(v8::Isolate*                isolate,
-                                                             const v8::Local<v8::Value>& value) {
+static std::optional<svn::simple_auth> convert_simple_auth(v8::Isolate*                isolate,
+                                                           const v8::Local<v8::Value>& value) {
     if (value->IsUndefined())
-        return std::unique_ptr<svn::simple_auth>();
+        return {};
 
     if (value->IsObject()) {
         auto object = value.As<v8::Object>();
@@ -93,15 +91,15 @@ static std::unique_ptr<svn::simple_auth> convert_simple_auth(v8::Isolate*       
             auto username = convert_string(object->Get(INTERNALIZED_STRING("username")));
             auto password = convert_string(object->Get(INTERNALIZED_STRING("password")));
             auto may_save = object->Get(INTERNALIZED_STRING("may_save"))->BooleanValue();
-            return std::make_unique<svn::simple_auth>(username, password, may_save);
+            return svn::simple_auth(username, password, may_save);
         } catch (svn::svn_type_error&) {
             // TODO: add warning for wrong return value type.
-            return std::unique_ptr<svn::simple_auth>();
+            return {};
         }
     }
 
     // TODO: add warning for wrong return value type.
-    return std::unique_ptr<svn::simple_auth>();
+    return {};
 }
 
 namespace node {
@@ -122,17 +120,17 @@ simple_auth_provider::simple_auth_provider(v8::Isolate*             isolate,
 simple_auth_provider::~simple_auth_provider() {
 }
 
-std::unique_ptr<svn::simple_auth> simple_auth_provider::operator()(const std::string& realm,
-                                                                   const std::string& username,
-                                                                   bool               may_save) {
+std::optional<svn::simple_auth> simple_auth_provider::operator()(const std::string&                      realm,
+                                                                 const std::optional<const std::string>& username,
+                                                                 bool                                    may_save) {
     auto future = _invoke(this, realm, username, may_save);
     return future.get();
 }
 
-simple_auth_future simple_auth_provider::_invoke_sync(simple_auth_provider* _this,
-                                                      const std::string&    realm,
-                                                      const std::string&    username,
-                                                      bool                  may_save) {
+simple_auth_future simple_auth_provider::_invoke_sync(simple_auth_provider*                   _this,
+                                                      const std::string&                      realm,
+                                                      const std::optional<const std::string>& username,
+                                                      bool                                    may_save) {
     auto            isolate = _this->_isolate;
     v8::HandleScope scope(isolate);
     auto            context = isolate->GetCurrentContext();
@@ -140,14 +138,14 @@ simple_auth_future simple_auth_provider::_invoke_sync(simple_auth_provider* _thi
     const auto           argc       = 3;
     v8::Local<v8::Value> argv[argc] = {
         v8::New(isolate, realm),
-        v8::New(isolate, username),
+        username ? v8::New(isolate, *username).As<v8::Value>() : v8::Undefined(isolate).As<v8::Value>(),
         v8::New(isolate, may_save)};
 
     auto callback = _this->_callback.Get(isolate);
     auto result   = callback->Call(context, v8::Undefined(isolate), argc, argv).ToLocalChecked();
 
     if (_this->_is_async && result->IsPromise()) {
-        return v8::PromiseEx::Then<std::unique_ptr<svn::simple_auth>>(isolate, result.As<v8::Promise>(), convert_simple_auth, convert_simple_auth);
+        return v8::PromiseEx::Then<std::optional<svn::simple_auth>>(isolate, result.As<v8::Promise>(), convert_simple_auth, convert_simple_auth);
     }
 
     simple_auth_promise promise;

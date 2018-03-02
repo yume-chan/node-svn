@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <unordered_map>
 #include <vector>
@@ -29,12 +30,18 @@ struct simple_auth {
 
     ~simple_auth() {}
 
-    const std::string username;
-    const std::string password;
-    const bool        may_save;
+    // I want to declare there members as `const`,
+    // but MSVC's `std::promise<std::optional<T>>::set_value()`
+    // function requires the `T` to be copy or move assignable.
+    // (gcc is ok)
+    // So temporarily remove the `const`.
+
+    /* const */ std::string username;
+    /* const */ std::string password;
+    /* const */ bool        may_save;
 };
 
-using simple_auth_provider = std::function<std::unique_ptr<simple_auth>(const std::string&, const std::string&, bool)>;
+using simple_auth_provider = std::function<std::optional<simple_auth>(const std::string&, const std::optional<const std::string>&, bool)>;
 
 class client : public std::enable_shared_from_this<client> {
   public:
@@ -55,15 +62,18 @@ class client : public std::enable_shared_from_this<client> {
 
     ~client();
 
+    bool has_config(const std::optional<const std::string>& path);
+    void ensure_config(const std::optional<const std::string>& path);
+
     void add_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function);
     void remove_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function);
     void invoke_notify_function(const notify_info& info);
 
-    void                         add_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
-    void                         remove_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
-    std::unique_ptr<simple_auth> invoke_simple_auth_providers(const std::string& realm,
-                                                              const std::string& username,
-                                                              bool               may_save);
+    void                       add_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
+    void                       remove_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
+    std::optional<simple_auth> invoke_simple_auth_providers(const std::string&                      realm,
+                                                            const std::optional<const std::string>& username,
+                                                            bool                                    may_save);
 
     void add_to_changelist(const std::string&   path,
                            const std::string&   changelist,
