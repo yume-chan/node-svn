@@ -11,8 +11,8 @@
         try {                                                            \
             auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
 
-#define CONVERT_CALLBACK(callback, ...) \
-    std::function<std::invoke_result_t<decltype(callback), __VA_ARGS__>(__VA_ARGS__)>(callback)
+#define CONVERT_CALLBACK(callback) \
+    callback
 
 template <class T>
 class future {

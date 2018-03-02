@@ -1,5 +1,7 @@
 #include <node_object_wrap.h>
 
+#include <node/auth/simple.hpp>
+
 namespace svn {
 class client;
 }
@@ -7,7 +9,9 @@ class client;
 namespace node {
 class CLASS_NAME : public node::ObjectWrap {
   public:
-    static void init(v8::Local<v8::Object> exports, v8::Isolate* isolate, v8::Local<v8::Context>& context);
+    static void init(v8::Local<v8::Object>&  exports,
+                     v8::Isolate*            isolate,
+                     v8::Local<v8::Context>& context);
 
     static void create_instance(const v8::FunctionCallbackInfo<v8::Value>& args);
 
@@ -40,5 +44,8 @@ class CLASS_NAME : public node::ObjectWrap {
 
   private:
     std::unique_ptr<svn::client> _client;
+
+    // std::unordered_map<shared_callback, svn::simple_auth_provider> _simple_auth_providers;
+    std::map<shared_callback, svn::simple_auth_provider> _simple_auth_providers;
 };
 } // namespace node

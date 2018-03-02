@@ -12,25 +12,21 @@ function test(svn) {
     console.log(revision);
 }
 
+function async_simple_auth_provider(realm, username, may_save) {
+    return Promise.resolve({
+        username: "ad_cxm",
+        password: "cxm123",
+        may_save: false
+    });
+}
+
 async function testAsync(svn) {
     try {
         const client = new svn.AsyncClient();
         await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
         await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
-        client.add_simple_auth_provider((realm, username, may_save) => {
-            return Promise.resolve({
-                username: "ad_cxm",
-                password: "cxm123",
-                may_save: false
-            });
-            // return new Promise((resolve) => {
-            //     resolve({
-            //         username: "ad_cxm",
-            //         password: "cxm123",
-            //         may_save: false
-            //     });
-            // });
-        });
+        client.add_simple_auth_provider(async_simple_auth_provider);
+        client.remove_simple_auth_provider(async_simple_auth_provider);
         const revision = await client.update("c:/Users/Simon/Desktop/dev/webchat");
         // const revision = await Promise.resolve(1);
         console.log(revision);

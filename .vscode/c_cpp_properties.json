@@ -93,7 +93,7 @@
                     "${workspaceRoot}/deps/subversion/include/win",
                     "${workspaceRoot}/deps/subversion/sqlite-amalgamation",
                     "${workspaceRoot}/deps/subversion/subversion/subversion/include",
-                    "${workspaceRoot}"
+                    "${workspaceRoot}/src"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""

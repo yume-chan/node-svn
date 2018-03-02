@@ -1,36 +1,34 @@
-#include <functional>
-#include <future>
+#pragma once
 
 #include <cpp/client.hpp>
 
 #include <node/v8.hpp>
-#include <uv/async.hpp>
 
 namespace node {
-using simple_auth_promise = std::promise<std::optional<svn::simple_auth>>;
-using simple_auth_future  = std::future<std::optional<svn::simple_auth>>;
+using shared_callback = std::shared_ptr<v8::Persistent<v8::Function>>;
 
-struct simple_auth_provider {
+struct simple_auth_provider
+    : public std::enable_shared_from_this<simple_auth_provider> {
   public:
-    simple_auth_provider(v8::Isolate* isolate, v8::Local<v8::Function>& callback, bool is_async);
+    simple_auth_provider(v8::Isolate* isolate, bool async);
     ~simple_auth_provider();
+
+    void add(const v8::Local<v8::Function>& function);
+    void remove(const v8::Local<v8::Function>& function);
 
     std::optional<svn::simple_auth> operator()(const std::string&                      realm,
                                                const std::optional<const std::string>& username,
                                                bool                                    may_save);
 
+    operator svn::simple_auth_provider();
+
   private:
-    static simple_auth_future _invoke_sync(simple_auth_provider*                   _this,
-                                           const std::string&                      realm,
-                                           const std::optional<const std::string>& username,
-                                           bool                                    may_save);
+    std::optional<svn::simple_auth> _invoke_sync(const std::string&                      realm,
+                                                 const std::optional<const std::string>& username,
+                                                 bool                                    may_save);
 
-    using invoke_function       = std::function<simple_auth_future(simple_auth_provider*, const std::string&, const std::optional<const std::string>&, bool)>;
-    using invoke_function_async = uv::async<invoke_function, simple_auth_future, simple_auth_provider*, const std::string&, const std::optional<const std::string>&, bool>;
-
-    v8::Isolate*             _isolate;
-    v8::Global<v8::Function> _callback;
-    bool                     _is_async;
-    invoke_function          _invoke;
+    v8::Isolate*            _isolate;
+    bool                    _async;
+    v8::Persistent<v8::Set> _functions;
 };
 } // namespace node

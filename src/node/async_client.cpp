@@ -28,8 +28,8 @@
         try {                                                                  \
             auto _this = node::ObjectWrap::Unwrap<async_client>(args.Holder());
 
-#define CONVERT_CALLBACK(callback, ...) \
-    uv::make_async<decltype(callback), __VA_ARGS__>(callback);
+#define CONVERT_CALLBACK(callback) \
+    uv::make_async(callback);
 
 #define EXPAND(x) x
 

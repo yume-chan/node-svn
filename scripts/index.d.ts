@@ -99,10 +99,15 @@ type InfoCallback = (info: Readonly<NodeInfo>) => void;
 type StatusCallback = (status: Readonly<NodeStatus>) => void;
 type CommitCallback = (info: Readonly<CommitInfo>) => void;
 
+type auth_reuslt<T> = undefined | T;
+type simple_auth_result = auth_reuslt<SimpleAuth>;
+type simple_auth_provider = (realm: string, username: string | undefined, may_save: boolean) => simple_auth_result;
+
 export class Client {
     constructor();
 
-    add_simple_auth_provider(provider: (realm: string, username: string, may_save: boolean) => undefined | SimpleAuth): void;
+    add_simple_auth_provider(provider: simple_auth_provider): void;
+    remove_simple_auth_provider(provider: simple_auth_provider): void;
 
     add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): void;
 
@@ -142,10 +147,15 @@ export class Client {
     get_working_copy_root(path: string): string;
 }
 
+type async_auth_reuslt<T> = undefined | T | Promise<undefined | T>
+type async_simple_auth_result = async_auth_reuslt<SimpleAuth>;
+type async_simple_auth_provider = (realm: string, username: string | undefined, may_save: boolean) => async_simple_auth_result;
+
 export class AsyncClient {
     constructor();
 
-    add_simple_auth_provider(provider: (realm: string, username: string, may_save: boolean) => undefined | SimpleAuth | Promise<undefined | SimpleAuth>): void;
+    add_simple_auth_provider(provider: async_simple_auth_provider): void;
+    remove_simple_auth_provider(provider: async_simple_auth_provider): void;
 
     add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): Promise<void>;
 

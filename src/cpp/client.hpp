@@ -41,7 +41,7 @@ struct simple_auth {
     /* const */ bool        may_save;
 };
 
-using simple_auth_provider = std::function<std::optional<simple_auth>(const std::string&, const std::optional<const std::string>&, bool)>;
+using simple_auth_provider = std::shared_ptr<std::function<std::optional<simple_auth>(const std::string&, const std::optional<const std::string>&, bool)>>;
 
 class client : public std::enable_shared_from_this<client> {
   public:
@@ -51,7 +51,7 @@ class client : public std::enable_shared_from_this<client> {
     using info_callback            = std::function<void(const char*, const info*)>;
     using remove_callback          = std::function<void(const commit_info*)>;
     using status_callback          = std::function<void(const char*, const status*)>;
-    using notify_function          = std::function<void(const notify_info&)>;
+    using notify_function          = std::shared_ptr<std::function<void(const notify_info&)>>;
 
     explicit client();
     client(client&&);
@@ -65,12 +65,12 @@ class client : public std::enable_shared_from_this<client> {
     bool has_config(const std::optional<const std::string>& path);
     void ensure_config(const std::optional<const std::string>& path);
 
-    void add_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function);
-    void remove_notify_function(std::initializer_list<notify_action> actions, const std::shared_ptr<notify_function> function);
+    void add_notify_function(std::initializer_list<notify_action> actions, const notify_function function);
+    void remove_notify_function(std::initializer_list<notify_action> actions, const notify_function function);
     void invoke_notify_function(const notify_info& info);
 
-    void                       add_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
-    void                       remove_simple_auth_provider(const std::shared_ptr<simple_auth_provider> provider);
+    void                       add_simple_auth_provider(const simple_auth_provider provider);
+    void                       remove_simple_auth_provider(const simple_auth_provider provider);
     std::optional<simple_auth> invoke_simple_auth_providers(const std::string&                      realm,
                                                             const std::optional<const std::string>& username,
                                                             bool                                    may_save);
@@ -224,7 +224,7 @@ class client : public std::enable_shared_from_this<client> {
     apr_pool_t*       _pool;
     svn_client_ctx_t* _context;
 
-    std::set<std::shared_ptr<simple_auth_provider>>                          _simple_auth_providers;
-    std::map<svn::notify_action, std::set<std::shared_ptr<notify_function>>> _notify_functions;
+    std::unordered_map<svn::notify_action, std::set<notify_function>> _notify_functions;
+    std::set<simple_auth_provider>                                    _simple_auth_providers;
 };
 } // namespace svn

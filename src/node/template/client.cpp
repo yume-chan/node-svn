@@ -11,8 +11,8 @@
         try {                                                            \
             auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
 
-#define CONVERT_CALLBACK(callback, ...) \
-    std::function<std::invoke_result_t<decltype(callback), __VA_ARGS__>(__VA_ARGS__)>(callback)
+#define CONVERT_CALLBACK(callback) \
+    callback
 
 template <class T>
 class future {
@@ -67,7 +67,6 @@ class future<void> {
 #include <cpp/client.hpp>
 #include <cpp/svn_type_error.hpp>
 
-#include <node/auth/simple.hpp>
 #include <node/v8.hpp>
 
 #define INTERNALIZED_STRING(value) \
@@ -141,19 +140,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
 
     if (value->IsNumber()) {
         auto simple = static_cast<svn::revision_kind>(value->Int32Value());
-        switch (simple) {
-            case svn::revision_kind::unspecified:
-            case svn::revision_kind::committed:
-            case svn::revision_kind::previous:
-            case svn::revision_kind::base:
-            case svn::revision_kind::working:
-            case svn::revision_kind::head:
-                return svn::revision(simple);
-            case svn::revision_kind::number:
-            case svn::revision_kind::date:
-            default:
-                throw svn::svn_type_error("");
-        }
+        return svn::revision(simple);
     }
 
     if (value->IsObject()) {
@@ -274,7 +261,7 @@ static v8::Local<v8::Object> buffer_from_vector(v8::Isolate* isolate, std::vecto
     auto _raw_callback = std::make_shared<v8::Global<v8::Function>>(isolate, raw_callback);
 
 namespace node {
-void CLASS_NAME::init(v8::Local<v8::Object>   exports,
+void CLASS_NAME::init(v8::Local<v8::Object>&  exports,
                       v8::Isolate*            isolate,
                       v8::Local<v8::Context>& context) {
     auto client    = v8::New<v8::FunctionTemplate>(isolate, create_instance);
@@ -286,7 +273,8 @@ void CLASS_NAME::init(v8::Local<v8::Object>   exports,
     client->InstanceTemplate()->SetInternalFieldCount(1);
 
     auto prototype = client->PrototypeTemplate();
-    SET_PROTOTYPE_METHOD(signature, prototype, "add_simple_auth_provider", add_simple_auth_provider, 2);
+    // SET_PROTOTYPE_METHOD(signature, prototype, "add_simple_auth_provider", add_simple_auth_provider, 1);
+    // SET_PROTOTYPE_METHOD(signature, prototype, "remove_simple_auth_provider", remove_simple_auth_provider, 1);
 
     SET_PROTOTYPE_METHOD(signature, prototype, "add_to_changelist", add_to_changelist, 2);
     SET_PROTOTYPE_METHOD(signature, prototype, "get_changelists", get_changelists, 2);
@@ -321,26 +309,38 @@ void CLASS_NAME::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args
     result->Wrap(args.This());
 }
 
-static std::shared_ptr<svn::simple_auth_provider> convert_simple_provider(std::shared_ptr<node::simple_auth_provider> provider) {
-    auto bind = std::bind(&node::simple_auth_provider::operator(), provider, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3);
-    return std::make_shared<svn::simple_auth_provider>(bind);
-}
+// void CLASS_NAME::add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args) {
+//     auto isolate = args.GetIsolate();
+//     auto context = isolate->GetCurrentContext();
 
-void CLASS_NAME::add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    auto isolate = args.GetIsolate();
-    auto context = isolate->GetCurrentContext();
+//     auto _this = node::ObjectWrap::Unwrap<CLASS_NAME>(args.Holder());
 
-    auto _this = node::ObjectWrap::Unwrap<CLASS_NAME>(args.Holder());
+//     if (!args[0]->IsFunction()) {
+//         isolate->ThrowException(v8::Exception::TypeError(v8::String::Empty(isolate)));
+//         return;
+//     }
 
-    if (!args[0]->IsFunction()) {
-        isolate->ThrowException(v8::Exception::TypeError(v8::String::Empty(isolate)));
-        return;
-    }
+//     auto callback = std::make_shared<v8::Persistent<v8::Function>>(isolate, args[0].As<v8::Function>());
+//     auto provider = node::make_simple_auth_provider(isolate, callback, ASYNC);
+//     _this->_client->add_simple_auth_provider(provider);
+//     _this->_simple_auth_providers[callback] = provider;
+// }
 
-    auto callback = args[0].As<v8::Function>();
-    auto provider = std::make_shared<node::simple_auth_provider>(isolate, callback, ASYNC);
-    _this->_client->add_simple_auth_provider(convert_simple_provider(provider));
-}
+// void CLASS_NAME::remove_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args) {
+//     auto isolate = args.GetIsolate();
+//     auto context = isolate->GetCurrentContext();
+
+//     auto _this = node::ObjectWrap::Unwrap<CLASS_NAME>(args.Holder());
+
+//     if (!args[0]->IsFunction()) {
+//         isolate->ThrowException(v8::Exception::TypeError(v8::String::Empty(isolate)));
+//         return;
+//     }
+
+//     auto callback = std::make_shared<v8::Persistent<v8::Function>>(isolate, args[0].As<v8::Function>());
+//     auto provider = _this->_simple_auth_providers[callback];
+//     _this->_client->remove_simple_auth_provider(provider);
+// }
 
 METHOD_BEGIN(add_to_changelist)
     auto paths      = convert_array(args[0], false);
@@ -374,7 +374,7 @@ METHOD_BEGIN(get_changelists)
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto callback = CONVERT_CALLBACK(_callback, const char*, const char*);
+    auto callback = CONVERT_CALLBACK(_callback);
 
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
     auto changelists = convert_array(isolate, options, "changelists");
@@ -469,7 +469,7 @@ METHOD_BEGIN(cleanup)
     METHOD_RETURN(v8::Undefined(isolate));
 METHOD_END
 
-static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate, const v8::Local<v8::Value>& value) {
+static decltype(auto) convert_commit_callback(v8::Isolate* isolate, const v8::Local<v8::Value>& value) {
     if (!value->IsFunction())
         throw svn::svn_type_error("");
 
@@ -494,7 +494,7 @@ static svn::client::commit_callback convert_commit_callback(v8::Isolate* isolate
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
 
-    return CONVERT_CALLBACK(_callback, const svn::commit_info*);
+    return CONVERT_CALLBACK(_callback);
 }
 
 METHOD_BEGIN(commit)
@@ -540,7 +540,7 @@ METHOD_BEGIN(info)
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto callback = CONVERT_CALLBACK(_callback, const char*, const svn::info*);
+    auto callback = CONVERT_CALLBACK(_callback);
 
     auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
     auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
@@ -625,7 +625,7 @@ METHOD_BEGIN(status)
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
-    auto callback = CONVERT_CALLBACK(_callback, const char*, const svn::status*);
+    auto callback = CONVERT_CALLBACK(_callback);
 
     auto revision         = convert_revision(isolate, options, "revision", svn::revision_kind::working);
     auto depth            = convert_depth(isolate, options, "depth", svn::depth::infinity);

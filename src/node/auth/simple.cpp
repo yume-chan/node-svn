@@ -1,4 +1,8 @@
 #include <cstring>
+#include <functional>
+#include <future>
+
+#include <uv/async.hpp>
 
 #include "simple.hpp"
 
@@ -30,7 +34,10 @@ static void invoke_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 template <class T>
-static std::future<T> Then(v8::Isolate* isolate, const v8::Local<v8::Promise>& promise, ThenCallback<T> then_callback, ThenCallback<T> catch_callback) {
+static std::future<T> Then(v8::Isolate*                  isolate,
+                           const v8::Local<v8::Promise>& promise,
+                           ThenCallback<T>               then_callback,
+                           ThenCallback<T>               catch_callback) {
     auto _promise = std::make_shared<std::promise<T>>();
     auto future   = _promise->get_future();
 
@@ -103,53 +110,132 @@ static std::optional<svn::simple_auth> convert_simple_auth(v8::Isolate*         
 }
 
 namespace node {
-simple_auth_provider::simple_auth_provider(v8::Isolate*             isolate,
-                                           v8::Local<v8::Function>& callback,
-                                           bool                     is_async)
+using simple_auth_promise = std::promise<std::optional<svn::simple_auth>>;
+using simple_auth_future  = std::future<std::optional<svn::simple_auth>>;
+
+simple_auth_provider::simple_auth_provider(v8::Isolate* isolate, bool async)
     : _isolate(isolate)
-    , _callback(v8::Global<v8::Function>(isolate, callback))
-    , _is_async(is_async) {
-    if (is_async) {
-        auto async = new invoke_function_async(_invoke_sync);
-        _invoke    = async->bind();
-    } else {
-        _invoke = &_invoke_sync;
-    }
+    , _async(async) {
+    v8::HandleScope scope(isolate);
+    _functions.Reset(isolate, v8::Set::New(isolate));
 }
 
 simple_auth_provider::~simple_auth_provider() {
+    _functions.Reset();
+}
+
+void simple_auth_provider::add(const v8::Local<v8::Function>& function) {
+    v8::HandleScope scope(_isolate);
+
+    auto context = _isolate->GetCurrentContext();
+
+    auto functions = _functions.Get(_isolate);
+    functions->Add(context, function).ToLocalChecked();
+}
+
+void simple_auth_provider::remove(const v8::Local<v8::Function>& function) {
+    v8::HandleScope scope(_isolate);
+
+    auto context = _isolate->GetCurrentContext();
+
+    auto functions = _functions.Get(_isolate);
+    functions->Delete(context, function);
 }
 
 std::optional<svn::simple_auth> simple_auth_provider::operator()(const std::string&                      realm,
                                                                  const std::optional<const std::string>& username,
                                                                  bool                                    may_save) {
-    auto future = _invoke(this, realm, username, may_save);
-    return future.get();
+                                                                     std::mem_fn(&node::simple_auth_provider::operator());
 }
 
-simple_auth_future simple_auth_provider::_invoke_sync(simple_auth_provider*                   _this,
-                                                      const std::string&                      realm,
-                                                      const std::optional<const std::string>& username,
-                                                      bool                                    may_save) {
-    auto            isolate = _this->_isolate;
-    v8::HandleScope scope(isolate);
-    auto            context = isolate->GetCurrentContext();
+simple_auth_provider::operator svn::simple_auth_provider() {
+    auto bind = std::bind(&node::simple_auth_provider::operator(),
+                          this->shared_from_this(),
+                          std::placeholders::_1,
+                          std::placeholders::_2,
+                          std::placeholders::_3);
 
-    const auto           argc       = 3;
-    v8::Local<v8::Value> argv[argc] = {
-        v8::New(isolate, realm),
-        username ? v8::New(isolate, *username).As<v8::Value>() : v8::Undefined(isolate).As<v8::Value>(),
-        v8::New(isolate, may_save)};
-
-    auto callback = _this->_callback.Get(isolate);
-    auto result   = callback->Call(context, v8::Undefined(isolate), argc, argv).ToLocalChecked();
-
-    if (_this->_is_async && result->IsPromise()) {
-        return v8::PromiseEx::Then<std::optional<svn::simple_auth>>(isolate, result.As<v8::Promise>(), convert_simple_auth, convert_simple_auth);
-    }
-
-    simple_auth_promise promise;
-    promise.set_value(convert_simple_auth(isolate, result));
-    return promise.get_future();
+    return std::make_shared<svn::simple_auth_provider::element_type>(bind);
 }
+
+// struct simple_auth_provider {
+//   public:
+//     simple_auth_provider(v8::Isolate* isolate, shared_callback callback, bool is_async)
+//         : _isolate(isolate)
+//         , _callback(callback)
+//         , _is_async(is_async) {
+//         if (is_async) {
+//             auto async = new invoke_function_async(_invoke_sync);
+//             _invoke    = async->bind();
+//         } else {
+//             _invoke = &_invoke_sync;
+//         }
+//     }
+
+//     std::optional<svn::simple_auth> operator()(const std::string&                      realm,
+//                                                const std::optional<const std::string>& username,
+//                                                bool                                    may_save) {
+//         auto future = _invoke(this, realm, username, may_save);
+//         return future.get();
+//     }
+
+//   private:
+//     static simple_auth_future _invoke_sync(simple_auth_provider*                   _this,
+//                                            const std::string&                      realm,
+//                                            const std::optional<const std::string>& username,
+//                                            bool                                    may_save) {
+//         auto            isolate = _this->_isolate;
+//         v8::HandleScope scope(isolate);
+//         auto            context = isolate->GetCurrentContext();
+
+//         const auto           argc       = 3;
+//         v8::Local<v8::Value> argv[argc] = {
+//             v8::New(isolate, realm),
+//             username ? v8::New(isolate, *username).As<v8::Value>() : v8::Undefined(isolate).As<v8::Value>(),
+//             v8::New(isolate, may_save)};
+
+//         auto callback = _this->_callback->Get(isolate);
+//         auto result   = callback->Call(context, v8::Undefined(isolate), argc, argv).ToLocalChecked();
+
+//         if (_this->_is_async && result->IsPromise()) {
+//             return v8::PromiseEx::Then<std::optional<svn::simple_auth>>(isolate,
+//                                                                         result.As<v8::Promise>(),
+//                                                                         convert_simple_auth,
+//                                                                         convert_simple_auth);
+//         }
+
+//         simple_auth_promise promise;
+//         promise.set_value(convert_simple_auth(isolate, result));
+//         return promise.get_future();
+//     }
+
+//     using invoke_function = std::function<simple_auth_future(simple_auth_provider*,
+//                                                              const std::string&,
+//                                                              const std::optional<const std::string>&,
+//                                                              bool)>;
+
+//     using invoke_function_async = uv::async<invoke_function,
+//                                             simple_auth_future,
+//                                             simple_auth_provider*,
+//                                             const std::string&,
+//                                             const std::optional<const std::string>&,
+//                                             bool>;
+
+//     v8::Isolate*    _isolate;
+//     shared_callback _callback;
+//     bool            _is_async;
+//     invoke_function _invoke;
+// };
+
+// svn::simple_auth_provider make_simple_auth_provider(v8::Isolate* isolate, shared_callback callback, bool async) {
+//     auto provider = std::make_shared<node::simple_auth_provider>(isolate, callback, async);
+
+//     auto bind = std::bind(&node::simple_auth_provider::operator(),
+//                           provider,
+//                           std::placeholders::_1,
+//                           std::placeholders::_2,
+//                           std::placeholders::_3);
+
+//     return std::make_shared<svn::simple_auth_provider::element_type>(bind);
+// }
 } // namespace node
