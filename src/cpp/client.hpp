@@ -53,7 +53,7 @@ class client : public std::enable_shared_from_this<client> {
     using status_callback          = std::function<void(const char*, const status*)>;
     using notify_function          = std::shared_ptr<std::function<void(const notify_info&)>>;
 
-    explicit client();
+    explicit client(const std::optional<const std::string>& config_path);
     client(client&&);
     client(const client&) = delete;
 
@@ -61,9 +61,6 @@ class client : public std::enable_shared_from_this<client> {
     client& operator=(const client&) = delete;
 
     ~client();
-
-    bool has_config(const std::optional<const std::string>& path);
-    void ensure_config(const std::optional<const std::string>& path);
 
     void add_notify_function(std::initializer_list<notify_action> actions, const notify_function function);
     void remove_notify_function(std::initializer_list<notify_action> actions, const notify_function function);

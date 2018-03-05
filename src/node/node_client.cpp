@@ -59,4 +59,4 @@ class future<void> {
     }                                                                                      \
     }
 
-#include "template/client.cpp"
+#include "template/client.inc.cpp"

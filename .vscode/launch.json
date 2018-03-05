@@ -18,14 +18,5 @@
             "request": "attach",
             "processId": "${command:pickProcess}"
         }
-    ],
-    "compounds": [
-        {
-            "name": "Both Node and Native",
-            "configurations": [
-                "Debug Node",
-                "Attach Native"
-            ]
-        }
     ]
 }

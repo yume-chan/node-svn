@@ -1,13 +1,14 @@
+#include "client.hpp"
+
 #include <utility>
 
+#include <apr_hash.h>
 #include <apr_pools.h>
 
 #include <svn_client.h>
 #include <svn_path.h>
 
 #include <cpp/svn_type_error.hpp>
-
-#include "client.hpp"
 
 static svn::svn_error* copy_error(svn_error_t* error) {
     const auto buffer_size = 100;
@@ -204,11 +205,25 @@ static svn_error_t* invoke_get_simple_prompt_provider(svn_auth_cred_simple_t** c
     return SVN_NO_ERROR;
 }
 
+decltype(auto) read_config(const char* path, apr_pool_t* pool) {
+    check_result(svn_config_ensure(path, pool));
+
+    apr_hash_t* config;
+    check_result(svn_config_get_config(&config, path, pool));
+
+    return config;
+}
+
 namespace svn {
-client::client() {
+client::client(const std::optional<const std::string>& config_path) {
     apr_initialize();
+
     check_result(apr_pool_create_ex(&_pool, nullptr, nullptr, nullptr));
-    check_result(svn_client_create_context2(&_context, nullptr, _pool));
+
+    auto raw_config_path = convert_path(config_path, _pool);
+    auto config          = read_config(raw_config_path, _pool);
+
+    check_result(svn_client_create_context2(&_context, config, _pool));
 
     svn_error_set_malfunction_handler(throw_on_malfunction);
 
@@ -229,7 +244,7 @@ client::client() {
 
     const char* path;
     check_result(svn_config_get_user_config_path(&path, nullptr, nullptr, _pool));
-    svn_auth_set_parameter(auth_baton, SVN_AUTH_PARAM_CONFIG_DIR, path);
+    svn_auth_set_parameter(auth_baton, SVN_AUTH_PARAM_CONFIG_DIR, raw_config_path);
 
     _context->auth_baton = auth_baton;
 
@@ -262,23 +277,6 @@ client::~client() {
         apr_pool_destroy(_pool);
         apr_terminate();
     }
-}
-
-bool client::has_config(const std::optional<const std::string>& path) {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
-
-    svn_config_t* config;
-    auto          raw_path = convert_path(path, pool);
-    return svn_config_read3(&config, raw_path, true, false, false, pool) != SVN_NO_ERROR;
-}
-
-void client::ensure_config(const std::optional<const std::string>& path) {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
-
-    auto raw_path = convert_path(path, pool);
-    check_result(svn_config_ensure(raw_path, pool));
 }
 
 void client::add_notify_function(std::initializer_list<notify_action> actions,

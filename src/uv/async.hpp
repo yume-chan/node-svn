@@ -13,39 +13,66 @@ static void check_uv_error(int error) {
 }
 
 namespace uv {
-template <class Callable>
-struct async_callable;
+template <class F>
+struct async;
 
-template <class Callable, class Result, class... Args>
+using async_handle = std::shared_ptr<uv_async_t>;
+
+static void delete_async_handle(uv_handle_t* handle) {
+    delete reinterpret_cast<uv_async_t*>(handle);
+}
+
+static void close_async_handle(uv_async_t* handle) {
+    uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async_handle);
+}
+
+static async_handle make_async_handle(uv_loop_t* loop = nullptr) {
+    auto raw = new uv_async_t();
+
+    if (!loop) {
+        loop = uv_default_loop();
+    }
+    uv_async_init(loop, raw, nullptr);
+
+    uv_unref(reinterpret_cast<uv_handle_t*>(raw));
+
+    return async_handle(raw, close_async_handle);
+}
+
+template <class F, class Result, class... Args>
 struct async_data {
-    async_data(async_callable<Callable> async, Args&&... args)
+    async_data(async<F>* async, std::tuple<Args...>&& args)
         : async(async)
-        , args(std::make_tuple<Args...>(std::forward<Args>(args)...)) {}
+        , args(std::move(args)) {}
 
-    async_callable<Callable>& async;
-    std::promise<Result>      promise;
-    std::tuple<Args...>       args;
+    async<F>*            async;
+    std::promise<Result> promise;
+    std::tuple<Args...>  args;
 };
 
-template <class Callable>
-struct async_callable {
+template <class F>
+struct async {
   public:
-    async_callable(Callable callback)
-        : callback(callback)
-        , handle(new uv_async_t) {
-        uv_async_init(uv_default_loop(), handle, nullptr);
-    }
+    async(F&& callback)
+        : callback(std::forward<F>(callback))
+        , handle(make_async_handle()) {}
 
     template <class... Args>
     decltype(auto) operator()(Args&&... args) {
-        using Result = std::invoke_result_t<Callable, Args...>;
+        using Result = std::invoke_result_t<F, Args...>;
 
-        auto data   = async_data<async_callable<Callable>, Result, Args...>{this, std::forward<Args>(args)...};
-        auto future = data.promise.get_future();
+        auto old = handle->data;
+        if (old) {
+            delete old;
+        }
+
+        auto tuple  = std::make_tuple<Args...>(std::forward<Args>(args)...);
+        auto data   = new async_data<F, Result, Args...>(this, std::move(tuple));
+        auto future = data->promise.get_future();
 
         handle->data     = data;
-        handle->async_cb = &async_callable::invoke_async<Result, Args...>;
-        uv_async_send(handle);
+        handle->async_cb = &async::invoke_async<Result, Args...>;
+        uv_async_send(handle.get());
 
         if constexpr (std::is_void_v<Result>) {
             future.get();
@@ -57,106 +84,22 @@ struct async_callable {
   private:
     template <class Result, class... Args>
     static void invoke_async(uv_async_t* handle) {
-        auto data = static_cast<async_data<Callable, Result, Args...>>(handle->data);
+        auto data = static_cast<async_data<F, Result, Args...>*>(handle->data);
         if constexpr (std::is_void_v<Result>) {
             std::apply(data->async->callback, data->args);
-            _this->promise.set_value();
+            data->promise.set_value();
         } else {
-            auto result = std::apply(data->async->callback, data->args);
-            _this->promise.set_value(std::move(result));
+            auto result = std::apply(data->async->callback, std::move(data->args));
+            data->promise.set_value(std::move(result));
         }
     }
 
-    Callable    callback;
-    uv_async_t* handle;
+    F            callback;
+    async_handle handle;
 };
 
-template <class Callable>
-decltype(auto) make_async(Callable callback) {
-    return async_callable<Callable>(callback);
+template <class F>
+decltype(auto) make_async(F&& callback) {
+    return async<F>(std::forward<F>(callback));
 }
 } // namespace uv
-
-// template <int>
-// struct placeholder_template {};
-
-// namespace std {
-// template <int N>
-// struct is_placeholder<placeholder_template<N>>
-//     : integral_constant<int, N + 1> {};
-// } // namespace std
-
-// template <class Callback, class Result, class... Args>
-// class async {
-//   public:
-//     async(Callback callback)
-//         : callback(callback)
-//         , handle(new uv_async_t) {
-//         static_assert(std::is_invocable_v<Callback, Args...>, "callback must be invocable");
-
-//         check_uv_error(uv_async_init(uv_default_loop(), handle, invoke_async));
-//         uv_unref(reinterpret_cast<uv_handle_t*>(handle));
-//         handle->data = this;
-//     }
-
-//     async(const async&) = delete;
-
-//     ~async() {
-//         uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async);
-//     }
-
-//     Result operator()(Args... args) {
-//         this->args = std::make_unique<std::tuple<Args...>>(std::forward<Args>(args)...);
-
-//         promise = std::promise<Result>();
-
-//         check_uv_error(uv_async_send(handle));
-
-//         auto future = promise.get_future();
-//         if constexpr (std::is_void_v<Result>) {
-//             future.get();
-//         } else {
-//             return future.get();
-//         }
-//     }
-
-//     std::function<Result(Args...)> bind() {
-//         return bind_impl(std::make_integer_sequence<int, sizeof...(Args)>{});
-//     }
-
-//   private:
-//     static void invoke_async(uv_async_t* handle) {
-//         auto _this = static_cast<async*>(handle->data);
-//         if constexpr (std::is_void_v<Result>) {
-//             std::apply(_this->callback, *(_this->args));
-//             _this->promise.set_value();
-//         } else {
-//             auto result = std::apply(_this->callback, *(_this->args));
-//             _this->promise.set_value(std::move(result));
-//         }
-//     }
-
-//     static void delete_async(uv_handle_t* handle) {
-//         delete reinterpret_cast<uv_async_t*>(handle);
-//     }
-
-//     template <int... Is>
-//     decltype(auto) bind_impl(std::integer_sequence<int, Is...>) {
-//         auto shared = std::shared_ptr<async>(this);
-//         return std::bind(&async::operator(), shared, placeholder_template<Is>{}...);
-//     }
-
-//     uv_async_t* handle;
-
-//     Callback                             callback;
-//     std::unique_ptr<std::tuple<Args...>> args;
-
-//     std::promise<Result> promise;
-// };
-
-// template <class Callback, class... Args>
-// static decltype(auto) make_async(Callback callback) {
-//     using Result = std::invoke_result_t<Callback, Args...>;
-//     return (new async<Callback, Result, Args...>(callback))->bind();
-// }
-// } // namespace uv

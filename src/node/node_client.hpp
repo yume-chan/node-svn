@@ -2,4 +2,4 @@
 
 #define CLASS_NAME client
 
-#include "template/client.hpp"
+#include "template/client.inc.hpp"
