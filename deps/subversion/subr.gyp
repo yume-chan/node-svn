@@ -1,30 +1,19 @@
 {
+    "includes": [
+        "./common.gypi"
+    ],
     "variables": {
         "runtime%": "node"
     },
     "targets": [
         {
             "target_name": "libsvn_subr",
-            "type": "static_library",
-            "win_delay_load_hook": "false",
-            "dependencies": [
-                "../apr/apr.gyp:apr",
-                "../libexpat/expat.gyp:expat"
-            ],
             "include_dirs": [
-                "subversion/subversion/include",
-                "subversion/subversion/include/private",
                 "sqlite-amalgamation",
                 "include/subr"
             ],
             "defines": [
-                "alloca=_alloca",
-                "SVN_HAVE_MEMCACHE",
-                "SVN_INTERNAL_LZ4",
-                "SVN_HAVE_SERF",
-                "SVN_LIBSVN_RA_LINKS_RA_SERF",
-                "SVN_SQLITE_INLINE",
-                "SVN_INTERNAL_UTF8PROC"
+                "alloca=_alloca"
             ],
             "sources": [
                 "subversion/subversion/libsvn_subr/adler32.c",
@@ -114,37 +103,12 @@
                 "subversion/subversion/libsvn_subr/x509parse.c",
                 "subversion/subversion/libsvn_subr/xml.c"
             ],
-            "configurations": {
-                "Release": {
-                    "defines": [
-                        "NDEBUG"
-                    ]
-                }
-            },
-            "direct_dependent_settings": {
-                "include_dirs": [
-                    "subversion/subversion/include"
-                ]
-            },
             "conditions": [
                 [
                     "runtime == 'electron'",
                     {
                         "include_dirs": [
                             "<(node_root_dir)/deps/zlib"
-                        ]
-                    }
-                ],
-                [
-                    "OS == \"win\"",
-                    {
-                        "include_dirs": [
-                            "include/win"
-                        ]
-                    },
-                    {
-                        "include_dirs": [
-                            "include/unix"
                         ]
                     }
                 ]

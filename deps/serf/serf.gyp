@@ -1,4 +1,7 @@
 {
+    "includes": [
+        "../common.gypi"
+    ],
     "variables": {
         "runtime%": "node"
     },

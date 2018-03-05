@@ -41,11 +41,11 @@ static async_handle make_async_handle(uv_loop_t* loop = nullptr) {
 
 template <class F, class Result, class... Args>
 struct async_data {
-    async_data(async<F>* async, std::tuple<Args...>&& args)
-        : async(async)
+    async_data(async<F>* owner, std::tuple<Args...>&& args)
+        : owner(owner)
         , args(std::move(args)) {}
 
-    async<F>*            async;
+    async<F>*            owner;
     std::promise<Result> promise;
     std::tuple<Args...>  args;
 };
@@ -86,10 +86,10 @@ struct async {
     static void invoke_async(uv_async_t* handle) {
         auto data = static_cast<async_data<F, Result, Args...>*>(handle->data);
         if constexpr (std::is_void_v<Result>) {
-            std::apply(data->async->callback, data->args);
+            std::apply(data->owner->callback, data->args);
             data->promise.set_value();
         } else {
-            auto result = std::apply(data->async->callback, std::move(data->args));
+            auto result = std::apply(data->owner->callback, std::move(data->args));
             data->promise.set_value(std::move(result));
         }
     }

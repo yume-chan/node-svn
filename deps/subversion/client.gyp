@@ -1,12 +1,11 @@
 {
+    "includes": [
+        "./common.gypi"
+    ],
     "targets": [
         {
             "target_name": "libsvn_client",
-            "type": "static_library",
-            "win_delay_load_hook": "false",
             "dependencies": [
-                "../apr/apr.gyp:apr",
-                "../libexpat/expat.gyp:expat",
                 "subr.gyp:libsvn_subr",
                 "delta.gyp:libsvn_delta",
                 "diff.gyp:libsvn_diff",
@@ -17,18 +16,6 @@
                 "fs_util.gyp:libsvn_fs_util",
                 "repos.gyp:libsvn_repos",
                 "wc.gyp:libsvn_wc"
-            ],
-            "include_dirs": [
-                "subversion/subversion/include",
-                "subversion/subversion/include/private"
-            ],
-            "defines": [
-                "SVN_HAVE_MEMCACHE",
-                "SVN_INTERNAL_LZ4",
-                "SVN_HAVE_SERF",
-                "SVN_LIBSVN_RA_LINKS_RA_SERF",
-                "SVN_SQLITE_INLINE",
-                "SVN_INTERNAL_UTF8PROC"
             ],
             "sources": [
                 "subversion/subversion/libsvn_client/add.c",
@@ -78,33 +65,6 @@
                 "subversion/subversion/libsvn_client/url.c",
                 "subversion/subversion/libsvn_client/util.c",
                 "subversion/subversion/libsvn_client/version.c"
-            ],
-            "configurations": {
-                "Release": {
-                    "defines": [
-                        "NDEBUG"
-                    ]
-                }
-            },
-            "direct_dependent_settings": {
-                "include_dirs": [
-                    "subversion/subversion/include"
-                ]
-            },
-            "conditions": [
-                [
-                    "OS == \"win\"",
-                    {
-                        "include_dirs": [
-                            "include/win"
-                        ]
-                    },
-                    {
-                        "include_dirs": [
-                            "include/unix"
-                        ]
-                    }
-                ]
             ]
         }
     ]
