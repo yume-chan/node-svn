@@ -6,6 +6,10 @@
             "-Wall",
             "-Wextra"
         ],
+        "cflags": [
+            "-Wno-all",
+            "-Wno-extra"
+        ],
         "xcode_settings": {
             "WARNING_CFLAGS": [
                 "-Wall",

@@ -5,8 +5,6 @@
     "targets": [
         {
             "target_name": "apr",
-            "type": "static_library",
-            "win_delay_load_hook": "false",
             "dependencies": [
                 "../libexpat/expat.gyp:expat"
             ],
@@ -176,9 +174,7 @@
                     {
                         "include_dirs": [
                             "../apr-gen-test-char/unix",
-                            "apr/include/arch/unix",
-                            "include/unix",
-                            "include/unix/private"
+                            "apr/include/arch/unix"
                         ],
                         "sources": [
                             "apr/atomic/unix/builtins.c",
@@ -227,6 +223,18 @@
                             "apr/time/unix/timestr.c",
                             "apr/user/unix/groupinfo.c",
                             "apr/user/unix/userinfo.c"
+                        ]
+                    }
+                ],
+                [
+                    "OS == 'mac'",
+                    {
+                        "defines": [
+                            "DARWIN"
+                        ],
+                        "include_dirs": [
+                            "include/unix",
+                            "include/unix/private"
                         ],
                         "direct_dependent_settings": {
                             "include_dirs": [
@@ -236,11 +244,21 @@
                     }
                 ],
                 [
-                    "OS == 'mac'",
+                    "OS == 'linux'",
                     {
                         "defines": [
-                            "DARWIN"
-                        ]
+                            "LINUX",
+                            "_GNU_SOURCE"
+                        ],
+                        "include_dirs": [
+                            "include/linux",
+                            "include/linux/private"
+                        ],
+                        "direct_dependent_settings": {
+                            "include_dirs": [
+                                "include/linux"
+                            ]
+                        }
                     }
                 ]
             ]

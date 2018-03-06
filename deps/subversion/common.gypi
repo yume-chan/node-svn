@@ -33,15 +33,26 @@
         },
         "conditions": [
             [
-                "OS == \"win\"",
+                "OS == 'win'",
                 {
                     "include_dirs": [
                         "include/win"
                     ]
-                },
+                }
+            ],
+            [
+                "OS == 'mac'",
                 {
                     "include_dirs": [
                         "include/unix"
+                    ]
+                }
+            ],
+            [
+                "OS == 'linux'",
+                {
+                    "include_dirs": [
+                        "include/linux"
                     ]
                 }
             ]
