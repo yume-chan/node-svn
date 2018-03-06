@@ -1,14 +1,14 @@
 matrix:
   include:
-    # - os: linux
-    #   addons:
-    #     apt:
-    #       sources:
-    #         - ubuntu-toolchain-r-test
-    #       packages:
-    #         - g++-7
-    #   env:
-    #     - MATRIX_EVAL="export CC=gcc-7 && export  CXX=g++-7"
+    - os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+        - MATRIX_EVAL="export CC=gcc-7 && export  CXX=g++-7"
     - os: osx
       osx_image: xcode9.2
       env:
