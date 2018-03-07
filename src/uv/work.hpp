@@ -3,7 +3,7 @@
 #include <future>
 #include <type_traits>
 
-#include <uv.h>
+#include <uv/error.hpp>
 
 namespace uv {
 template <class Work, class AfterWork, class Result>
@@ -13,12 +13,12 @@ class work {
         : do_work(std::move(do_work))
         , after_work(std::move(after_work)) {
         uv_work.data = this;
-        uv_queue_work(uv_default_loop(), &uv_work, invoke_work, invoke_after_work);
+        check_uv_error(uv_queue_work(uv_default_loop(), &uv_work, invoke_work, invoke_after_work));
     }
 
   private:
-    static void invoke_work(uv_work_t* req) {
-        auto _this = static_cast<work*>(req->data);
+    static void invoke_work(uv_work_t* handle) {
+        auto _this = static_cast<work*>(handle->data);
         try {
             if constexpr (std::is_void_v<Result>) {
                 _this->do_work();
@@ -32,8 +32,8 @@ class work {
         }
     }
 
-    static void invoke_after_work(uv_work_t* req, int status) {
-        auto _this  = static_cast<work*>(req->data);
+    static void invoke_after_work(uv_work_t* handle, int status) {
+        auto _this  = static_cast<work*>(handle->data);
         auto future = _this->promise.get_future();
         _this->after_work(std::move(future));
 

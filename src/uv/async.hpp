@@ -1,21 +1,11 @@
 #pragma once
 
-#include <functional>
 #include <future>
 #include <type_traits>
 
-#include <uv.h>
-
-static void check_uv_error(int error) {
-    if (error != 0) {
-        throw std::runtime_error(uv_strerror(error));
-    }
-}
+#include <uv/error.hpp>
 
 namespace uv {
-template <class F>
-struct async;
-
 using async_handle = std::shared_ptr<uv_async_t>;
 
 static void delete_async_handle(uv_handle_t* handle) {
@@ -32,12 +22,17 @@ static async_handle make_async_handle(uv_loop_t* loop = nullptr) {
     if (!loop) {
         loop = uv_default_loop();
     }
-    uv_async_init(loop, raw, nullptr);
 
+    check_uv_error(uv_async_init(loop, raw, nullptr));
+
+    // this handle won't keep event loop running
     uv_unref(reinterpret_cast<uv_handle_t*>(raw));
 
     return async_handle(raw, close_async_handle);
 }
+
+template <class F>
+struct async;
 
 template <class F, class Result, class... Args>
 struct async_data {
@@ -72,7 +67,7 @@ struct async {
 
         handle->data     = data;
         handle->async_cb = &async::invoke_async<Result, Args...>;
-        uv_async_send(handle.get());
+        check_uv_error(uv_async_send(handle.get()));
 
         if constexpr (std::is_void_v<Result>) {
             future.get();
@@ -85,12 +80,17 @@ struct async {
     template <class Result, class... Args>
     static void invoke_async(uv_async_t* handle) {
         auto data = static_cast<async_data<F, Result, Args...>*>(handle->data);
-        if constexpr (std::is_void_v<Result>) {
-            std::apply(data->owner->callback, data->args);
-            data->promise.set_value();
-        } else {
-            auto result = std::apply(data->owner->callback, std::move(data->args));
-            data->promise.set_value(std::move(result));
+
+        try {
+            if constexpr (std::is_void_v<Result>) {
+                std::apply(data->owner->callback, data->args);
+                data->promise.set_value();
+            } else {
+                auto result = std::apply(data->owner->callback, std::move(data->args));
+                data->promise.set_value(std::move(result));
+            }
+        } catch (...) {
+            data->promise.set_exception(std::current_exception());
         }
     }
 
