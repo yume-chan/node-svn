@@ -56,16 +56,11 @@ struct async {
     decltype(auto) operator()(Args&&... args) {
         using Result = std::invoke_result_t<F, Args...>;
 
-        auto old = handle->data;
-        if (old) {
-            delete old;
-        }
-
         auto tuple  = std::make_tuple<Args...>(std::forward<Args>(args)...);
-        auto data   = new async_data<F, Result, Args...>(this, std::move(tuple));
-        auto future = data->promise.get_future();
+        auto data   = async_data<F, Result, Args...>(this, std::move(tuple));
+        auto future = data.promise.get_future();
 
-        handle->data     = data;
+        handle->data     = &data;
         handle->async_cb = &async::invoke_async<Result, Args...>;
         check_uv_error(uv_async_send(handle.get()));
 
