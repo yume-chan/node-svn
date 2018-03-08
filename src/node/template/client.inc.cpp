@@ -377,7 +377,6 @@ METHOD_BEGIN(get_changelists)
         callback->Call(v8::Undefined(isolate), argc, argv);
     };
     auto callback = CONVERT_CALLBACK(_callback);
-    callback((const char*)"", (const char*)"");
 
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
     auto changelists = convert_array(isolate, options, "changelists");

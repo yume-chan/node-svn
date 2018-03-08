@@ -94,9 +94,14 @@ struct async {
         }
     }
 
-    F            callback;
-    async_handle handle;
+    std::decay_t<F> callback;
+    async_handle    handle;
 };
+
+#if !defined(_MSC_VER)
+template <class F>
+async(F &&)->async<F>;
+#endif
 
 template <class F>
 decltype(auto) make_async(F&& callback) {
