@@ -51,12 +51,44 @@ async function async_status(svn) {
     console.log("pass");
 }
 
+async function async_status_memory_leak(svn) {
+    const client = new svn.AsyncClient();
+    await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
+    const before = process.memoryUsage().rss;
+    console.log(before);
+    for (let i = 0; i < 10000; i++) {
+        await client.status("c:/Users/Simon/Desktop/dev/webchat", status => {
+            // console.log(status);
+        });
+    }
+    const after = process.memoryUsage().rss;
+    console.log(after);
+    console.log("pass");
+}
+
+async function async_info_memory_leak(svn) {
+    const client = new svn.AsyncClient();
+    await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
+    const before = process.memoryUsage().rss;
+    console.log(before);
+    for (let i = 0; i < 100000; i++) {
+        await client.info("c:/Users/Simon/Desktop/dev/webchat", info => {
+            // console.log(info);
+        });
+    }
+    const after = process.memoryUsage().rss;
+    console.log(after);
+    console.log("pass");
+}
+
 try {
     const svn = require("..");
     console.log(process.pid);
 
     // async_update_with_async_simple_auth_provider(svn);
-    async_status(svn);
+    // async_status(svn);
+    // async_status_memory_leak(svn);
+    async_info_memory_leak(svn);
 } catch (err) {
     console.log(err.stack);
 }
