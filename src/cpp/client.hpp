@@ -14,44 +14,28 @@ struct apr_pool_t;
 struct svn_client_ctx_t;
 
 namespace svn {
-using string_vector = std::vector<std::string>;
-using string_map    = std::unordered_map<std::string, std::string>;
-
-struct cat_result {
-    std::vector<char> content;
-    string_map        properties;
-};
-
-struct simple_auth {
-    simple_auth(const std::string& username, const std::string& password, bool may_save)
-        : username(std::move(username))
-        , password(std::move(password))
-        , may_save(may_save) {}
-
-    ~simple_auth() {}
-
-    // I want to declare there members as `const`,
-    // but MSVC's `std::promise<std::optional<T>>::set_value()`
-    // function requires the `T` to be copy or move assignable.
-    // (gcc is ok)
-    // So temporarily remove the `const`.
-
-    /* const */ std::string username;
-    /* const */ std::string password;
-    /* const */ bool        may_save;
-};
-
-using simple_auth_provider = std::shared_ptr<std::function<std::optional<simple_auth>(const std::string&, const std::optional<const std::string>&, bool)>>;
-
 class client : public std::enable_shared_from_this<client> {
   public:
+    using simple_auth_provider = std::shared_ptr<std::function<std::optional<simple_auth>(const std::string&,
+                                                                                          const std::optional<const std::string>&,
+                                                                                          bool)>>;
+
     using get_changelists_callback = std::function<void(const char*, const char*)>;
     using cat_callback             = std::function<void(const char*, size_t)>;
     using commit_callback          = std::function<void(const commit_info*)>;
-    using info_callback            = std::function<void(const char*, const info*)>;
+    using info_callback            = std::function<void(const char*, const svn::info&)>;
     using remove_callback          = std::function<void(const commit_info*)>;
-    using status_callback          = std::function<void(const char*, const status*)>;
+    using status_callback          = std::function<void(const char*, const svn::status&)>;
     using notify_function          = std::shared_ptr<std::function<void(const notify_info&)>>;
+
+    using blame_callback = std::function<void(int32_t                    start_revision,
+                                              int32_t                    end_revision,
+                                              int64_t                    line_number,
+                                              std::optional<int32_t>     revision,
+                                              std::optional<int32_t>     merged_revision,
+                                              std::optional<std::string> merged_path,
+                                              std::string                line,
+                                              bool                       local_change)>;
 
     explicit client(const std::optional<const std::string>& config_path);
     client(client&&);
@@ -99,6 +83,16 @@ class client : public std::enable_shared_from_this<client> {
              bool               no_ignore    = false,
              bool               no_autoprops = false,
              bool               add_parents  = true) const;
+
+    void blame(const std::string&    path,
+               const revision&       start_revision,
+               const revision&       end_revision,
+               const blame_callback& callback,
+               const revision&       peg_revision             = revision_kind::working,
+               diff_ignore_space     ignore_space             = diff_ignore_space::none,
+               bool                  ignore_eol_style         = true,
+               bool                  ignore_mime_type         = false,
+               bool                  include_merged_revisions = false) const;
 
     string_map cat(const std::string&  path,
                    const cat_callback& callback,
@@ -150,8 +144,8 @@ class client : public std::enable_shared_from_this<client> {
 
     void info(const std::string&   path,
               const info_callback& callback,
-              const revision&      peg_revision      = revision(revision_kind::working),
-              const revision&      op_revision       = revision(revision_kind::working),
+              const revision&      peg_revision      = revision_kind::unspecified,
+              const revision&      op_revision       = revision_kind::unspecified,
               depth                depth             = depth::empty,
               bool                 fetch_excluded    = true,
               bool                 fetch_actual_only = true,

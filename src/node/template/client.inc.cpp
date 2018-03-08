@@ -134,15 +134,15 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
                                       const char*                  key,
                                       svn::revision_kind           defaultValue) {
     if (options.IsEmpty())
-        return svn::revision(defaultValue);
+        return defaultValue;
 
     auto value = options->Get(v8::New(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
-        return svn::revision(defaultValue);
+        return defaultValue;
 
     if (value->IsNumber()) {
         auto simple = static_cast<svn::revision_kind>(value->Int32Value());
-        return svn::revision(simple);
+        return simple;
     }
 
     if (value->IsObject()) {
@@ -477,20 +477,20 @@ static decltype(auto) convert_commit_callback(v8::Isolate* isolate, const v8::Lo
 
     auto raw_callback  = value.As<v8::Function>();
     auto _raw_callback = std::make_shared<v8::Global<v8::Function>>(isolate, raw_callback);
-    auto _callback     = [isolate, _raw_callback](const svn::commit_info* raw_info) -> void {
+    auto _callback     = [isolate, _raw_callback](const svn::commit_info* raw_commit) -> void {
         v8::HandleScope scope(isolate);
 
-        auto info = v8::New<v8::Object>(isolate);
-        info->Set(INTERNALIZED_STRING("author"), v8::New(isolate, raw_info->author));
-        info->Set(INTERNALIZED_STRING("date"), v8::New(isolate, raw_info->date));
-        info->Set(INTERNALIZED_STRING("repos_root"), v8::New(isolate, raw_info->repos_root));
-        info->Set(INTERNALIZED_STRING("revision"), v8::New(isolate, raw_info->revision));
+        auto commit = v8::New<v8::Object>(isolate);
+        commit->Set(INTERNALIZED_STRING("author"), v8::New(isolate, raw_commit->author));
+        commit->Set(INTERNALIZED_STRING("date"), v8::New(isolate, raw_commit->date));
+        commit->Set(INTERNALIZED_STRING("repos_root"), v8::New(isolate, raw_commit->repos_root));
+        commit->Set(INTERNALIZED_STRING("revision"), v8::New(isolate, raw_commit->revision));
 
-        if (raw_info->post_commit_error != nullptr)
-            info->Set(INTERNALIZED_STRING("post_commit_error"), v8::New(isolate, raw_info->post_commit_error));
+        if (raw_commit->post_commit_error != nullptr)
+            commit->Set(INTERNALIZED_STRING("post_commit_error"), v8::New(isolate, raw_commit->post_commit_error));
 
         const auto           argc       = 1;
-        v8::Local<v8::Value> argv[argc] = {info};
+        v8::Local<v8::Value> argv[argc] = {commit};
 
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
@@ -512,11 +512,9 @@ METHOD_BEGIN(commit)
     METHOD_RETURN(v8::Undefined(isolate));
 METHOD_END
 
-static v8::Local<v8::Value> copy_int64(v8::Isolate* isolate, int64_t value) {
-    if (value <= INT32_MAX)
-        return v8::New(isolate, static_cast<int32_t>(value));
-    else
-        return v8::New(isolate, std::to_string(value));
+static auto convert_to_date(v8::Local<v8::Context>& context, int64_t value) {
+    auto d = static_cast<double>(value / 1000);
+    return v8::Date::New(context, d).ToLocalChecked();
 }
 
 METHOD_BEGIN(info)
@@ -524,17 +522,20 @@ METHOD_BEGIN(info)
 
     CONVERT_OPTIONS_AND_CALLBACK(1)
 
-    auto _callback = [isolate, _raw_callback](const char* path, const svn::info* raw_info) -> void {
+    auto _callback = [isolate, _raw_callback](const char* path, const svn::info& raw_info) -> void {
         v8::HandleScope scope(isolate);
+
+        auto context = isolate->GetCurrentContext();
 
         auto info = v8::New<v8::Object>(isolate);
         info->Set(INTERNALIZED_STRING("path"), v8::New(isolate, path));
-        info->Set(INTERNALIZED_STRING("kind"), v8::New(isolate, static_cast<int32_t>(raw_info->kind)));
-        info->Set(INTERNALIZED_STRING("last_changed_author"), v8::New(isolate, raw_info->last_changed_author));
-        info->Set(INTERNALIZED_STRING("last_changed_date"), copy_int64(isolate, raw_info->last_changed_date));
-        info->Set(INTERNALIZED_STRING("last_changed_rev"), v8::New(isolate, static_cast<int32_t>(raw_info->last_changed_rev)));
-        info->Set(INTERNALIZED_STRING("repos_root_url"), v8::New(isolate, raw_info->repos_root_URL));
-        info->Set(INTERNALIZED_STRING("url"), v8::New(isolate, raw_info->URL));
+        info->Set(INTERNALIZED_STRING("kind"), v8::New(isolate, static_cast<int32_t>(raw_info.kind)));
+        info->Set(INTERNALIZED_STRING("last_changed_author"), v8::New(isolate, raw_info.last_changed_author));
+        info->Set(INTERNALIZED_STRING("last_changed_date"), convert_to_date(context, raw_info.last_changed_date));
+        info->Set(INTERNALIZED_STRING("last_changed_rev"), v8::New(isolate, static_cast<int32_t>(raw_info.last_changed_rev)));
+        info->Set(INTERNALIZED_STRING("repos_root_url"), v8::New(isolate, raw_info.repos_root_url));
+        info->Set(INTERNALIZED_STRING("repos_root_uuid"), v8::New(isolate, raw_info.repos_uuid));
+        info->Set(INTERNALIZED_STRING("url"), v8::New(isolate, raw_info.url));
 
         const auto           argc       = 1;
         v8::Local<v8::Value> argv[argc] = {info};
@@ -544,8 +545,8 @@ METHOD_BEGIN(info)
     };
     auto callback = CONVERT_CALLBACK(_callback);
 
-    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
-    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
+    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
+    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::unspecified);
     auto depth        = convert_depth(isolate, options, "depth", svn::depth::empty);
 
     ASYNC_BEGIN(void, path, callback, peg_revision, revision, depth)
@@ -601,28 +602,30 @@ METHOD_BEGIN(status)
 
     CONVERT_OPTIONS_AND_CALLBACK(1)
 
-    auto _callback = [isolate, _raw_callback](const char* path, const svn::status* raw_info) -> void {
+    auto _callback = [isolate, _raw_callback](const std::string& path, const svn::status& raw_status) -> void {
         v8::HandleScope scope(isolate);
 
-        auto info = v8::New<v8::Object>(isolate);
-        info->Set(INTERNALIZED_STRING("path"), v8::New(isolate, path));
-        info->Set(INTERNALIZED_STRING("changelist"), copy_string(isolate, raw_info->changelist));
-        info->Set(INTERNALIZED_STRING("changed_author"), copy_string(isolate, raw_info->changed_author));
-        info->Set(INTERNALIZED_STRING("changed_date"), copy_int64(isolate, raw_info->changed_date));
-        info->Set(INTERNALIZED_STRING("changed_rev"), v8::New(isolate, raw_info->changed_rev));
-        info->Set(INTERNALIZED_STRING("conflicted"), v8::New(isolate, raw_info->conflicted));
-        info->Set(INTERNALIZED_STRING("copied"), v8::New(isolate, raw_info->copied));
-        info->Set(INTERNALIZED_STRING("depth"), v8::New(isolate, static_cast<int32_t>(raw_info->node_depth)));
-        info->Set(INTERNALIZED_STRING("file_external"), v8::New(isolate, raw_info->file_external));
-        info->Set(INTERNALIZED_STRING("kind"), v8::New(isolate, static_cast<int32_t>(raw_info->kind)));
-        info->Set(INTERNALIZED_STRING("node_status"), v8::New(isolate, static_cast<int32_t>(raw_info->node_status)));
-        info->Set(INTERNALIZED_STRING("prop_status"), v8::New(isolate, static_cast<int32_t>(raw_info->prop_status)));
-        info->Set(INTERNALIZED_STRING("revision"), v8::New(isolate, static_cast<int32_t>(raw_info->revision)));
-        info->Set(INTERNALIZED_STRING("text_status"), v8::New(isolate, static_cast<int32_t>(raw_info->text_status)));
-        info->Set(INTERNALIZED_STRING("versioned"), v8::New(isolate, raw_info->versioned));
+        auto context = isolate->GetCurrentContext();
+
+        auto status = v8::New<v8::Object>(isolate);
+        status->Set(INTERNALIZED_STRING("path"), v8::New(isolate, path));
+        status->Set(INTERNALIZED_STRING("changelist"), copy_string(isolate, raw_status.changelist));
+        status->Set(INTERNALIZED_STRING("changed_author"), copy_string(isolate, raw_status.changed_author));
+        status->Set(INTERNALIZED_STRING("changed_date"), convert_to_date(context, raw_status.changed_date));
+        status->Set(INTERNALIZED_STRING("changed_rev"), v8::New(isolate, raw_status.changed_rev));
+        status->Set(INTERNALIZED_STRING("conflicted"), v8::New(isolate, raw_status.conflicted));
+        status->Set(INTERNALIZED_STRING("copied"), v8::New(isolate, raw_status.copied));
+        status->Set(INTERNALIZED_STRING("depth"), v8::New(isolate, static_cast<int32_t>(raw_status.node_depth)));
+        status->Set(INTERNALIZED_STRING("file_external"), v8::New(isolate, raw_status.file_external));
+        status->Set(INTERNALIZED_STRING("kind"), v8::New(isolate, static_cast<int32_t>(raw_status.kind)));
+        status->Set(INTERNALIZED_STRING("node_status"), v8::New(isolate, static_cast<int32_t>(raw_status.node_status)));
+        status->Set(INTERNALIZED_STRING("prop_status"), v8::New(isolate, static_cast<int32_t>(raw_status.prop_status)));
+        status->Set(INTERNALIZED_STRING("revision"), v8::New(isolate, static_cast<int32_t>(raw_status.revision)));
+        status->Set(INTERNALIZED_STRING("text_status"), v8::New(isolate, static_cast<int32_t>(raw_status.text_status)));
+        status->Set(INTERNALIZED_STRING("versioned"), v8::New(isolate, raw_status.versioned));
 
         const auto           argc       = 1;
-        v8::Local<v8::Value> argv[argc] = {info};
+        v8::Local<v8::Value> argv[argc] = {status};
 
         auto callback = _raw_callback->Get(isolate);
         callback->Call(v8::Undefined(isolate), argc, argv);
@@ -675,7 +678,7 @@ METHOD_END
 CLASS_NAME::CLASS_NAME(v8::Isolate* isolate, const std::optional<const std::string>& config_path)
     : _client(new svn::client(config_path))
     , _simple_auth_provider(isolate, ASYNC) {
-    _client->add_simple_auth_provider(std::make_shared<svn::simple_auth_provider::element_type>(_simple_auth_provider));
+    _client->add_simple_auth_provider(std::make_shared<svn::client::simple_auth_provider::element_type>(_simple_auth_provider));
 }
 
 CLASS_NAME::~CLASS_NAME() {}

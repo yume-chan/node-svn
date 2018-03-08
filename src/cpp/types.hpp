@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
+#include <unordered_map>
+#include <vector>
 
 #include "svn_type_error.hpp"
 
@@ -232,7 +235,7 @@ struct status {
 
     /** The locally present lock. (Values of path, token, owner, comment and
       * are available if a lock is present) */
-    const lock* local_lock;
+    std::optional<svn::lock> local_lock;
 
     /** Which changelist this item is part of, or NULL if not part of any. */
     const char* changelist;
@@ -267,7 +270,7 @@ struct status {
     status_kind repos_prop_status;
 
     /** The node's lock in the repository, if any. */
-    const lock* repos_lock;
+    std::optional<svn::lock> repos_lock;
 
     /** Set to the youngest committed revision, or #SVN_INVALID_REVNUM
       * if not out of date. */
@@ -372,7 +375,7 @@ struct working_copy_info {
     int32_t copyfrom_rev;
 
     /** The checksum of the node, if it is a file. */
-    const checksum* node_checksum;
+    std::optional<svn::checksum> node_checksum;
 
     /** A changelist the item is in, @c NULL if this node is not in a
       * changelist. */
@@ -411,7 +414,7 @@ struct working_copy_info {
 
 struct info {
     /** Where the item lives in the repository. */
-    const char* URL;
+    const char* url;
 
     /** The revision of the object.  If the target is a working-copy
     * path, then this is its current working revnum.  If the target
@@ -419,10 +422,10 @@ struct info {
     int32_t rev;
 
     /** The root URL of the repository. */
-    const char* repos_root_URL;
+    const char* repos_root_url;
 
     /** The repository's UUID. */
-    const char* repos_UUID;
+    const char* repos_uuid;
 
     /** The node's kind. */
     node_kind kind;
@@ -443,10 +446,10 @@ struct info {
     const char* last_changed_author;
 
     /** An exclusive lock, if present.  Could be either local or remote. */
-    const lock* node_lock;
+    std::optional<svn::lock> node_lock;
 
     /** Possible information about the working copy, NULL if not valid. */
-    const working_copy_info* wc_info;
+    std::optional<svn::working_copy_info> wc_info;
 };
 
 /**
@@ -501,11 +504,11 @@ struct revision {
         }
     }
 
-    revision(int32_t number)
+    explicit revision(int32_t number)
         : kind(revision_kind::number)
         , number(number) {}
 
-    revision(int64_t date)
+    explicit revision(int64_t date)
         : kind(revision_kind::date)
         , date(date) {}
 
@@ -603,5 +606,40 @@ enum class conflict_choose {
     mine_conflict,
     merged,
     unspecified
+};
+
+enum class diff_ignore_space {
+    none,
+    change,
+    all
+};
+
+using string_vector = std::vector<std::string>;
+using string_map    = std::unordered_map<std::string, std::string>;
+
+struct cat_result {
+    std::vector<char> content;
+    string_map        properties;
+};
+
+struct simple_auth {
+    simple_auth(const std::string& username,
+                const std::string& password,
+                bool               may_save)
+        : username(std::move(username))
+        , password(std::move(password))
+        , may_save(may_save) {}
+
+    ~simple_auth() {}
+
+    // I want to declare there members as `const`,
+    // but MSVC's `std::promise<std::optional<T>>::set_value()`
+    // function requires the `T` to be copy or move assignable.
+    // (gcc is ok)
+    // So temporarily remove the `const`.
+
+    /* const */ std::string username;
+    /* const */ std::string password;
+    /* const */ bool        may_save;
 };
 } // namespace svn
