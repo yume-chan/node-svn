@@ -14,12 +14,16 @@
 #include <node/enum/revision_kind.hpp>
 #include <node/enum/status_kind.hpp>
 
-#define INTERNALIZED_STRING(value) v8::New(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
+#include "async_iterator.hpp"
+#include <uv/work.hpp>
 
-#define SetReadOnly(object, name, value)                  \
-    (object)->DefineOwnProperty(context,                  \
+#define INTERNALIZED_STRING(value) \
+    v8::New(isolate, value, sizeof(value) - 1, v8::NewStringType::kInternalized)
+
+#define SetReadOnly(object, name, value)                   \
+    (object)->DefineOwnProperty(context,                   \
                                 INTERNALIZED_STRING(name), \
-                                (value),                  \
+                                (value),                   \
                                 v8::PropertyAttributeEx::ReadOnlyDontDelete)
 
 namespace node {
@@ -40,8 +44,28 @@ static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
     auto context = isolate->GetCurrentContext();
 
-    auto callback = args[0].As<v8::Function>();
-	callback->Call(callback->CreationContext(), v8::Undefined(isolate), 0, nullptr);
+    auto iterator = new async_iterator(isolate, context);
+    args.GetReturnValue().Set(iterator->get());
+
+    auto async = [isolate, iterator](int32_t i) -> uv::future<void> {
+        v8::HandleScope scope(isolate);
+
+        auto context = isolate->GetCurrentContext();
+
+        return iterator->resolve(v8::New(isolate, i), false);
+    };
+
+    auto work = [async = uv::make_async(async)]() -> void {
+        for (auto i = 0; i < 5; i++) {
+            async(i);
+        }
+    };
+
+    auto after_work = [isolate, iterator](std::future<void>) -> void {
+        iterator->resolve(v8::Undefined(isolate), true);
+    };
+
+    uv::queue_work(work, after_work);
 }
 
 #include <type_traits>
@@ -51,7 +75,7 @@ void init(v8::Local<v8::Object> exports) {
     auto context = isolate->GetCurrentContext();
 
     exports->SetAccessor(context,                                      // context
-                         INTERNALIZED_STRING("version"),                // name
+                         INTERNALIZED_STRING("version"),               // name
                          version,                                      // getter
                          nullptr,                                      // setter
                          v8::MaybeLocal<v8::Value>(),                  // data

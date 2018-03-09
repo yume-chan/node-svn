@@ -81,14 +81,37 @@ async function async_info_memory_leak(svn) {
     console.log("pass");
 }
 
+async function async_blame(svn) {
+    const client = new svn.AsyncClient();
+    await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
+    client.blame()
+}
+
+function test_async_iterator(svn) {
+    const result = svn.test();
+    console.log(typeof Symbol.asyncIterator);
+    console.log(typeof result[Symbol.asyncIterator]);
+    const iterator = result[Symbol.asyncIterator]();
+    console.log(typeof iterator.next);
+    const promise = iterator.next();
+    console.log(promise);
+    promise.then(args => {
+        console.log(args);
+    });
+}
+
 try {
-    const svn = require("..");
     console.log(process.pid);
 
-    // async_update_with_async_simple_auth_provider(svn);
-    // async_status(svn);
-    // async_status_memory_leak(svn);
-    async_info_memory_leak(svn);
+    process.stdin.resume();
+    process.stdin.on("data", () => {
+        const svn = require("..");
+        // async_update_with_async_simple_auth_provider(svn);
+        // async_status(svn);
+        // async_status_memory_leak(svn);
+        // async_info_memory_leak(svn);
+        test_async_iterator(svn);
+    });
 } catch (err) {
     console.log(err.stack);
 }

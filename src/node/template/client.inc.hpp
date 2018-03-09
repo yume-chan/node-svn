@@ -23,6 +23,7 @@ class CLASS_NAME : public node::ObjectWrap {
     static void remove_from_changelists(const v8::FunctionCallbackInfo<v8::Value>& args);
 
     static void add(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static void blame(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void cat(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void checkout(const v8::FunctionCallbackInfo<v8::Value>& args);
     static void cleanup(const v8::FunctionCallbackInfo<v8::Value>& args);

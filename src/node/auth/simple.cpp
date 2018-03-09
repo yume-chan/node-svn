@@ -98,7 +98,7 @@ static std::optional<svn::simple_auth> convert_simple_auth(v8::Isolate*         
             auto username = convert_string(object->Get(INTERNALIZED_STRING("username")));
             auto password = convert_string(object->Get(INTERNALIZED_STRING("password")));
             auto may_save = object->Get(INTERNALIZED_STRING("may_save"))->BooleanValue();
-            return svn::simple_auth(username, password, may_save);
+            return svn::simple_auth(std::move(username), std::move(password), may_save);
         } catch (svn::svn_type_error&) {
             // TODO: add warning for wrong return value type.
             return {};

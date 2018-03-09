@@ -1,9 +1,7 @@
 #pragma once
 
+#include <optional>
 #include <string>
-
-using std::string;
-using std::to_string;
 
 #include <uv.h>
 #include <v8.h>
@@ -54,7 +52,7 @@ struct Factory<v8::Function> {
 template <>
 struct Factory<v8::FunctionTemplate> {
     static inline v8::Local<v8::FunctionTemplate> New(v8::Isolate*             isolate,
-                                                      v8::FunctionCallback     callback,
+                                                      v8::FunctionCallback     callback  = nullptr,
                                                       v8::Local<v8::Value>     data      = v8::Local<v8::Value>(),
                                                       v8::Local<v8::Signature> signature = v8::Local<v8::Signature>(),
                                                       int                      length    = 0) {
@@ -103,6 +101,13 @@ static v8::Local<v8::Integer> New(Isolate* isolate, int32_t value) {
     return v8::Integer::New(isolate, value);
 }
 
+static v8::Local<v8::Value> New(Isolate* isolate, std::optional<int32_t> value) {
+    if (!value)
+        return v8::Undefined(isolate);
+
+    return v8::New(isolate, *value);
+}
+
 static v8::Local<v8::Integer> New(Isolate* isolate, uint32_t value) {
     return v8::Integer::NewFromUnsigned(isolate, value);
 }
@@ -117,15 +122,21 @@ static v8::Local<v8::String> New(Isolate*           isolate,
     return v8::String::NewFromUtf8(isolate, value.c_str(), type, static_cast<int>(value.size())).ToLocalChecked();
 }
 
-static v8::Local<v8::String> New(Isolate*    isolate,
-                                 const char* value) {
+static v8::Local<v8::Value> New(Isolate*    isolate,
+                                const char* value) {
+    if (value == nullptr)
+        return v8::Undefined(isolate);
+
     return v8::String::NewFromUtf8(isolate, value, v8::NewStringType::kNormal, -1).ToLocalChecked();
 }
 
-static v8::Local<v8::String> New(Isolate*          isolate,
-                                 const char*       value,
-                                 v8::NewStringType type,
-                                 int               size = -1) {
+static v8::Local<v8::Value> New(Isolate*          isolate,
+                                const char*       value,
+                                v8::NewStringType type,
+                                int               size = -1) {
+    if (value == nullptr)
+        return v8::Undefined(isolate);
+
     return v8::String::NewFromUtf8(isolate, value, type, size).ToLocalChecked();
 }
 
@@ -134,5 +145,16 @@ static v8::Local<v8::String> New(Isolate*          isolate,
                                  int               size,
                                  v8::NewStringType type = v8::NewStringType::kNormal) {
     return v8::String::NewFromUtf8(isolate, value, type, size).ToLocalChecked();
+}
+
+static v8::Local<v8::Value> New(Isolate* isolate, int64_t value) {
+    if (value > INT32_MAX)
+        return v8::New(isolate, std::to_string(value));
+    else
+        return v8::New(isolate, static_cast<int32_t>(value));
+}
+
+static v8::Local<v8::External> New(Isolate* isolate, void* value) {
+    return v8::External::New(isolate, value);
 }
 } // namespace v8

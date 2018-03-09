@@ -28,14 +28,14 @@ class client : public std::enable_shared_from_this<client> {
     using status_callback          = std::function<void(const char*, const svn::status&)>;
     using notify_function          = std::shared_ptr<std::function<void(const notify_info&)>>;
 
-    using blame_callback = std::function<void(int32_t                    start_revision,
-                                              int32_t                    end_revision,
-                                              int64_t                    line_number,
-                                              std::optional<int32_t>     revision,
-                                              std::optional<int32_t>     merged_revision,
-                                              std::optional<std::string> merged_path,
-                                              std::string                line,
-                                              bool                       local_change)>;
+    using blame_callback = std::function<void(int32_t                start_revision,
+                                              int32_t                end_revision,
+                                              int64_t                line_number,
+                                              std::optional<int32_t> revision,
+                                              std::optional<int32_t> merged_revision,
+                                              const char*            merged_path,
+                                              const char*            line,
+                                              bool                   local_change)>;
 
     explicit client(const std::optional<const std::string>& config_path);
     client(client&&);

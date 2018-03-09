@@ -623,23 +623,17 @@ struct cat_result {
 };
 
 struct simple_auth {
-    simple_auth(const std::string& username,
-                const std::string& password,
-                bool               may_save)
-        : username(std::move(username))
-        , password(std::move(password))
+    simple_auth(std::string&& username,
+                std::string&& password,
+                bool          may_save)
+        : username(std::forward<std::string>(username))
+        , password(std::forward<std::string>(password))
         , may_save(may_save) {}
 
     ~simple_auth() {}
 
-    // I want to declare there members as `const`,
-    // but MSVC's `std::promise<std::optional<T>>::set_value()`
-    // function requires the `T` to be copy or move assignable.
-    // (gcc is ok)
-    // So temporarily remove the `const`.
-
-    /* const */ std::string username;
-    /* const */ std::string password;
-    /* const */ bool        may_save;
+    std::string username;
+    std::string password;
+    bool        may_save;
 };
 } // namespace svn

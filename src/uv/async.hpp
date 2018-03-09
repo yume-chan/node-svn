@@ -34,16 +34,80 @@ static async_handle make_async_handle(uv_loop_t* loop = nullptr) {
 template <class F>
 struct async;
 
-template <class F, class Result, class... Args>
+template <class F, class Result, class... Arg>
 struct async_data {
-    async_data(async<F>* owner, std::tuple<Args...>&& args)
+    async_data(const async<F>*      owner,
+               std::tuple<Arg...>&& arg)
         : owner(owner)
-        , args(std::move(args)) {}
+        , promise()
+        , arg(std::move(arg)) {}
 
-    async<F>*            owner;
+    const async<F>*      owner;
     std::promise<Result> promise;
-    std::tuple<Args...>  args;
+    std::tuple<Arg...>   arg;
 };
+
+template <class T>
+class future {
+  public:
+    using value_type = typename T;
+
+    future(std::future<T>& future)
+        : value(std::move(future)) {}
+
+    T get() {
+        return value.get();
+    }
+
+  private:
+    std::future<T> value;
+};
+
+template <class T>
+class future<T&> {
+  public:
+    using value_type = typename T&;
+
+    future(std::future<T&>& future)
+        : value(std::move(future)) noexcept {}
+
+    T& get() {
+        return value.get();
+    }
+
+  private:
+    std::future<T&> value;
+};
+
+template <>
+class future<void> {
+  public:
+    using value_type = void;
+
+    future()         = default;
+    future(future&&) = default;
+
+    future& operator=(future&&) = default;
+
+    future(std::future<void>&& value)
+        : value(std::move(value)) {}
+
+    void get() {
+        value.get();
+    }
+
+  private:
+    std::future<void> value;
+};
+
+template <class T>
+struct is_future : std::false_type {};
+
+template <class T>
+struct is_future<future<T>> : std::true_type {};
+
+template <class T>
+inline constexpr bool is_future_v = is_future<T>::value;
 
 template <class F>
 struct async {
@@ -52,36 +116,45 @@ struct async {
         : callback(std::forward<F>(callback))
         , handle(make_async_handle()) {}
 
-    template <class... Args>
-    decltype(auto) operator()(Args&&... args) {
-        using Result = std::invoke_result_t<F, Args...>;
+    template <class... Arg>
+    decltype(auto) operator()(Arg&&... arg) const {
+        using Result = std::invoke_result_t<F, Arg...>;
 
-        auto tuple  = std::make_tuple<Args...>(std::forward<Args>(args)...);
-        auto data   = async_data<F, Result, Args...>(this, std::move(tuple));
+        auto tuple  = std::forward_as_tuple(arg...);
+        auto data   = async_data<F, Result, Arg...>(this, std::move(tuple));
         auto future = data.promise.get_future();
 
         handle->data     = &data;
-        handle->async_cb = &async::invoke_async<Result, Args...>;
+        handle->async_cb = &async::invoke_async<Result, Arg...>;
         check_uv_error(uv_async_send(handle.get()));
 
         if constexpr (std::is_void_v<Result>) {
             future.get();
+        } else if constexpr (is_future_v<Result>) {
+            using T = typename Result::value_type;
+
+            auto result = future.get();
+            if constexpr (std::is_void_v<T>) {
+                result.get();
+            } else {
+                return result.get();
+            }
         } else {
             return future.get();
         }
     }
 
   private:
-    template <class Result, class... Args>
+    template <class Result, class... Arg>
     static void invoke_async(uv_async_t* handle) {
-        auto data = static_cast<async_data<F, Result, Args...>*>(handle->data);
+        auto data = static_cast<async_data<F, Result, Arg...>*>(handle->data);
 
         try {
             if constexpr (std::is_void_v<Result>) {
-                std::apply(data->owner->callback, data->args);
+                std::apply(data->owner->callback, std::move(data->arg));
                 data->promise.set_value();
             } else {
-                auto result = std::apply(data->owner->callback, std::move(data->args));
+                auto result = std::apply(data->owner->callback, std::move(data->arg));
                 data->promise.set_value(std::move(result));
             }
         } catch (...) {
@@ -89,8 +162,13 @@ struct async {
         }
     }
 
+    // use `std::decay_t` to ensure copy/move,
+    // instead of referencing the `callback`.
     std::decay_t<F> callback;
-    async_handle    handle;
+
+    // use a `std::shared_ptr<uv_async_t>` to
+    // enable copy of `async` struct.
+    async_handle handle;
 };
 
 #if !defined(_MSC_VER)

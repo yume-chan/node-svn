@@ -330,7 +330,7 @@ static svn_error_t* invoke_blame_callback(void*         baton,
              line_no,
              convert_to_revision_number(revision),
              convert_to_revision_number(merged_revision),
-             convert_to_string(merged_path),
+             merged_path,
              line,
              local_change);
     return nullptr;

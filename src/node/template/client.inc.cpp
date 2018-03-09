@@ -72,7 +72,7 @@ class future<void> {
 #include <node/v8.hpp>
 
 #define INTERNALIZED_STRING(value) \
-    v8::New(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
+    v8::New(isolate, value, sizeof(value) - 1, v8::NewStringType::kInternalized)
 
 static std::string convert_string(const v8::Local<v8::Value>& value) {
     if (!value->IsString())
@@ -88,7 +88,7 @@ static std::string convert_string(const v8::Local<v8::Value>& value) {
 }
 
 static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, svn::svn_error& raw_error) {
-    auto error = v8::Exception::Error(v8::New(isolate, raw_error.what()));
+    auto error = v8::Exception::Error(v8::New(isolate, raw_error.what()).As<v8::String>());
     if (raw_error.child != nullptr)
         error.As<v8::Object>()->Set(INTERNALIZED_STRING("child"), copy_error(isolate, *raw_error.child));
     return error;
@@ -132,7 +132,7 @@ static v8::Local<v8::Object> convert_options(const v8::Local<v8::Value> options)
 static svn::revision convert_revision(v8::Isolate*                 isolate,
                                       const v8::Local<v8::Object>& options,
                                       const char*                  key,
-                                      svn::revision_kind           defaultValue) {
+                                      svn::revision                defaultValue) {
     if (options.IsEmpty())
         return defaultValue;
 
@@ -283,6 +283,7 @@ void CLASS_NAME::init(v8::Local<v8::Object>&  exports,
     SET_PROTOTYPE_METHOD(signature, prototype, "remove_from_changelists", remove_from_changelists, 2);
 
     SET_PROTOTYPE_METHOD(signature, prototype, "add", add, 1);
+    SET_PROTOTYPE_METHOD(signature, prototype, "blame", blame, 1);
     SET_PROTOTYPE_METHOD(signature, prototype, "cat", cat, 1);
     SET_PROTOTYPE_METHOD(signature, prototype, "checkout", checkout, 2);
     SET_PROTOTYPE_METHOD(signature, prototype, "cleanup", cleanup, 1);
@@ -303,7 +304,7 @@ void CLASS_NAME::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args
     auto isolate = args.GetIsolate();
     if (!args.IsConstructCall()) {
         auto message = "Class constructor " STRINGIFY(CLASS_NAME) " cannot be invoked without 'new'";
-        isolate->ThrowException(v8::Exception::TypeError(v8::New(isolate, message)));
+        isolate->ThrowException(v8::Exception::TypeError(v8::New(isolate, message).As<v8::String>()));
         return;
     }
 
@@ -412,6 +413,58 @@ METHOD_BEGIN(add)
 
     ASYNC_BEGIN(void, path, depth)
         _this->_client->add(path, depth);
+    ASYNC_END()
+
+    ASYNC_RESULT;
+    METHOD_RETURN(v8::Undefined(isolate));
+METHOD_END
+
+METHOD_BEGIN(blame)
+    auto path = convert_string(args[0]);
+
+    CONVERT_OPTIONS_AND_CALLBACK(1)
+
+    auto _callback = [isolate, _raw_callback](int32_t                start_revision,
+                                              int32_t                end_revision,
+                                              int64_t                line_number,
+                                              std::optional<int32_t> revision,
+                                              std::optional<int32_t> merged_revision,
+                                              const char*            merged_path,
+                                              const char*            line,
+                                              bool                   local_change) -> void {
+        v8::HandleScope scope(isolate);
+
+        auto context = isolate->GetCurrentContext();
+
+        auto info = v8::New<v8::Object>(isolate);
+        info->Set(INTERNALIZED_STRING("start_revision"), v8::New(isolate, start_revision));
+        info->Set(INTERNALIZED_STRING("end_revision"), v8::New(isolate, end_revision));
+        info->Set(INTERNALIZED_STRING("line_number"), v8::New(isolate, line_number));
+        info->Set(INTERNALIZED_STRING("revision"), v8::New(isolate, revision));
+        info->Set(INTERNALIZED_STRING("merged_revision"), v8::New(isolate, merged_revision));
+        info->Set(INTERNALIZED_STRING("merged_path"), v8::New(isolate, merged_path));
+        info->Set(INTERNALIZED_STRING("line"), v8::New(isolate, line));
+        info->Set(INTERNALIZED_STRING("local_change"), v8::New(isolate, local_change));
+
+        const auto           argc       = 1;
+        v8::Local<v8::Value> argv[argc] = {info};
+
+        auto callback = _raw_callback->Get(isolate);
+        callback->Call(v8::Undefined(isolate), argc, argv);
+    };
+    auto callback = CONVERT_CALLBACK(_callback);
+
+    auto start_revision = convert_revision(isolate, options, "start_revision", svn::revision(0));
+    auto end_revision   = convert_revision(isolate, options, "end_revision", svn::revision_kind::head);
+    auto peg_revision   = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
+
+    ASYNC_BEGIN(void, path, start_revision, end_revision, callback, peg_revision)
+        _this->_client->blame(path,
+                              start_revision,
+                              end_revision,
+                              callback,
+                              peg_revision,
+                              svn::diff_ignore_space::none);
     ASYNC_END()
 
     ASYNC_RESULT;
