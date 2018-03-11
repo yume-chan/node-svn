@@ -50,7 +50,7 @@ struct async_data {
 template <class T>
 class future {
   public:
-    using value_type = typename T;
+    using value_type = T;
 
     future(std::future<T>& future)
         : value(std::move(future)) {}
@@ -66,10 +66,10 @@ class future {
 template <class T>
 class future<T&> {
   public:
-    using value_type = typename T&;
+    using value_type = T&;
 
     future(std::future<T&>& future)
-        : value(std::move(future)) noexcept {}
+        : value(std::move(future)) {}
 
     T& get() {
         return value.get();

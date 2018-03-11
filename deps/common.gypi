@@ -11,7 +11,7 @@
             "-Wno-extra"
         ],
         "xcode_settings": {
-            "WARNING_CFLAGS": [
+            "WARNING_CFLAGS!": [
                 "-Wall",
                 "-Wendif-labels",
                 "-W"
