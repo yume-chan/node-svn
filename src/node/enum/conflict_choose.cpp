@@ -4,12 +4,12 @@
 
 #define SET_CONFLICT_CHOOSE(name) SET_ENUM(object, svn::conflict_choose, name)
 
-namespace node {
+namespace no {
 namespace conflict_choose {
 void init(v8::Local<v8::Object>&  exports,
           v8::Isolate*            isolate,
           v8::Local<v8::Context>& context) {
-    auto object = v8::New<v8::Object>(isolate);
+    auto object = no::New<v8::Object>(isolate);
 
     SET_CONFLICT_CHOOSE(postpone);
     SET_CONFLICT_CHOOSE(base);
@@ -23,4 +23,4 @@ void init(v8::Local<v8::Object>&  exports,
     SetReadOnly(exports, "ConflictChoose", object);
 }
 } // namespace conflict_choose
-} // namespace node
+} // namespace no

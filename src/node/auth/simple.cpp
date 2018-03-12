@@ -6,9 +6,6 @@
 
 #include <uv/async.hpp>
 
-#define INTERNALIZED_STRING(value) \
-    v8::New(isolate, value, v8::NewStringType::kInternalized, sizeof(value) - 1)
-
 namespace v8 {
 namespace PromiseEx {
 template <class T>
@@ -95,9 +92,9 @@ static std::optional<svn::simple_auth> convert_simple_auth(v8::Isolate*         
     if (value->IsObject()) {
         auto object = value.As<v8::Object>();
         try {
-            auto username = convert_string(object->Get(INTERNALIZED_STRING("username")));
-            auto password = convert_string(object->Get(INTERNALIZED_STRING("password")));
-            auto may_save = object->Get(INTERNALIZED_STRING("may_save"))->BooleanValue();
+            auto username = convert_string(object->Get(no::New(isolate, "username", v8::NewStringType::kInternalized)));
+            auto password = convert_string(object->Get(no::New(isolate, "password", v8::NewStringType::kInternalized)));
+            auto may_save = object->Get(no::New(isolate, "may_save", v8::NewStringType::kInternalized))->BooleanValue();
             return svn::simple_auth(std::move(username), std::move(password), may_save);
         } catch (svn::svn_type_error&) {
             // TODO: add warning for wrong return value type.
@@ -109,7 +106,7 @@ static std::optional<svn::simple_auth> convert_simple_auth(v8::Isolate*         
     return {};
 }
 
-namespace node {
+namespace no {
 using simple_auth_promise = std::promise<std::optional<svn::simple_auth>>;
 using simple_auth_future  = std::future<std::optional<svn::simple_auth>>;
 
@@ -161,9 +158,9 @@ std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(simple_auth_p
 
     const auto           argc       = 3;
     v8::Local<v8::Value> argv[argc] = {
-        v8::New(isolate, realm),
-        username ? v8::New(isolate, *username).As<v8::Value>() : v8::Undefined(isolate).As<v8::Value>(),
-        v8::New(isolate, may_save)};
+        no::New(isolate, realm),
+        no::New(isolate, username),
+        no::New(isolate, may_save)};
 
     auto functions = _this->_functions.Get(isolate);
     auto array     = functions->AsArray();
@@ -188,4 +185,4 @@ std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(simple_auth_p
 
     return {};
 }
-} // namespace node
+} // namespace no

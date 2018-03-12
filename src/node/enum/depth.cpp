@@ -4,12 +4,12 @@
 
 #define SET_DEPTH(name) SET_ENUM(object, svn::depth, name)
 
-namespace node {
+namespace no {
 namespace depth {
 void init(v8::Local<v8::Object>&  exports,
           v8::Isolate*            isolate,
           v8::Local<v8::Context>& context) {
-    auto object = v8::New<v8::Object>(isolate);
+    auto object = no::New<v8::Object>(isolate);
 
     SET_DEPTH(unknown);
     SET_DEPTH(empty);
@@ -20,4 +20,4 @@ void init(v8::Local<v8::Object>&  exports,
     SetReadOnly(exports, "Depth", object);
 }
 } // namespace depth
-} // namespace node
+} // namespace no

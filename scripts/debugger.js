@@ -43,8 +43,13 @@ async function async_update_with_async_simple_auth_provider(svn) {
 }
 
 async function async_status(svn) {
+    console.log("start");
+
     const client = new svn.AsyncClient();
+
     await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
+    console.log("cleanup complete");
+
     await client.status("c:/Users/Simon/Desktop/dev/webchat", status => {
         console.log(status);
     });
@@ -87,31 +92,41 @@ async function async_blame(svn) {
     client.blame()
 }
 
-function test_async_iterator(svn) {
-    const result = svn.test();
-    console.log(typeof Symbol.asyncIterator);
-    console.log(typeof result[Symbol.asyncIterator]);
-    const iterator = result[Symbol.asyncIterator]();
-    console.log(typeof iterator.next);
-    const promise = iterator.next();
-    console.log(promise);
-    promise.then(args => {
-        console.log(args);
-    });
+async function test_async_iterator(svn) {
+    console.log("start");
+
+    const iterator = svn.test();
+    let value;
+    do {
+        const promise = iterator.next();
+        console.log(promise);
+
+        value = await promise;
+        console.log(value);
+    } while (!value.done);
+
+    // const promise = await svn.test();
+    // console.log(promise);
+
+    // const result = await promise.value;
+    // console.log(result);
+
+    // console.log("end");
 }
 
 try {
-    console.log(process.pid);
+    const svn = require("..");
 
-    process.stdin.resume();
-    process.stdin.on("data", () => {
-        const svn = require("..");
-        // async_update_with_async_simple_auth_provider(svn);
-        // async_status(svn);
-        // async_status_memory_leak(svn);
-        // async_info_memory_leak(svn);
-        test_async_iterator(svn);
-    });
+    console.log("pid: " + process.pid);
+
+    // process.stdin.resume();
+    // process.stdin.on("data", () => {
+    // async_update_with_async_simple_auth_provider(svn);
+    // async_status(svn);
+    // async_status_memory_leak(svn);
+    // async_info_memory_leak(svn);
+    test_async_iterator(svn);
+    // });
 } catch (err) {
     console.log(err.stack);
 }

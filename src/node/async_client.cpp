@@ -10,7 +10,7 @@
 #define REPORT_ERROR                                                                                 \
     }                                                                                                \
     catch (svn::svn_type_error & error) {                                                            \
-        resolver->Reject(v8::Exception::TypeError(v8::New(isolate, error.what()).As<v8::String>())); \
+        resolver->Reject(v8::Exception::TypeError(no::New(isolate, error.what()).As<v8::String>())); \
     }                                                                                                \
     catch (svn::svn_error & raw_error) {                                                             \
         auto error = copy_error(isolate, raw_error);                                                 \
@@ -22,7 +22,7 @@
         auto isolate = args.GetIsolate();                                      \
         auto context = isolate->GetCurrentContext();                           \
                                                                                \
-        auto resolver = v8::New<v8::Promise::Resolver>(context);               \
+        auto resolver = no::New<v8::Promise::Resolver>(context);               \
         args.GetReturnValue().Set(resolver);                                   \
                                                                                \
         try {                                                                  \

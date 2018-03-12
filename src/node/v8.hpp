@@ -61,77 +61,94 @@ struct Factory<v8::FunctionTemplate> {
 };
 }; // namespace
 
-namespace v8 {
+namespace no {
 template <class T, class A0>
-inline Local<T> New(A0 a0) {
+inline v8::Local<T> New(A0 a0) {
     return Factory<T>::New(a0);
 }
 
 template <class T, class A0, class A1>
-inline Local<T> New(A0 a0, A1 a1) {
+inline v8::Local<T> New(A0 a0, A1 a1) {
     return Factory<T>::New(a0, a1);
 }
 
 template <class T, class A0, class A1, class A2>
-inline Local<T> New(A0 a0, A1 a1, A2 a2) {
+inline v8::Local<T> New(A0 a0, A1 a1, A2 a2) {
     return Factory<T>::New(a0, a1, a2);
 }
 
 template <class T, class A0, class A1, class A2, class A3>
-inline Local<T> New(A0 a0, A1 a1, A2 a2, A3 a3) {
+inline v8::Local<T> New(A0 a0, A1 a1, A2 a2, A3 a3) {
     return Factory<T>::New(a0, a1, a2, a3);
 }
 
-struct PropertyAttributeEx {
-    static const PropertyAttribute None               = PropertyAttribute::None;
-    static const PropertyAttribute ReadOnly           = PropertyAttribute::ReadOnly;
-    static const PropertyAttribute DontEnum           = PropertyAttribute::DontEnum;
-    static const PropertyAttribute DontDelete         = PropertyAttribute::DontDelete;
-    static const PropertyAttribute ReadOnlyDontEnum   = static_cast<PropertyAttribute>(ReadOnly | DontEnum);
-    static const PropertyAttribute ReadOnlyDontDelete = static_cast<PropertyAttribute>(ReadOnly | DontDelete);
-    static const PropertyAttribute DontEnumDontDelete = static_cast<PropertyAttribute>(DontEnum | DontDelete);
-    static const PropertyAttribute All                = static_cast<PropertyAttribute>(ReadOnly | DontEnum | DontDelete);
+struct PropertyAttribute {
+    static const v8::PropertyAttribute None               = v8::PropertyAttribute::None;
+    static const v8::PropertyAttribute ReadOnly           = v8::PropertyAttribute::ReadOnly;
+    static const v8::PropertyAttribute DontEnum           = v8::PropertyAttribute::DontEnum;
+    static const v8::PropertyAttribute DontDelete         = v8::PropertyAttribute::DontDelete;
+    static const v8::PropertyAttribute ReadOnlyDontEnum   = static_cast<v8::PropertyAttribute>(ReadOnly | DontEnum);
+    static const v8::PropertyAttribute ReadOnlyDontDelete = static_cast<v8::PropertyAttribute>(ReadOnly | DontDelete);
+    static const v8::PropertyAttribute DontEnumDontDelete = static_cast<v8::PropertyAttribute>(DontEnum | DontDelete);
+    static const v8::PropertyAttribute All                = static_cast<v8::PropertyAttribute>(ReadOnly | DontEnum | DontDelete);
 };
 
-static v8::Local<v8::Boolean> New(Isolate* isolate, bool value) {
+static v8::Local<v8::Boolean> New(v8::Isolate* isolate, bool value) {
     return v8::Boolean::New(isolate, value);
 }
 
-static v8::Local<v8::Integer> New(Isolate* isolate, int32_t value) {
+static v8::Local<v8::Integer> New(v8::Isolate* isolate, int32_t value) {
     return v8::Integer::New(isolate, value);
 }
 
-static v8::Local<v8::Value> New(Isolate* isolate, std::optional<int32_t> value) {
-    if (!value)
-        return v8::Undefined(isolate);
+static v8::Local<v8::Value> New(v8::Isolate*            isolate,
+                                std::optional<int32_t>& value) {
+    if (value.has_value())
+        return no::New(isolate, *value);
 
-    return v8::New(isolate, *value);
+    return v8::Undefined(isolate);
 }
 
-static v8::Local<v8::Integer> New(Isolate* isolate, uint32_t value) {
+static v8::Local<v8::Integer> New(v8::Isolate* isolate, uint32_t value) {
     return v8::Integer::NewFromUnsigned(isolate, value);
 }
 
-static v8::Local<v8::Number> New(Isolate* isolate, double value) {
+static v8::Local<v8::Number> New(v8::Isolate* isolate, double value) {
     return v8::Number::New(isolate, value);
 }
 
-static v8::Local<v8::String> New(Isolate*           isolate,
+static v8::Local<v8::String> New(v8::Isolate*       isolate,
                                  const std::string& value,
                                  v8::NewStringType  type = v8::NewStringType::kNormal) {
     return v8::String::NewFromUtf8(isolate, value.c_str(), type, static_cast<int>(value.size())).ToLocalChecked();
 }
 
-static v8::Local<v8::Value> New(Isolate*    isolate,
-                                const char* value) {
+static v8::Local<v8::Value> New(v8::Isolate*                            isolate,
+                                const std::optional<const std::string>& value,
+                                v8::NewStringType                       type = v8::NewStringType::kNormal) {
+    if (value.has_value())
+        return no::New(isolate, value.value(), type);
+
+    return v8::Undefined(isolate);
+}
+
+template <std::size_t N>
+static v8::Local<v8::String> New(v8::Isolate* isolate,
+                                 const char (&value)[N],
+                                 v8::NewStringType type = v8::NewStringType::kNormal) {
+    return v8::String::NewFromUtf8(isolate, value, type, N - 1).ToLocalChecked();
+}
+
+static v8::Local<v8::Value> New(v8::Isolate* isolate,
+                                const char*& value) {
     if (value == nullptr)
         return v8::Undefined(isolate);
 
     return v8::String::NewFromUtf8(isolate, value, v8::NewStringType::kNormal, -1).ToLocalChecked();
 }
 
-static v8::Local<v8::Value> New(Isolate*          isolate,
-                                const char*       value,
+static v8::Local<v8::Value> New(v8::Isolate*      isolate,
+                                const char*&      value,
                                 v8::NewStringType type,
                                 int               size = -1) {
     if (value == nullptr)
@@ -140,21 +157,21 @@ static v8::Local<v8::Value> New(Isolate*          isolate,
     return v8::String::NewFromUtf8(isolate, value, type, size).ToLocalChecked();
 }
 
-static v8::Local<v8::String> New(Isolate*          isolate,
-                                 const char*       value,
+static v8::Local<v8::String> New(v8::Isolate*      isolate,
+                                 const char*&      value,
                                  int               size,
                                  v8::NewStringType type = v8::NewStringType::kNormal) {
     return v8::String::NewFromUtf8(isolate, value, type, size).ToLocalChecked();
 }
 
-static v8::Local<v8::Value> New(Isolate* isolate, int64_t value) {
+static v8::Local<v8::Value> New(v8::Isolate* isolate, int64_t value) {
     if (value > INT32_MAX)
-        return v8::New(isolate, std::to_string(value));
+        return no::New(isolate, std::to_string(value));
     else
-        return v8::New(isolate, static_cast<int32_t>(value));
+        return no::New(isolate, static_cast<int32_t>(value));
 }
 
-static v8::Local<v8::External> New(Isolate* isolate, void* value) {
+static v8::Local<v8::External> New(v8::Isolate* isolate, void* value) {
     return v8::External::New(isolate, value);
 }
-} // namespace v8
+} // namespace no

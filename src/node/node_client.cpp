@@ -51,7 +51,7 @@ class future<void> {
 #define METHOD_END                                                                                          \
     }                                                                                                       \
     catch (svn::svn_type_error & error) {                                                                   \
-        isolate->ThrowException(v8::Exception::TypeError(v8::New(isolate, error.what()).As<v8::String>())); \
+        isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, error.what()).As<v8::String>())); \
     }                                                                                                       \
     catch (svn::svn_error & raw_error) {                                                                    \
         auto error = copy_error(isolate, raw_error);                                                        \

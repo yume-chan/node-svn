@@ -3,237 +3,149 @@
 #include <future>
 #include <iostream>
 
-#include <node_object_wrap.h>
-
-#include <node/v8.hpp>
+#include <node/class_builder.hpp>
 #include <uv/async.hpp>
 
-#define INTERNALIZED_STRING(value) \
-    v8::New(isolate, value, sizeof(value) - 1, v8::NewStringType::kInternalized)
-
-#define SET_PROTOTYPE_METHOD(signature, prototype, name, callback, length)                \
-    /* Add a scope to hide extra variables */                                             \
-    {                                                                                     \
-        auto function = v8::FunctionTemplate::New(isolate,                /* isolate */   \
-                                                  callback,               /* callback */  \
-                                                  v8::Local<v8::Value>(), /* data */      \
-                                                  signature,              /* signature */ \
-                                                  length);                /* length */    \
-        function->RemovePrototype();                                                      \
-        prototype->Set(name, function, v8::PropertyAttribute::DontEnum);                  \
+namespace no {
+static void check_result(v8::Maybe<bool> value) {
+    if (value.IsNothing()) {
+        throw std::runtime_error("empty");
     }
 
-namespace node {
-class iterator : public node::ObjectWrap {
-  public:
-    iterator(v8::Isolate* isolate, v8::Local<v8::Context>& context) {
-        if (_initializer.IsEmpty()) {
-            auto context = isolate->GetCurrentContext();
-
-            auto clazz     = v8::New<v8::FunctionTemplate>(isolate, create_instance);
-            auto signature = v8::Signature::New(isolate, clazz);
-
-            clazz->SetClassName(INTERNALIZED_STRING("Iterator"));
-            clazz->ReadOnlyPrototype();
-
-            clazz->InstanceTemplate()->SetInternalFieldCount(1);
-
-            auto prototype = clazz->PrototypeTemplate();
-            SET_PROTOTYPE_METHOD(signature, prototype, v8::Symbol::GetIterator(isolate), get_iterator, 0);
-            SET_PROTOTYPE_METHOD(signature, prototype, INTERNALIZED_STRING("next"), next, 0);
-
-            _initializer.Reset(isolate, clazz->GetFunction(context).ToLocalChecked());
-        }
-
-        const auto           argc       = 1;
-        v8::Local<v8::Value> argv[argc] = {v8::New(isolate, this)};
-        _iterator.Reset(isolate, _initializer.Get(isolate)->CallAsConstructor(context, argc, argv).ToLocalChecked());
+    if (!value.ToChecked()) {
+        throw std::runtime_error("false");
     }
+}
 
-  private:
-    static void create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
-        auto isolate = args.GetIsolate();
-
-        auto result = static_cast<iterator*>(args[0].As<v8::External>()->Value());
-        result->Wrap(args.This());
-    }
-
-    static void get_iterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
-        auto _this = node::ObjectWrap::Unwrap<iterator>(args.Holder());
-
-        if (_this->_iterator_created) {
-            auto isolate = args.GetIsolate();
-            isolate->ThrowException(v8::New(isolate, "You can only get async_iterator once").As<v8::String>());
-            return;
-        }
-
-        _this->_iterator_created = true;
-        args.GetReturnValue().Set(args.Holder());
-    }
-
-    static void next(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    }
-
-    static v8::Global<v8::Function> _initializer;
-
-    bool                              _iterator_created;
-    std::promise<void>                _consume_promise;
-    bool                              _has_unconsumed_value;
-    v8::Global<v8::Value>             _iterator;
-    v8::Global<v8::Value>             _next_value;
-    v8::Global<v8::Promise::Resolver> _pending_resolver;
-};
-
-class async_iterator : public node::ObjectWrap {
+class async_iterator {
   public:
     async_iterator(v8::Isolate* isolate, v8::Local<v8::Context>& context)
         : _isolate(isolate)
-        , _iterator_created(false)
+        , _value()
+        , _value_created(false)
         , _consume_promise()
-        , _has_unconsumed_value(false)
-        , _iterator()
-        , _next_value()
-        , _pending_resolver() {
+        , _resolver_fulfilled(false)
+        , _resolver() {
         if (_initializer.IsEmpty()) {
-            auto context = isolate->GetCurrentContext();
+            auto asyncIteratorName = no::New(isolate, "asyncIterator", v8::NewStringType::kInternalized);
 
-            auto clazz     = v8::New<v8::FunctionTemplate>(isolate, create_instance);
-            auto signature = v8::Signature::New(isolate, clazz);
-
-            clazz->SetClassName(INTERNALIZED_STRING("AsyncIterator"));
-            clazz->ReadOnlyPrototype();
-
-            clazz->InstanceTemplate()->SetInternalFieldCount(1);
-
-            auto symbol        = context->Global()->Get(INTERNALIZED_STRING("Symbol")).As<v8::Object>();
-            auto asyncIterator = symbol->Get(context, INTERNALIZED_STRING("asyncIterator")).ToLocalChecked().As<v8::Symbol>();
+            // polyfill Symbol.asyncIterator
+            auto symbol        = context->Global()->Get(no::New(isolate, "Symbol", v8::NewStringType::kInternalized)).As<v8::Object>();
+            auto asyncIterator = symbol->Get(context, asyncIteratorName).ToLocalChecked().As<v8::Symbol>();
 
             if (asyncIterator->IsUndefined()) {
-                asyncIterator = v8::Symbol::New(isolate, INTERNALIZED_STRING("Symbol.asyncIterator"));
-                symbol->DefineOwnProperty(context, INTERNALIZED_STRING("asyncIterator"), asyncIterator, v8::PropertyAttributeEx::All);
+                asyncIterator = v8::Symbol::New(isolate, no::New(isolate, "Symbol.asyncIterator"));
+                symbol->DefineOwnProperty(context, asyncIteratorName, asyncIterator, no::PropertyAttribute::All);
             }
 
-            auto prototype = clazz->PrototypeTemplate();
-            SET_PROTOTYPE_METHOD(signature, prototype, asyncIterator, get_iterator, 0);
-            SET_PROTOTYPE_METHOD(signature, prototype, INTERNALIZED_STRING("next"), next, 0);
+            class_builder<async_iterator> clazz(isolate, "Iterator", create_instance);
+            clazz.add_prototype_method(asyncIterator.As<v8::Name>(), &async_iterator::get_iterator);
+            clazz.add_prototype_method("next", &async_iterator::next);
 
-            _initializer.Reset(isolate, clazz->GetFunction(context).ToLocalChecked());
+            _initializer.Reset(isolate, clazz.get_constructor());
         }
 
-        const auto           argc       = 1;
-        v8::Local<v8::Value> argv[argc] = {v8::New(isolate, this)};
+        auto value = _initializer.Get(isolate)->NewInstance(context).ToLocalChecked();
+        value->SetAlignedPointerInInternalField(0, this);
+        _value.Reset(isolate, value);
 
-        auto value = _initializer.Get(isolate)->CallAsConstructor(context, argc, argv).ToLocalChecked();
-        _iterator.Reset(isolate, value);
+        auto resolver = no::New<v8::Promise::Resolver>(context);
+        _resolver.Reset(_isolate, resolver);
     }
 
     template <class T>
-    std::future<void> resolve(v8::Local<T>& value,
-                              bool          done) {
-        if (_has_unconsumed_value) {
-            throw std::runtime_error("");
-        }
+    std::future<void> yield(v8::Local<T>& value) {
+        return resolve(value, false);
+    }
 
-        auto isolate = _isolate;
-        auto context = isolate->GetCurrentContext();
-
-        _consume_promise = std::promise<void>();
-
-        if (_next_value.IsEmpty()) {
-            _next_value.Reset(isolate, value.As<v8::Value>());
-
-            _has_unconsumed_value = false;
-            _consume_promise.set_value();
-
-            return _consume_promise.get_future();
-        }
-
-        v8::Local<v8::Promise::Resolver> resolver;
-
-        if (_pending_resolver.IsEmpty()) {
-            resolver = v8::New<v8::Promise::Resolver>(context);
-            _pending_resolver.Reset(isolate, resolver);
-
-            _has_unconsumed_value = true;
-        } else {
-            resolver = _pending_resolver.Get(isolate);
-            _pending_resolver.Reset();
-
-            _has_unconsumed_value = false;
-            _consume_promise.set_value();
-        }
-
-        auto result = v8::New<v8::Object>(isolate);
-        result->Set(INTERNALIZED_STRING("value"), _next_value.Get(isolate));
-        result->Set(INTERNALIZED_STRING("done"), v8::New(isolate, done));
-
-        resolver->Resolve(result);
-
-        _next_value.Reset(isolate, value);
-        return _consume_promise.get_future();
+    void end() {
+        resolve(v8::Undefined(_isolate), true);
     }
 
     v8::Local<v8::Value> get() {
-        return _iterator.Get(_isolate);
+        return _value.Get(_isolate);
     }
 
   private:
-    static void create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
-        auto isolate = args.GetIsolate();
-
-        auto result = static_cast<async_iterator*>(args[0].As<v8::External>()->Value());
-        result->Wrap(args.This());
+    static async_iterator* create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+        return nullptr;
     }
 
-    static void get_iterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
-        auto _this   = node::ObjectWrap::Unwrap<async_iterator>(args.Holder());
-        auto isolate = _this->_isolate;
-
-        if (_this->_iterator_created) {
-            isolate->ThrowException(v8::New(isolate, "You can only get async_iterator once").As<v8::String>());
-            return;
+    template <class T>
+    std::future<void> resolve(v8::Local<T> value,
+                              bool         done) {
+        if (_resolver_fulfilled) {
+            throw std::runtime_error("");
         }
 
-        _this->_iterator_created = true;
-        args.GetReturnValue().Set(args.Holder());
+        v8::HandleScope scope(_isolate);
+
+        auto context = _isolate->GetCurrentContext();
+
+        v8::Local<v8::Promise::Resolver> resolver;
+        _consume_promise = std::promise<void>();
+
+        if (_resolver.IsEmpty()) {
+            resolver = no::New<v8::Promise::Resolver>(context);
+            _resolver.Reset(_isolate, resolver);
+
+            _resolver_fulfilled = true;
+        } else {
+            resolver = _resolver.Get(_isolate);
+            _resolver.Reset();
+
+            _consume_promise.set_value();
+        }
+
+        auto object = no::New<v8::Object>(_isolate);
+        object->Set(no::New(_isolate, "value"), value);
+        object->Set(no::New(_isolate, "done"), no::New(_isolate, done));
+        check_result(resolver->Resolve(context, object));
+
+        return _consume_promise.get_future();
     }
 
-    static void next(const v8::FunctionCallbackInfo<v8::Value>& args) {
-        auto isolate = args.GetIsolate();
-        auto context = isolate->GetCurrentContext();
+    v8::Local<v8::Value> get_iterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
+        auto isolate = this->_isolate;
 
-        auto _this = node::ObjectWrap::Unwrap<async_iterator>(args.Holder());
-
-        if (_this->_has_unconsumed_value) {
-            auto promise = _this->_pending_resolver.Get(isolate)->GetPromise();
-            args.GetReturnValue().Set(promise);
-
-            _this->_pending_resolver.Reset();
-
-            _this->_has_unconsumed_value = false;
-            _this->_consume_promise.set_value();
-            return;
+        if (this->_value_created) {
+            isolate->ThrowException(no::New(isolate, "You can only get async_iterator once").As<v8::String>());
+            return v8::Local<v8::Value>();
         }
 
-        auto resolver = v8::New<v8::Promise::Resolver>(context);
-        _this->_pending_resolver.Reset(isolate, resolver);
+        this->_value_created = true;
+        return args.Holder();
+    }
 
-        args.GetReturnValue().Set(resolver->GetPromise());
+    v8::Local<v8::Value> next(const v8::FunctionCallbackInfo<v8::Value>& args) {
+        v8::Local<v8::Promise::Resolver> resolver;
+
+        if (_resolver_fulfilled) {
+            resolver = _resolver.Get(_isolate);
+            _resolver.Reset();
+
+            _resolver_fulfilled = false;
+            _consume_promise.set_value();
+        } else {
+            auto context = _isolate->GetCurrentContext();
+            resolver     = no::New<v8::Promise::Resolver>(context);
+            _resolver.Reset(_isolate, resolver);
+        }
+
+        return resolver;
     }
 
     static v8::Global<v8::Function> _initializer;
 
     v8::Isolate* _isolate;
 
-    v8::Global<v8::Value> _iterator;
-    bool                  _iterator_created;
+    v8::Global<v8::Value> _value;
+    bool                  _value_created;
 
-    std::promise<void> _consume_promise;
-
-    v8::Global<v8::Value>             _next_value;
-    bool                              _has_unconsumed_value;
-    v8::Global<v8::Promise::Resolver> _pending_resolver;
+    v8::Global<v8::Promise::Resolver> _resolver;
+    bool                              _resolver_fulfilled;
+    std::promise<void>                _consume_promise;
 };
 
 v8::Global<v8::Function> async_iterator::_initializer;
-} // namespace node
+} // namespace no

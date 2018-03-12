@@ -4,7 +4,7 @@
 
 #include <node/v8.hpp>
 
-namespace node {
+namespace no {
 using shared_callback = std::shared_ptr<v8::Persistent<v8::Function>>;
 
 struct simple_auth_provider {
@@ -35,4 +35,4 @@ struct simple_auth_provider {
 
     invoke_function _invoke;
 };
-} // namespace node
+} // namespace no

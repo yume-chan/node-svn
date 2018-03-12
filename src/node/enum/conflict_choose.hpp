@@ -2,10 +2,10 @@
 
 #include <node/v8.hpp>
 
-namespace node {
+namespace no {
 namespace conflict_choose {
 void init(v8::Local<v8::Object>&  exports,
           v8::Isolate*            isolate,
           v8::Local<v8::Context>& context);
 }
-} // namespace node
+} // namespace no

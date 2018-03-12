@@ -1,5 +1,7 @@
 #include <node.h>
 
+#include <iostream>
+
 #include <svn_client.h>
 #include <svn_version.h>
 
@@ -17,16 +19,15 @@
 #include "async_iterator.hpp"
 #include <uv/work.hpp>
 
-#define INTERNALIZED_STRING(value) \
-    v8::New(isolate, value, sizeof(value) - 1, v8::NewStringType::kInternalized)
+using namespace std::literals;
 
-#define SetReadOnly(object, name, value)                   \
-    (object)->DefineOwnProperty(context,                   \
-                                INTERNALIZED_STRING(name), \
-                                (value),                   \
-                                v8::PropertyAttributeEx::ReadOnlyDontDelete)
+#define SetReadOnly(object, name, value)                                                  \
+    (object)->DefineOwnProperty(context,                                                  \
+                                no::New(isolate, name, v8::NewStringType::kInternalized), \
+                                (value),                                                  \
+                                no::PropertyAttribute::ReadOnlyDontDelete)
 
-namespace node {
+namespace no {
 void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
     auto context = isolate->GetCurrentContext();
@@ -34,9 +35,9 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
     auto version = svn_client_version();
 
     auto object = v8::Object::New(isolate);
-    SetReadOnly(object, "major", v8::New(isolate, version->major));
-    SetReadOnly(object, "minor", v8::New(isolate, version->minor));
-    SetReadOnly(object, "patch", v8::New(isolate, version->patch));
+    SetReadOnly(object, "major", no::New(isolate, version->major));
+    SetReadOnly(object, "minor", no::New(isolate, version->minor));
+    SetReadOnly(object, "patch", no::New(isolate, version->patch));
     args.GetReturnValue().Set(object);
 }
 
@@ -44,15 +45,12 @@ static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
     auto context = isolate->GetCurrentContext();
 
-    auto iterator = new async_iterator(isolate, context);
+    auto iterator = std::make_shared<no::async_iterator>(isolate, context);
     args.GetReturnValue().Set(iterator->get());
 
     auto async = [isolate, iterator](int32_t i) -> uv::future<void> {
         v8::HandleScope scope(isolate);
-
-        auto context = isolate->GetCurrentContext();
-
-        return iterator->resolve(v8::New(isolate, i), false);
+        return iterator->yield(no::New(isolate, i));
     };
 
     auto work = [async = uv::make_async(async)]() -> void {
@@ -62,25 +60,70 @@ static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
     };
 
     auto after_work = [isolate, iterator](std::future<void>) -> void {
-        iterator->resolve(v8::Undefined(isolate), true);
+        iterator->end();
     };
 
     uv::queue_work(work, after_work);
 }
 
-#include <type_traits>
+ //static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
+ //    auto isolate = args.GetIsolate();
+ //    auto context = isolate->GetCurrentContext();
+
+ //    auto resolver = no::New<v8::Promise::Resolver>(context);
+ //    args.GetReturnValue().Set(resolver);
+
+	// auto _resolver = std::make_shared<v8::Persistent<v8::Promise::Resolver>>(isolate,resolver);
+
+ //    auto async = [isolate, _resolver]() -> void {
+	//	 //v8::HandleScope scope(isolate);
+
+	//	 //auto context = isolate->GetCurrentContext();
+	//	 //auto resolver = _resolver->Get(isolate);
+
+	//	 //resolver->Resolve(context, no::New(isolate, "test"));
+
+	//	 v8::Isolate::Scope isolate_scope(isolate);
+	//	 v8::HandleScope scope(isolate);
+
+	//	 auto context = isolate->GetCurrentContext();
+	//	 auto resolver = _resolver->Get(isolate);
+
+	//	 auto another = no::New<v8::Promise::Resolver>(context);
+	//	 _resolver->Reset(isolate, another);
+
+	//	 auto object = no::New<v8::Object>(isolate);
+	//	 object->Set(no::New(isolate, "value"), another);
+ //        resolver->Resolve(context, object);
+ //    };
+
+ //    auto work = [async = uv::make_async(std::move(async))]() -> void {
+ //        async();
+ //    };
+
+ //    auto after_work = [isolate, _resolver](std::future<void>) -> void {
+	//	 v8::HandleScope scope(isolate);
+
+	//	 auto context = isolate->GetCurrentContext();
+	//	 auto resolver = _resolver->Get(isolate);
+
+	//	 resolver->Resolve(context, no::New(isolate, 42));
+ //    };
+
+ //    uv::queue_work(std::move(work), std::move(after_work));
+ //}
 
 void init(v8::Local<v8::Object> exports) {
     auto isolate = exports->GetIsolate();
     auto context = isolate->GetCurrentContext();
 
-    exports->SetAccessor(context,                                      // context
-                         INTERNALIZED_STRING("version"),               // name
-                         version,                                      // getter
-                         nullptr,                                      // setter
-                         v8::MaybeLocal<v8::Value>(),                  // data
-                         v8::AccessControl::ALL_CAN_READ,              // settings
-                         v8::PropertyAttributeEx::ReadOnlyDontDelete); // attribute
+    exports->SetAccessor(context,                                                       // context
+                         no::New(isolate, "version", v8::NewStringType::kInternalized), // name
+                         version,                                                       // getter
+                         nullptr,                                                       // setter
+                         v8::MaybeLocal<v8::Value>(),                                   // data
+                         v8::AccessControl::ALL_CAN_READ,                               // settings
+                         no::PropertyAttribute::ReadOnlyDontDelete);                    // attribute
 
     NODE_SET_METHOD(exports, "test", Test);
 
@@ -96,4 +139,4 @@ void init(v8::Local<v8::Object> exports) {
 }
 
 NODE_MODULE(svn, init)
-} // namespace node
+} // namespace no

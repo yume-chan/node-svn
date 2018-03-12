@@ -4,12 +4,12 @@
 
 #define SET_STATUS_KIND(name) SET_ENUM(object, svn::status_kind, name)
 
-namespace node {
+namespace no {
 namespace status_kind {
 void init(v8::Local<v8::Object>&  exports,
           v8::Isolate*            isolate,
           v8::Local<v8::Context>& context) {
-    auto object = v8::New<v8::Object>(isolate);
+    auto object = no::New<v8::Object>(isolate);
 
     SET_STATUS_KIND(none);
     SET_STATUS_KIND(unversioned);
@@ -28,4 +28,4 @@ void init(v8::Local<v8::Object>&  exports,
     SetReadOnly(exports, "StatusKind", object);
 }
 } // namespace status_kind
-} // namespace node
+} // namespace no

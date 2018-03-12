@@ -6,7 +6,7 @@ namespace svn {
 class client;
 }
 
-namespace node {
+namespace no {
 class CLASS_NAME : public node::ObjectWrap {
   public:
     static void init(v8::Local<v8::Object>&  exports,
@@ -45,6 +45,6 @@ class CLASS_NAME : public node::ObjectWrap {
 
   private:
     std::unique_ptr<svn::client> _client;
-    node::simple_auth_provider   _simple_auth_provider;
+    no::simple_auth_provider   _simple_auth_provider;
 };
-} // namespace node
+} // namespace no

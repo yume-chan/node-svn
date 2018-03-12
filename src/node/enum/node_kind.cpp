@@ -2,12 +2,12 @@
 
 #include "enum.hpp"
 
-namespace node {
+namespace no {
 namespace node_kind {
 void init(v8::Local<v8::Object>&  exports,
           v8::Isolate*            isolate,
           v8::Local<v8::Context>& context) {
-    auto object = v8::New<v8::Object>(isolate);
+    auto object = no::New<v8::Object>(isolate);
 
     SET_NODE_KIND(none);
     SET_NODE_KIND(file);
@@ -17,4 +17,4 @@ void init(v8::Local<v8::Object>&  exports,
     SetReadOnly(exports, "NodeKind", object);
 }
 } // namespace node_kind
-} // namespace node
+} // namespace no
