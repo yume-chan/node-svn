@@ -1,7 +1,6 @@
 #include <future>
 
 namespace uv {
-
 template <class T>
 class future {
   public:

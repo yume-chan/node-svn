@@ -66,17 +66,8 @@ struct async {
         handle->async_cb = &async::invoke_async<Result, Arg...>;
         check_uv_error(uv_async_send(handle.get()));
 
-        if constexpr (std::is_void_v<Result>) {
-            future.get();
-        } else if constexpr (is_future_v<Result>) {
-            using T = typename Result::value_type;
-
-            auto result = future.get();
-            if constexpr (std::is_void_v<T>) {
-                result.get();
-            } else {
-                return result.get();
-            }
+        if constexpr (uv::is_future_v<Result>) {
+            return future.get().get();
         } else {
             return future.get();
         }

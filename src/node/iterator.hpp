@@ -17,15 +17,15 @@ static void check_result(v8::Maybe<bool> value) {
     }
 }
 
-class async_iterator {
+class iterator {
   public:
-    async_iterator(v8::Isolate* isolate, v8::Local<v8::Context>& context)
+    iterator(v8::Isolate* isolate, v8::Local<v8::Context>& context)
         : _isolate(isolate)
         , _value()
-        , _value_created(false)
-        , _consume_promise()
+        , _iterator_created(false)
+        , _resolver()
         , _resolver_fulfilled(false)
-        , _resolver() {
+        , _consume_promise() {
         if (_initializer.IsEmpty()) {
             auto asyncIteratorName = no::New(isolate, "asyncIterator", v8::NewStringType::kInternalized);
 
@@ -38,19 +38,13 @@ class async_iterator {
                 symbol->DefineOwnProperty(context, asyncIteratorName, asyncIterator, no::PropertyAttribute::All);
             }
 
-            class_builder<async_iterator> clazz(isolate, "Iterator", create_instance);
-            clazz.add_prototype_method(asyncIterator.As<v8::Name>(), &async_iterator::get_iterator);
-            clazz.add_prototype_method("next", &async_iterator::next);
+            class_builder<iterator> clazz(isolate, "Iterator", create_instance);
+            clazz.add_prototype_method(v8::Symbol::GetIterator(isolate), &iterator::get_iterator);
+            clazz.add_prototype_method(asyncIterator.As<v8::Name>(), &iterator::get_async_iterator);
+            clazz.add_prototype_method("next", &iterator::next);
 
             _initializer.Reset(isolate, clazz.get_constructor());
         }
-
-        auto value = _initializer.Get(isolate)->NewInstance(context).ToLocalChecked();
-        value->SetAlignedPointerInInternalField(0, this);
-        _value.Reset(isolate, value);
-
-        auto resolver = no::New<v8::Promise::Resolver>(context);
-        _resolver.Reset(_isolate, resolver);
     }
 
     template <class T>
@@ -63,11 +57,19 @@ class async_iterator {
     }
 
     v8::Local<v8::Value> get() {
+        if (_value.IsEmpty()) {
+            v8::HandleScope scope(_isolate);
+
+            auto context = _isolate->GetCurrentContext();
+            auto value   = _initializer.Get(_isolate)->NewInstance(context).ToLocalChecked();
+            value->SetAlignedPointerInInternalField(0, this);
+            _value.Reset(_isolate, value);
+        }
         return _value.Get(_isolate);
     }
 
   private:
-    static async_iterator* create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    static iterator* create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
         return nullptr;
     }
 
@@ -102,18 +104,30 @@ class async_iterator {
         object->Set(no::New(_isolate, "done"), no::New(_isolate, done));
         check_result(resolver->Resolve(context, object));
 
+        // **crucial!** v8 don't think it's idle so it won't run microtasks.
+        // force it to run, or we will stuck on waiting `_consume_promise` forever.
+        _isolate->RunMicrotasks();
+
         return _consume_promise.get_future();
     }
 
     v8::Local<v8::Value> get_iterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
-        auto isolate = this->_isolate;
-
-        if (this->_value_created) {
-            isolate->ThrowException(no::New(isolate, "You can only get async_iterator once").As<v8::String>());
+        if (this->_iterator_created) {
+            _isolate->ThrowException(no::New(_isolate, "You can only get iterator once").As<v8::String>());
             return v8::Local<v8::Value>();
         }
 
-        this->_value_created = true;
+        this->_iterator_created = true;
+        return args.Holder();
+    }
+
+    v8::Local<v8::Value> get_async_iterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
+        if (this->_iterator_created) {
+            _isolate->ThrowException(no::New(_isolate, "You can only get iterator once").As<v8::String>());
+            return v8::Local<v8::Value>();
+        }
+
+        this->_iterator_created = true;
         return args.Holder();
     }
 
@@ -140,12 +154,13 @@ class async_iterator {
     v8::Isolate* _isolate;
 
     v8::Global<v8::Value> _value;
-    bool                  _value_created;
+
+    bool _iterator_created;
 
     v8::Global<v8::Promise::Resolver> _resolver;
     bool                              _resolver_fulfilled;
     std::promise<void>                _consume_promise;
 };
 
-v8::Global<v8::Function> async_iterator::_initializer;
+v8::Global<v8::Function> iterator::_initializer;
 } // namespace no
