@@ -110,17 +110,11 @@ namespace no {
 using simple_auth_promise = std::promise<std::optional<svn::simple_auth>>;
 using simple_auth_future  = std::future<std::optional<svn::simple_auth>>;
 
-simple_auth_provider::simple_auth_provider(v8::Isolate* isolate, bool async)
+simple_auth_provider::simple_auth_provider(v8::Isolate* isolate)
     : _isolate(isolate)
-    , _async(async) {
+    , _invoke(uv::make_async(&simple_auth_provider::_invoke_sync)) {
     v8::HandleScope scope(isolate);
     _functions.Reset(isolate, v8::Set::New(isolate));
-
-    if (async) {
-        _invoke = uv::make_async(&simple_auth_provider::_invoke_sync);
-    } else {
-        _invoke = &simple_auth_provider::_invoke_sync;
-    }
 }
 
 void simple_auth_provider::add(const v8::Local<v8::Function>& function) {
@@ -143,11 +137,11 @@ void simple_auth_provider::remove(const v8::Local<v8::Function>& function) {
 
 std::optional<svn::simple_auth> simple_auth_provider::operator()(const std::string&                      realm,
                                                                  const std::optional<const std::string>& username,
-                                                                 bool                                    may_save) {
+                                                                 bool                                    may_save) const {
     return _invoke(this, realm, username, may_save);
 }
 
-std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(simple_auth_provider*                   _this,
+std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(const simple_auth_provider*             _this,
                                                                    const std::string&                      realm,
                                                                    const std::optional<const std::string>& username,
                                                                    bool                                    may_save) {
@@ -170,12 +164,12 @@ std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(simple_auth_p
         auto value    = function->Call(context, undefined, argc, argv).ToLocalChecked();
         if (value->IsPromise()) {
             auto promise = value.As<v8::Promise>();
-            if (!_this->_async) {
-                // de-async
-                while (promise->State() != v8::Promise::kFulfilled) {
-                    uv_run(uv_default_loop(), UV_RUN_ONCE);
-                }
+
+            // de-async
+            while (promise->State() != v8::Promise::kFulfilled) {
+                uv_run(uv_default_loop(), UV_RUN_ONCE);
             }
+
             auto result = v8::PromiseEx::Then<std::optional<svn::simple_auth>>(isolate, promise, convert_simple_auth, convert_simple_auth).get();
             if (result) {
                 return result;

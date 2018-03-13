@@ -4,12 +4,11 @@
 #define EXPORT_NAME "Client"
 #define ASYNC false
 
-#define METHOD_BEGIN(name)                                               \
-    void client::name(const v8::FunctionCallbackInfo<v8::Value>& args) { \
-        auto isolate = args.GetIsolate();                                \
-        auto context = isolate->GetCurrentContext();                     \
-        try {                                                            \
-            auto _this = node::ObjectWrap::Unwrap<client>(args.Holder());
+#define METHOD_BEGIN(name)                                                               \
+    v8::Local<v8::Value> client::name(const v8::FunctionCallbackInfo<v8::Value>& args) { \
+        auto isolate = args.GetIsolate();                                                \
+        auto context = isolate->GetCurrentContext();                                     \
+        try {
 
 #define CONVERT_CALLBACK(callback) \
     callback
@@ -45,18 +44,17 @@ class future<void> {
 #define ASYNC_RESULT \
     future.get()
 
-#define METHOD_RETURN(value) \
-    args.GetReturnValue().Set(value);
+// clang-format off
 
-#define METHOD_END                                                                                          \
-    }                                                                                                       \
-    catch (svn::svn_type_error & error) {                                                                   \
-        isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, error.what()).As<v8::String>())); \
-    }                                                                                                       \
-    catch (svn::svn_error & raw_error) {                                                                    \
-        auto error = copy_error(isolate, raw_error);                                                        \
-        isolate->ThrowException(error);                                                                     \
-    }                                                                                                       \
+#define METHOD_RETURN(value)                             \
+            return value;                                \
+        } catch (svn::svn_error & raw_error) {           \
+            auto error = copy_error(isolate, raw_error); \
+            isolate->ThrowException(error);              \
+            return v8::Local<v8::Value>();               \
+        }                                                \
     }
+
+// clang-format on
 
 #include "template/client.inc.cpp"

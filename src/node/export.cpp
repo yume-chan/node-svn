@@ -16,9 +16,6 @@
 #include <node/enum/revision_kind.hpp>
 #include <node/enum/status_kind.hpp>
 
-#include "async_iterator.hpp"
-#include <uv/work.hpp>
-
 using namespace std::literals;
 
 #define SetReadOnly(object, name, value)                                                  \
@@ -41,77 +38,33 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
     args.GetReturnValue().Set(object);
 }
 
-static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    auto isolate = args.GetIsolate();
-    auto context = isolate->GetCurrentContext();
+// #include <node/iterator.hpp>
+// #include <uv/work.hpp>
 
-    auto iterator = std::make_shared<no::async_iterator>(isolate, context);
-    args.GetReturnValue().Set(iterator->get());
+// static void test(const v8::FunctionCallbackInfo<v8::Value>& args) {
+//     auto isolate = args.GetIsolate();
+//     auto context = isolate->GetCurrentContext();
 
-    auto async = [isolate, iterator](int32_t i) -> uv::future<void> {
-        v8::HandleScope scope(isolate);
-        return iterator->yield(no::New(isolate, i));
-    };
+//     auto iterator = std::make_shared<no::async_iterator>(isolate, context);
+//     args.GetReturnValue().Set(iterator->get());
 
-    auto work = [async = uv::make_async(async)]() -> void {
-        for (auto i = 0; i < 5; i++) {
-            async(i);
-        }
-    };
+//     auto async = [isolate, iterator](int32_t i) -> uv::future<void> {
+//         v8::HandleScope scope(isolate);
+//         return iterator->yield(no::New(isolate, i));
+//     };
 
-    auto after_work = [isolate, iterator](std::future<void>) -> void {
-        iterator->end();
-    };
+//     auto work = [async = uv::make_async(async)]() -> void {
+//         for (auto i = 0; i < 5; i++) {
+//             async(i);
+//         }
+//     };
 
-    uv::queue_work(work, after_work);
-}
+//     auto after_work = [isolate, iterator](std::future<void>) -> void {
+//         iterator->end();
+//     };
 
- //static void Test(const v8::FunctionCallbackInfo<v8::Value>& args) {
- //    auto isolate = args.GetIsolate();
- //    auto context = isolate->GetCurrentContext();
-
- //    auto resolver = no::New<v8::Promise::Resolver>(context);
- //    args.GetReturnValue().Set(resolver);
-
-	// auto _resolver = std::make_shared<v8::Persistent<v8::Promise::Resolver>>(isolate,resolver);
-
- //    auto async = [isolate, _resolver]() -> void {
-	//	 //v8::HandleScope scope(isolate);
-
-	//	 //auto context = isolate->GetCurrentContext();
-	//	 //auto resolver = _resolver->Get(isolate);
-
-	//	 //resolver->Resolve(context, no::New(isolate, "test"));
-
-	//	 v8::Isolate::Scope isolate_scope(isolate);
-	//	 v8::HandleScope scope(isolate);
-
-	//	 auto context = isolate->GetCurrentContext();
-	//	 auto resolver = _resolver->Get(isolate);
-
-	//	 auto another = no::New<v8::Promise::Resolver>(context);
-	//	 _resolver->Reset(isolate, another);
-
-	//	 auto object = no::New<v8::Object>(isolate);
-	//	 object->Set(no::New(isolate, "value"), another);
- //        resolver->Resolve(context, object);
- //    };
-
- //    auto work = [async = uv::make_async(std::move(async))]() -> void {
- //        async();
- //    };
-
- //    auto after_work = [isolate, _resolver](std::future<void>) -> void {
-	//	 v8::HandleScope scope(isolate);
-
-	//	 auto context = isolate->GetCurrentContext();
-	//	 auto resolver = _resolver->Get(isolate);
-
-	//	 resolver->Resolve(context, no::New(isolate, 42));
- //    };
-
- //    uv::queue_work(std::move(work), std::move(after_work));
- //}
+//     uv::queue_work(work, after_work);
+// }
 
 void init(v8::Local<v8::Object> exports) {
     auto isolate = exports->GetIsolate();
@@ -125,7 +78,7 @@ void init(v8::Local<v8::Object> exports) {
                          v8::AccessControl::ALL_CAN_READ,                               // settings
                          no::PropertyAttribute::ReadOnlyDontDelete);                    // attribute
 
-    NODE_SET_METHOD(exports, "test", Test);
+    // NODE_SET_METHOD(exports, "test", test);
 
     async_client::init(exports, isolate, context);
     client::init(exports, isolate, context);

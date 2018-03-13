@@ -1,5 +1,6 @@
 #include <functional>
 
+#include <node/error.hpp>
 #include <node/v8.hpp>
 
 namespace no {
@@ -23,9 +24,9 @@ class class_builder {
         add_prototype_method(no::New(_isolate, name, v8::NewStringType::kInternalized).As<v8::Name>(), method, length);
     }
 
-    void add_prototype_method(v8::Local<v8::Name>& name,
-                              callback_method      method,
-                              int                  length = 0) {
+    void add_prototype_method(v8::Local<v8::Name> name,
+                              callback_method     method,
+                              int                 length = 0) {
         auto data     = no::New(_isolate, new callback_method(method));
         auto function = v8::FunctionTemplate::New(_isolate,                         // isolate
                                                   invoke_method,                    // callback
@@ -37,8 +38,8 @@ class class_builder {
         _prototype->Set(name, function, v8::PropertyAttribute::DontEnum);
     }
 
-    v8::Global<v8::Function> get_constructor() {
-        return v8::Global<v8::Function>(_isolate, _template->GetFunction());
+    v8::Local<v8::Function> get_constructor() {
+        return _template->GetFunction();
     }
 
   private:
@@ -92,12 +93,14 @@ class class_builder {
                 scope.Escape(result);
                 args.GetReturnValue().Set(result);
             }
+        } catch (no::type_error& error) {
+            isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, error.what()).As<v8::String>()));
         } catch (...) {
-            isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, "error invoking method").As<v8::String>()));
+            isolate->ThrowException(v8::Exception::Error(no::New(isolate, "error invoking method").As<v8::String>()));
         }
     }
 
-    v8::Isolate*           _isolate;
+    v8::Isolate* _isolate;
 
     v8::Local<v8::FunctionTemplate> _template;
     v8::Local<v8::Signature>        _signature;

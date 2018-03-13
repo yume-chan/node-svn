@@ -105,13 +105,10 @@ async function test_async_iterator(svn) {
         console.log(value);
     } while (!value.done);
 
-    // const promise = await svn.test();
-    // console.log(promise);
-
-    // const result = await promise.value;
+    // const result = await svn.test();
     // console.log(result);
 
-    // console.log("end");
+    console.log("end");
 }
 
 try {
@@ -122,10 +119,10 @@ try {
     // process.stdin.resume();
     // process.stdin.on("data", () => {
     // async_update_with_async_simple_auth_provider(svn);
-    // async_status(svn);
+    async_status(svn);
     // async_status_memory_leak(svn);
     // async_info_memory_leak(svn);
-    test_async_iterator(svn);
+    // test_async_iterator(svn);
     // });
 } catch (err) {
     console.log(err.stack);
