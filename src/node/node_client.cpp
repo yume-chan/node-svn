@@ -13,6 +13,7 @@
 #include <node/class_builder.hpp>
 #include <node/error.hpp>
 #include <node/iterable.hpp>
+#include <node/type_conversion.hpp>
 
 // clang-format off
 
@@ -86,21 +87,9 @@
 
 // clang-format on
 
-static std::string convert_string(const v8::Local<v8::Value>& value) {
-    if (!value->IsString())
-        throw no::type_error("cannot convert argument to string");
-
-    v8::String::Utf8Value utf8(value);
-    auto                  length = static_cast<size_t>(utf8.length());
-
-    if (std::strlen(*utf8) != length)
-        throw no::type_error("cannot convert argument with null characters to string");
-
-    return std::string(*utf8, length);
-}
-
 static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, svn::svn_error& raw_error) {
-    auto error = v8::Exception::Error(no::New(isolate, raw_error.what()).As<v8::String>()).As<v8::Object>();
+    auto message = raw_error.what();
+    auto error   = v8::Exception::Error(no::New(isolate, message).As<v8::String>()).As<v8::Object>();
     error->Set(no::New(isolate, "name", v8::NewStringType::kInternalized), no::New(isolate, "SvnError"));
     if (raw_error.child != nullptr)
         error.As<v8::Object>()->Set(no::New(isolate, "child", v8::NewStringType::kInternalized), copy_error(isolate, *raw_error.child));
@@ -530,13 +519,8 @@ METHOD_BEGIN(cleanup)
     ASYNC_RESULT;
 METHOD_RETURN(v8::Undefined(isolate))
 
-static decltype(auto) convert_commit_callback(v8::Isolate* isolate, const v8::Local<v8::Value>& value) {
-    if (!value->IsFunction())
-        throw no::type_error("");
-
-    auto raw_callback  = value.As<v8::Function>();
-    auto _raw_callback = std::make_shared<v8::Global<v8::Function>>(isolate, raw_callback);
-    auto _callback     = [isolate, _raw_callback](const svn::commit_info& raw_commit) -> void {
+static decltype(auto) convert_commit_callback(v8::Isolate* isolate, std::shared_ptr<no::iterable> iterable) {
+    auto _callback = [isolate, iterable](const svn::commit_info& raw_commit) -> void {
         v8::HandleScope scope(isolate);
 
         auto commit = no::New<v8::Object>(isolate);
@@ -546,27 +530,42 @@ static decltype(auto) convert_commit_callback(v8::Isolate* isolate, const v8::Lo
         commit->Set(no::New(isolate, "revision", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.revision));
         commit->Set(no::New(isolate, "post_commit_error", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.post_commit_error));
 
-        const auto           argc       = 1;
-        v8::Local<v8::Value> argv[argc] = {commit};
-
-        auto callback = _raw_callback->Get(isolate);
-        callback->Call(v8::Undefined(isolate), argc, argv);
+        iterable->yield(commit);
     };
 
     return uv::make_async(_callback);
 }
 
-METHOD_BEGIN(commit)
-    auto paths    = convert_array(args[0], false);
-    auto message  = convert_string(args[1]);
-    auto callback = convert_commit_callback(isolate, args[2]);
+v8::Local<v8::Value> client::commit(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    auto context = isolate->GetCurrentContext();
 
-    ASYNC_BEGIN(void, paths, message, callback)
+    auto paths   = convert_array(args[0], false);
+    auto message = convert_string(args[1]);
+
+    auto iterable = std::make_shared<no::iterable>(isolate, context);
+    auto callback = convert_commit_callback(isolate, iterable);
+
+    auto work = [this, paths, message, callback]() -> void {
         _client->commit(paths, message, callback);
-    ASYNC_END()
+    };
 
-    ASYNC_RESULT;
-METHOD_RETURN(v8::Undefined(isolate));
+    auto after_work = [isolate, iterable](std::future<void> future) -> void {
+        try {
+            future.get();
+            iterable->end();
+        } catch (svn::svn_error& raw) {
+            v8::HandleScope scope(isolate);
+
+            auto error = copy_error(isolate, raw);
+            iterable->reject(error);
+        }
+    };
+
+    uv::queue_work(work, after_work);
+
+    return iterable->get();
+}
 
 static auto convert_to_date(v8::Local<v8::Context>& context, int64_t value) {
     auto d = static_cast<double>(value / 1000);
@@ -584,9 +583,9 @@ v8::Local<v8::Value> client::info(const v8::FunctionCallbackInfo<v8::Value>& arg
     auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::unspecified);
     auto depth        = convert_depth(isolate, options, "depth", svn::depth::empty);
 
-    auto result = std::make_shared<no::iterable>(isolate, context);
+    auto iterable = std::make_shared<no::iterable>(isolate, context);
 
-    auto callback = [isolate, result](const char* path, const svn::info& raw_info) -> uv::future<void> {
+    auto callback = [isolate, iterable](const char* path, const svn::info& raw_info) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
         auto context = isolate->GetCurrentContext();
@@ -600,40 +599,59 @@ v8::Local<v8::Value> client::info(const v8::FunctionCallbackInfo<v8::Value>& arg
         object->Set(no::New(isolate, "repos_root_uuid", v8::NewStringType::kInternalized), no::New(isolate, raw_info.repos_uuid));
         object->Set(no::New(isolate, "url", v8::NewStringType::kInternalized), no::New(isolate, raw_info.url));
 
-        return result->yield(object);
+        return iterable->yield(object);
     };
 
     auto work = [this, path, callback, peg_revision, revision, depth]() -> void {
         _client->info(path, uv::make_async(callback), peg_revision, revision, depth);
     };
 
-    auto after_work = [isolate, result](std::future<void> future) -> void {
+    auto after_work = [isolate, iterable](std::future<void> future) -> void {
         try {
             future.get();
-            result->end();
+            iterable->end();
         } catch (svn::svn_error& raw) {
             v8::HandleScope scope(isolate);
 
             auto error = copy_error(isolate, raw);
-            result->reject(error);
+            iterable->reject(error);
         }
     };
 
     uv::queue_work(work, after_work);
 
-    return result->get();
+    return iterable->get();
 }
 
-METHOD_BEGIN(remove)
-    auto paths    = convert_array(args[0], false);
-    auto callback = convert_commit_callback(isolate, args[1]);
+v8::Local<v8::Value> client::remove(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    auto context = isolate->GetCurrentContext();
 
-    ASYNC_BEGIN(void, paths, callback)
+    auto paths = convert_array(args[0], false);
+
+    auto iterable = std::make_shared<no::iterable>(isolate, context);
+    auto callback = convert_commit_callback(isolate, iterable);
+
+    auto work = [this, paths, callback]() -> void {
         _client->remove(paths, callback);
-    ASYNC_END()
+    };
 
-    ASYNC_RESULT;
-METHOD_RETURN(v8::Undefined(isolate));
+    auto after_work = [isolate, iterable](std::future<void> future) -> void {
+        try {
+            future.get();
+            iterable->end();
+        } catch (svn::svn_error& raw) {
+            v8::HandleScope scope(isolate);
+
+            auto error = copy_error(isolate, raw);
+            iterable->reject(error);
+        }
+    };
+
+    uv::queue_work(work, after_work);
+
+    return iterable->get();
+}
 
 METHOD_BEGIN(resolve)
     auto path = convert_string(args[0]);

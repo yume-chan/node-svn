@@ -69,10 +69,25 @@ static const char* convert_from_path(const std::string& value,
                                      apr_pool_t*        pool) {
     auto raw = convert_from_string(value);
 
-    if (!svn_path_is_url(raw))
-        check_result(svn_dirent_get_absolute(&raw, raw, pool));
+    if (svn_path_is_url(raw)) {
+        throw svn::svn_type_error("");
+    }
 
+    check_result(svn_dirent_get_absolute(&raw, raw, pool));
     return raw;
+}
+
+static const char* convert_from_url(const std::string& value,
+                                    apr_pool_t*        pool) {
+    auto raw = convert_from_string(value);
+
+    if (!svn_path_is_url(raw)) {
+        throw svn::svn_type_error("");
+    }
+
+    // svn requires the drive letter on Windows to be lowercased
+    // `svn_uri_canonicalize` will do it for us
+    return svn_uri_canonicalize(raw, pool);
 }
 
 static const char* convert_from_path(const std::optional<const std::string>& value,

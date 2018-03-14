@@ -3,7 +3,7 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Debug Node",
+            "name": "Debugger Script",
             "program": "${workspaceFolder}\\scripts\\debugger.js",
             "console": "integratedTerminal",
             "cwd": "${workspaceFolder}"
@@ -11,10 +11,16 @@
         {
             "type": "cppvsdbg",
             "request": "launch",
-            "name": "Debug Native",
+            "name": "Mocha Tests Native",
             "program": "node",
             "args": [
-                "scripts/debugger.js"
+                "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+                "-u",
+                "tdd",
+                "--timeout",
+                "999999",
+                "--colors",
+                "${workspaceFolder}/test"
             ],
             "cwd": "${workspaceRoot}",
             "externalConsole": true,
@@ -24,6 +30,21 @@
                 "c:/ws/deps/v8/src": "C:/Users/Simon/.node-gyp/9.8.0/deps/v8/src"
             },
             "symbolSearchPath": "C:/Users/Simon/AppData/Local/Temp/SymbolCache;C:/Users/Simon/.node-gyp/9.8.0/x64",
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Mocha Tests",
+            "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+            "args": [
+                "-u",
+                "tdd",
+                "--timeout",
+                "999999",
+                "--colors",
+                "${workspaceFolder}/test"
+            ],
+            "internalConsoleOptions": "openOnSessionStart"
         }
     ],
     "version": "0.2.0"

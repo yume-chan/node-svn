@@ -147,7 +147,7 @@ client& client::operator=(client&& other) {
 client::~client() {
     if (_pool != nullptr) {
         apr_pool_destroy(_pool);
-        apr_terminate();
+        // apr_terminate();
     }
 }
 
@@ -453,7 +453,7 @@ int32_t client::checkout(const std::string& url,
     auto pool_ptr = create_pool(_pool);
     auto pool     = pool_ptr.get();
 
-    auto raw_url          = convert_from_string(url);
+    auto raw_url          = convert_from_url(url, pool);
     auto raw_path         = convert_from_path(path, pool);
     auto raw_peg_revision = convert_from_revision(peg_revision);
     auto raw_revision     = convert_from_revision(revision);

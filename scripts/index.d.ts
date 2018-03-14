@@ -100,7 +100,6 @@ interface GetChangelistsResult {
 }
 
 type StatusCallback = (status: Readonly<NodeStatus>) => void;
-type CommitCallback = (info: Readonly<CommitInfo>) => void;
 
 type auth_provider_result<T> = undefined | T | Promise<undefined | T>
 type simple_auth_provider = (realm: string, username: string | undefined, may_save: boolean) => auth_provider_result<SimpleAuth>;
@@ -130,11 +129,11 @@ export class Client {
      */
     checkout(url: string, path: string, options?: Partial<CheckoutOptions>): Promise<number>;
     cleanup(path: string): Promise<void>;
-    commit(path: string | string[], message: string, callback: CommitCallback): Promise<void>;
+    commit(path: string | string[], message: string): AsyncIterable<CommitInfo>;
 
     info(path: string, options?: Partial<InfoOptions>): AsyncIterable<NodeInfo>;
 
-    remove(path: string | string[], callback: CommitCallback): Promise<void>;
+    remove(path: string | string[]): AsyncIterable<CommitInfo>;
     resolve(path: string): Promise<void>;
     revert(path: string | string[]): Promise<void>;
 
@@ -207,3 +206,5 @@ export enum StatusKind {
     external,
     incomplete,
 }
+
+export function create_repos(path: string): void;

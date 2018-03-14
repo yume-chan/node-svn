@@ -15,6 +15,8 @@
 #include <node/enum/revision_kind.hpp>
 #include <node/enum/status_kind.hpp>
 
+#include <node/repos.hpp>
+
 using namespace std::literals;
 
 #define SetReadOnly(object, name, value)                                                  \
@@ -87,6 +89,8 @@ void init(v8::Local<v8::Object> exports) {
     revision_kind::init(exports, isolate, context);
     status_kind::init(exports, isolate, context);
     //SvnError::Init(exports, isolate, context);
+
+    repos::init(exports, isolate, context);
 }
 
 NODE_MODULE(svn, init)
