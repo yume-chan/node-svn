@@ -7,7 +7,6 @@
 
 #include <node/v8.hpp>
 
-#include <node/async_client.hpp>
 #include <node/node_client.hpp>
 
 #include <node/enum/conflict_choose.hpp>
@@ -80,7 +79,6 @@ void init(v8::Local<v8::Object> exports) {
 
     // NODE_SET_METHOD(exports, "test", test);
 
-    async_client::init(exports, isolate, context);
     client::init(exports, isolate, context);
 
     conflict_choose::init(exports, isolate, context);

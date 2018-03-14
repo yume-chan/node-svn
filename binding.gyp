@@ -21,7 +21,6 @@
                 "src/node/enum/node_kind.cpp",
                 "src/node/enum/revision_kind.cpp",
                 "src/node/enum/status_kind.cpp",
-                "src/node/async_client.cpp",
                 "src/node/export.cpp",
                 "src/node/node_client.cpp"
             ],

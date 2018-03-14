@@ -94,73 +94,26 @@ interface SimpleAuth {
     may_save: boolean;
 }
 
-type GetChangelistCallback = (path: string, changelist: string) => void;
-type InfoCallback = (info: Readonly<NodeInfo>) => void;
+interface GetChangelistsResult {
+    path: string;
+    changelist: string;
+}
+
 type StatusCallback = (status: Readonly<NodeStatus>) => void;
 type CommitCallback = (info: Readonly<CommitInfo>) => void;
 
-type auth_reuslt<T> = undefined | T;
-type simple_auth_result = auth_reuslt<SimpleAuth>;
-type simple_auth_provider = (realm: string, username: string | undefined, may_save: boolean) => simple_auth_result;
+type auth_provider_result<T> = undefined | T | Promise<undefined | T>
+type simple_auth_provider = (realm: string, username: string | undefined, may_save: boolean) => auth_provider_result<SimpleAuth>;
 
 export class Client {
-    constructor();
+    constructor(config_path?: string);
 
     add_simple_auth_provider(provider: simple_auth_provider): void;
     remove_simple_auth_provider(provider: simple_auth_provider): void;
 
-    add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): void;
-
-    get_changelists(path: string, callback: GetChangelistCallback): void;
-    get_changelists(path: string, options: Partial<GetChangelistsOptions> | undefined, callback: GetChangelistCallback): void;
-
-    remove_from_changelists(path: string | string[], options?: Partial<RemoveFromChangelistsOptions>): void;
-
-    add(path: string, options?: Partial<AddOptions>): void;
-    cat(path: string, options?: Partial<CatOptions>): CatResult;
-    /**
-     * Check out a working copy from a repository.
-     *
-     * @param url The repository URL of the checkout source.
-     * @param path The root of the new working copy.
-     * @param options The options of the checkout.
-     *
-     * @returns The value of the revision checked out from the repository.
-     */
-    checkout(url: string, path: string, options?: Partial<CheckoutOptions>): number;
-    cleanup(path: string): void;
-    commit(path: string | string[], message: string, callback: CommitCallback): void;
-
-    info(path: string, callback: InfoCallback): void;
-    info(path: string, options: Partial<InfoOptions> | undefined, callback: InfoCallback): void;
-
-    remove(path: string | string[], callback: CommitCallback): void;
-    resolve(path: string): void;
-    revert(path: string | string[]): void;
-
-    status(path: string, callback: StatusCallback): void;
-    status(path: string, options: Partial<StatusOptions> | undefined, callback: StatusCallback): void;
-
-    update(path: string): number;
-    update(path: string[]): number[];
-
-    get_working_copy_root(path: string): string;
-}
-
-type async_auth_reuslt<T> = undefined | T | Promise<undefined | T>
-type async_simple_auth_result = async_auth_reuslt<SimpleAuth>;
-type async_simple_auth_provider = (realm: string, username: string | undefined, may_save: boolean) => async_simple_auth_result;
-
-export class AsyncClient {
-    constructor();
-
-    add_simple_auth_provider(provider: async_simple_auth_provider): void;
-    remove_simple_auth_provider(provider: async_simple_auth_provider): void;
-
     add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): Promise<void>;
 
-    get_changelists(path: string, callback: GetChangelistCallback): Promise<void>;
-    get_changelists(path: string, options: Partial<GetChangelistsOptions> | undefined, callback: GetChangelistCallback): Promise<void>;
+    get_changelists(path: string, options?: Partial<GetChangelistsOptions>): AsyncIterable<GetChangelistsResult>;
 
     remove_from_changelists(path: string | string[], options?: Partial<RemoveFromChangelistsOptions>): Promise<void>;
 
@@ -179,8 +132,7 @@ export class AsyncClient {
     cleanup(path: string): Promise<void>;
     commit(path: string | string[], message: string, callback: CommitCallback): Promise<void>;
 
-    info(path: string, callback: InfoCallback): Promise<void>;
-    info(path: string, options: Partial<InfoOptions> | undefined, callback: InfoCallback): Promise<void>;
+    info(path: string, options?: Partial<InfoOptions>): AsyncIterable<NodeInfo>;
 
     remove(path: string | string[], callback: CommitCallback): Promise<void>;
     resolve(path: string): Promise<void>;

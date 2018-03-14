@@ -22,9 +22,9 @@ class client : public std::enable_shared_from_this<client> {
 
     using get_changelists_callback = std::function<void(const char*, const char*)>;
     using cat_callback             = std::function<void(const char*, size_t)>;
-    using commit_callback          = std::function<void(const commit_info*)>;
+    using commit_callback          = std::function<void(const commit_info&)>;
     using info_callback            = std::function<void(const char*, const svn::info&)>;
-    using remove_callback          = std::function<void(const commit_info*)>;
+    using remove_callback          = std::function<void(const commit_info&)>;
     using status_callback          = std::function<void(const char*, const svn::status&)>;
     using notify_function          = std::shared_ptr<std::function<void(const notify_info&)>>;
 

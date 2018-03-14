@@ -51,15 +51,15 @@ class work {
 };
 
 template <class Work, class AfterWork>
-static void queue_work(Work do_work, AfterWork after_work) {
+static void queue_work(Work work, AfterWork after_work) {
     static_assert(std::is_move_constructible_v<Work>, "do_work must be move constructible");
     static_assert(std::is_move_constructible_v<AfterWork>, "after_work must be move constructible");
 
     static_assert(std::is_invocable_v<Work>, "do_work must be invocable");
 
-    using Result = decltype(do_work());
+    using Result = decltype(work());
     static_assert(std::is_invocable_r_v<void, AfterWork, std::future<Result>>, "after_work must be invocable");
 
-    new work<Work, AfterWork, Result>(std::move(do_work), std::move(after_work));
+    new uv::work<Work, AfterWork, Result>(std::move(work), std::move(after_work));
 }
 } // namespace uv

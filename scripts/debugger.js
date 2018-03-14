@@ -1,16 +1,4 @@
-function update_with_simple_auth_provider(svn) {
-    const client = new svn.Client();
-    client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
-    client.add_simple_auth_provider((realm, username, may_save) => {
-        return Promise.resolve({
-            username: "ad_cxm",
-            password: "cxm123",
-            may_save: false
-        });
-    })
-    const revision = client.update("c:/Users/Simon/Desktop/dev/webchat");
-    console.log(revision);
-}
+const svn = require("..");
 
 const simple_auth = {
     username: "ad_cxm",
@@ -22,11 +10,11 @@ function simple_auth_provider(realm, username, may_save) {
     return { ...simple_auth };
 }
 
-function async_resolved_simple_auth_provider(realm, username, may_save) {
+function resolved_simple_auth_provider(realm, username, may_save) {
     return Promise.resolve({ ...simple_auth });
 }
 
-function async_timeout_simple_auth_provider(realm, username, may_save) {
+function timeout_simple_auth_provider(realm, username, may_save) {
     return new Promise(resolve => {
         setTimeout(() => {
             resolve({ ...simple_auth })
@@ -34,18 +22,55 @@ function async_timeout_simple_auth_provider(realm, username, may_save) {
     });
 }
 
-async function async_update_with_async_simple_auth_provider(svn) {
-    const client = new svn.AsyncClient();
+async function test_changelist() {
+    try {
+        const client = new svn.Client();
+
+        await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
+
+        await client.remove_from_changelists("c:/Users/Simon/Desktop/dev/webchat/index.html")
+        await client.add_to_changelist("c:/Users/Simon/Desktop/dev/webchat/index.html", Date.now().toString());
+
+        const iterable = client.get_changelists("c:/Users/Simon/Desktop/dev/webchat/index.html");
+        const iterator = iterable[Symbol["asyncIterator"]]();
+        let result;
+        do {
+            result = await iterator.next();
+            console.log(result.value);
+        } while (result.done === false);
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function test_info() {
+    try {
+        const client = new svn.Client();
+
+        const iterable = client.info("c:/Users/Simon/Desktop/dev/webchat");
+        const iterator = iterable[Symbol["asyncIterator"]]();
+        let result;
+        do {
+            result = await iterator.next();
+            console.log(result.value);
+        } while (result.done === false);
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+async function update_with_simple_auth_provider() {
+    const client = new svn.Client();
     await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
-    client.add_simple_auth_provider(async_resolved_simple_auth_provider);
+    client.add_simple_auth_provider(resolved_simple_auth_provider);
     const revision = await client.update("c:/Users/Simon/Desktop/dev/webchat");
     console.log(revision);
 }
 
-async function async_status(svn) {
+async function status() {
     console.log("start");
 
-    const client = new svn.AsyncClient();
+    const client = new svn.Client();
 
     await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
     console.log("cleanup complete");
@@ -56,8 +81,8 @@ async function async_status(svn) {
     console.log("pass");
 }
 
-async function async_status_memory_leak(svn) {
-    const client = new svn.AsyncClient();
+async function status_memory_leak() {
+    const client = new svn.Client();
     await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
     const before = process.memoryUsage().rss;
     console.log(before);
@@ -71,8 +96,8 @@ async function async_status_memory_leak(svn) {
     console.log("pass");
 }
 
-async function async_info_memory_leak(svn) {
-    const client = new svn.AsyncClient();
+async function info_memory_leak() {
+    const client = new svn.Client();
     await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
     const before = process.memoryUsage().rss;
     console.log(before);
@@ -86,24 +111,24 @@ async function async_info_memory_leak(svn) {
     console.log("pass");
 }
 
-async function async_blame(svn) {
-    const client = new svn.AsyncClient();
+async function blame() {
+    const client = new svn.Client();
     await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
-    client.blame()
+    // client.blame()
 }
 
-async function test_async_iterator(svn) {
+async function test_iterator() {
     console.log("start");
 
-    const iterator = svn.test();
-    let value;
-    do {
-        const promise = iterator.next();
-        console.log(promise);
+    // const iterator = svn.test();
+    // let value;
+    // do {
+    //     const promise = iterator.next();
+    //     console.log(promise);
 
-        value = await promise;
-        console.log(value);
-    } while (!value.done);
+    //     value = await promise;
+    //     console.log(value);
+    // } while (!value.done);
 
     // const result = await svn.test();
     // console.log(result);
@@ -112,18 +137,15 @@ async function test_async_iterator(svn) {
 }
 
 try {
-    const svn = require("..");
-
     console.log("pid: " + process.pid);
 
-    // process.stdin.resume();
-    // process.stdin.on("data", () => {
-    // async_update_with_async_simple_auth_provider(svn);
-    async_status(svn);
-    // async_status_memory_leak(svn);
-    // async_info_memory_leak(svn);
-    // test_async_iterator(svn);
-    // });
+    test_changelist();
+    test_info()
+    // update_with_simple_auth_provider();
+    // status();
+    // status_memory_leak();
+    // info_memory_leak();
+    // test_iterator();
 } catch (err) {
-    console.log(err.stack);
+    console.log(err);
 }

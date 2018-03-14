@@ -495,25 +495,11 @@ void client::cleanup(const std::string& path,
                                      pool));
 }
 
-static commit_info* copy_commit_info(const svn_commit_info_t* raw) {
-    if (raw == nullptr)
-        return nullptr;
-
-    auto result               = new commit_info();
-    result->author            = raw->author;
-    result->date              = raw->date;
-    result->post_commit_error = raw->post_commit_err;
-    result->repos_root        = raw->repos_root;
-    result->revision          = static_cast<int32_t>(raw->revision);
-
-    return result;
-}
-
 static svn_error_t* invoke_commit(const svn_commit_info_t* commit_info,
                                   void*                    raw_baton,
                                   apr_pool_t*              raw_pool) {
     auto callback = get_reference<client::commit_callback>(raw_baton);
-    callback(copy_commit_info(commit_info));
+    callback(convert_to_commit_info(commit_info));
     return nullptr;
 }
 

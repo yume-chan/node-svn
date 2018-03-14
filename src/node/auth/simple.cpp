@@ -6,8 +6,8 @@
 
 #include <uv/async.hpp>
 
-namespace v8 {
-namespace PromiseEx {
+namespace no {
+namespace Promise {
 template <class T>
 using ThenCallback = std::function<T(v8::Isolate*, const v8::Local<v8::Value>& value)>;
 
@@ -68,8 +68,8 @@ static std::future<T> Then(v8::Isolate*                  isolate,
 
     return future;
 }
-} // namespace PromiseEx
-} // namespace v8
+} // namespace Promise
+} // namespace no
 
 static std::string convert_string(const v8::Local<v8::Value>& value) {
     if (!value->IsString())
@@ -164,13 +164,7 @@ std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(const simple_
         auto value    = function->Call(context, undefined, argc, argv).ToLocalChecked();
         if (value->IsPromise()) {
             auto promise = value.As<v8::Promise>();
-
-            // de-async
-            while (promise->State() != v8::Promise::kFulfilled) {
-                uv_run(uv_default_loop(), UV_RUN_ONCE);
-            }
-
-            auto result = v8::PromiseEx::Then<std::optional<svn::simple_auth>>(isolate, promise, convert_simple_auth, convert_simple_auth).get();
+            auto result  = no::Promise::Then<std::optional<svn::simple_auth>>(isolate, promise, convert_simple_auth, convert_simple_auth).get();
             if (result) {
                 return result;
             }

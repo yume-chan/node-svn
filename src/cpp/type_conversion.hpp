@@ -258,3 +258,15 @@ static svn::info convert_to_info(const svn_client_info2_t* raw) {
         convert_to_lock(raw->lock),
         convert_to_working_copy_info(raw->wc_info)};
 }
+
+static svn::commit_info convert_to_commit_info(const svn_commit_info_t* raw) {
+    if (raw == nullptr)
+        throw svn::svn_type_error("");
+
+    return svn::commit_info{
+        static_cast<int32_t>(raw->revision),
+        raw->date,
+        raw->author,
+        raw->post_commit_err,
+        raw->repos_root};
+}
