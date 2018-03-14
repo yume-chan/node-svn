@@ -8,6 +8,8 @@ const config = path.resolve(__dirname, "config");
 const server = path.resolve(__dirname, "server");
 const repository = path.resolve(__dirname, "repository");
 
+const file1 = path.resolve(repository, "file1.txt").replace(/\\/g, "/");
+
 async function async_iterate(value, callback) {
     const iterator = value[Symbol["asyncIterator"]]();
     let result = await iterator.next();
@@ -61,9 +63,21 @@ describe("svn.node", () => {
         // they actually only take less than 100ms
         this.timeout(0);
 
-        const file1 = path.resolve(repository, "file1.txt");
         await fs.writeFile(file1, "file1");
         await client.add(file1);
+    });
+
+    it("status", async function() {
+        // don't know why but I need this line
+        // to disable timeout to let tests pass
+        // they actually only take less than 100ms
+        this.timeout(0);
+
+        const result = await client.status(repository);
+        await async_iterate(result, (value) => {
+            expect(value.path).to.equal(file1);
+            expect(value.kind).to.equal(svn.NodeKind.file);
+        });
     });
 
     it("commit", async function() {
@@ -73,9 +87,9 @@ describe("svn.node", () => {
         this.timeout(0);
 
         const result = await client.commit(repository, "commit1");
-        async_iterate(result, () => {
-            expect(result.revision).to.equal(1);
-            expect(result.post_commit_error).to.be.undefined;
+        await async_iterate(result, (value) => {
+            expect(value.revision).to.equal(1);
+            expect(value.post_commit_error).to.be.undefined;
         });
     });
 });

@@ -99,16 +99,14 @@ interface GetChangelistsResult {
     changelist: string;
 }
 
-type StatusCallback = (status: Readonly<NodeStatus>) => void;
-
-type auth_provider_result<T> = undefined | T | Promise<undefined | T>
-type simple_auth_provider = (realm: string, username: string | undefined, may_save: boolean) => auth_provider_result<SimpleAuth>;
+type AuthProviderResult<T> = undefined | T | Promise<undefined | T>
+type SimpleAuthProvider = (realm: string, username: string | undefined, may_save: boolean) => AuthProviderResult<SimpleAuth>;
 
 export class Client {
     constructor(config_path?: string);
 
-    add_simple_auth_provider(provider: simple_auth_provider): void;
-    remove_simple_auth_provider(provider: simple_auth_provider): void;
+    add_simple_auth_provider(provider: SimpleAuthProvider): void;
+    remove_simple_auth_provider(provider: SimpleAuthProvider): void;
 
     add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): Promise<void>;
 
@@ -137,8 +135,7 @@ export class Client {
     resolve(path: string): Promise<void>;
     revert(path: string | string[]): Promise<void>;
 
-    status(path: string, callback: StatusCallback): Promise<void>;
-    status(path: string, options: Partial<StatusOptions> | undefined, callback: StatusCallback): Promise<void>;
+    status(path: string, options?: Partial<StatusOptions>): AsyncIterator<NodeStatus>;
 
     update(path: string): Promise<number>;
     update(path: string[]): Promise<number[]>;

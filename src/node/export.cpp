@@ -19,10 +19,10 @@
 
 using namespace std::literals;
 
-#define SetReadOnly(object, name, value)                                                  \
-    (object)->DefineOwnProperty(context,                                                  \
-                                no::New(isolate, name, v8::NewStringType::kInternalized), \
-                                (value),                                                  \
+#define SetReadOnly(object, name, value)                                                        \
+    (object)->DefineOwnProperty(context,                                                        \
+                                no::NewString(isolate, name, v8::NewStringType::kInternalized), \
+                                (value),                                                        \
                                 no::PropertyAttribute::ReadOnlyDontDelete)
 
 namespace no {
@@ -71,13 +71,13 @@ void init(v8::Local<v8::Object> exports) {
     auto isolate = exports->GetIsolate();
     auto context = isolate->GetCurrentContext();
 
-    exports->SetAccessor(context,                                                       // context
-                         no::New(isolate, "version", v8::NewStringType::kInternalized), // name
-                         version,                                                       // getter
-                         nullptr,                                                       // setter
-                         v8::MaybeLocal<v8::Value>(),                                   // data
-                         v8::AccessControl::ALL_CAN_READ,                               // settings
-                         no::PropertyAttribute::ReadOnlyDontDelete);                    // attribute
+    exports->SetAccessor(context,                                                             // context
+                         no::NewString(isolate, "version", v8::NewStringType::kInternalized), // name
+                         version,                                                             // getter
+                         nullptr,                                                             // setter
+                         v8::MaybeLocal<v8::Value>(),                                         // data
+                         v8::AccessControl::ALL_CAN_READ,                                     // settings
+                         no::PropertyAttribute::ReadOnlyDontDelete);                          // attribute
 
     // NODE_SET_METHOD(exports, "test", test);
 

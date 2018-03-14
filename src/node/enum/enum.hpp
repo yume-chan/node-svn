@@ -4,7 +4,7 @@
 
 #define SET_ENUM(target, prefix, name)                                                                       \
     {                                                                                                        \
-        auto key   = no::New(isolate, #name);                                                                \
+        auto key   = no::NewString(isolate, #name);                                                          \
         auto value = static_cast<int32_t>(prefix::name);                                                     \
         target->DefineOwnProperty(context,                                                                   \
                                   key,                                                                       \
@@ -16,10 +16,10 @@
                                   no::PropertyAttribute::ReadOnlyDontDelete);                                \
     }
 
-#define SetReadOnly(object, name, value)                \
-    (object)->DefineOwnProperty(context,                \
-                                no::New(isolate, name), \
-                                value,                  \
+#define SetReadOnly(object, name, value)                      \
+    (object)->DefineOwnProperty(context,                      \
+                                no::NewString(isolate, name), \
+                                value,                        \
                                 no::PropertyAttribute::ReadOnlyDontDelete)
 
 #define SET_NODE_KIND(name) SET_ENUM(object, svn::node_kind, name)

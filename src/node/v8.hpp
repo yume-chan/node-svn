@@ -133,14 +133,14 @@ static v8::Local<v8::Value> New(v8::Isolate*                            isolate,
 }
 
 template <std::size_t N>
-static v8::Local<v8::String> New(v8::Isolate* isolate,
-                                 const char (&value)[N],
-                                 v8::NewStringType type = v8::NewStringType::kNormal) {
+static v8::Local<v8::String> NewString(v8::Isolate* isolate,
+                                       const char (&value)[N],
+                                       v8::NewStringType type = v8::NewStringType::kNormal) {
     return v8::String::NewFromUtf8(isolate, value, type, N - 1).ToLocalChecked();
 }
 
 static v8::Local<v8::Value> New(v8::Isolate* isolate,
-                                const char*& value) {
+                                const char*  value) {
     if (value == nullptr)
         return v8::Undefined(isolate);
 
@@ -148,7 +148,7 @@ static v8::Local<v8::Value> New(v8::Isolate* isolate,
 }
 
 static v8::Local<v8::Value> New(v8::Isolate*      isolate,
-                                const char*&      value,
+                                const char*       value,
                                 v8::NewStringType type,
                                 int               size = -1) {
     if (value == nullptr)
@@ -158,7 +158,7 @@ static v8::Local<v8::Value> New(v8::Isolate*      isolate,
 }
 
 static v8::Local<v8::String> New(v8::Isolate*      isolate,
-                                 const char*&      value,
+                                 const char*       value,
                                  int               size,
                                  v8::NewStringType type = v8::NewStringType::kNormal) {
     return v8::String::NewFromUtf8(isolate, value, type, size).ToLocalChecked();
