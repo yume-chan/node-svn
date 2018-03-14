@@ -16,6 +16,11 @@
                 "-Wendif-labels",
                 "-W"
             ]
+        },
+        "msvs_settings": {
+            "VCCLCompilerTool": {
+                "WarningLevel": 0
+            }
         }
     }
 }
