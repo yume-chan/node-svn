@@ -37,6 +37,8 @@ class client : public std::enable_shared_from_this<client> {
                                               const char*            line,
                                               bool                   local_change)>;
 
+    using log_callback = std::function<void(svn::log_entry& entry)>;
+
     explicit client(const std::optional<const std::string>& config_path);
     client(client&&);
     client(const client&) = delete;
@@ -56,29 +58,20 @@ class client : public std::enable_shared_from_this<client> {
                                                             const std::optional<const std::string>& username,
                                                             bool                                    may_save);
 
-    void add_to_changelist(const std::string&   path,
-                           const std::string&   changelist,
-                           depth                depth       = depth::infinity,
-                           const string_vector& changelists = string_vector()) const;
-    void add_to_changelist(const string_vector& paths,
-                           const std::string&   changelist,
-                           depth                depth       = depth::infinity,
-                           const string_vector& changelists = string_vector()) const;
-
-    void get_changelists(const std::string&              path,
-                         const get_changelists_callback& callback,
-                         depth                           depth       = depth::infinity,
-                         const string_vector&            changelists = string_vector()) const;
-
-    void remove_from_changelists(const std::string&   path,
-                                 depth                depth       = depth::infinity,
-                                 const string_vector& changelists = string_vector()) const;
-    void remove_from_changelists(const string_vector& paths,
-                                 depth                depth       = depth::infinity,
-                                 const string_vector& changelists = string_vector()) const;
+    void add_to_changelist(const std::vector<std::string>&                      paths,
+                           const std::string&                                   changelist,
+                           svn::depth                                           depth       = svn::depth::infinity,
+                           const std::optional<const std::vector<std::string>>& changelists = {}) const;
+    void get_changelists(const std::string&                                   path,
+                         const get_changelists_callback&                      callback,
+                         svn::depth                                           depth       = svn::depth::infinity,
+                         const std::optional<const std::vector<std::string>>& changelists = {}) const;
+    void remove_from_changelists(const std::vector<std::string>&                      paths,
+                                 svn::depth                                           depth       = svn::depth::infinity,
+                                 const std::optional<const std::vector<std::string>>& changelists = {}) const;
 
     void add(const std::string& path,
-             depth              depth        = depth::infinity,
+             svn::depth         depth        = svn::depth::infinity,
              bool               force        = true,
              bool               no_ignore    = false,
              bool               no_autoprops = false,
@@ -96,19 +89,19 @@ class client : public std::enable_shared_from_this<client> {
 
     string_map cat(const std::string&  path,
                    const cat_callback& callback,
-                   const revision&     peg_revision    = revision(revision_kind::working),
-                   const revision&     op_revision     = revision(revision_kind::working),
+                   const revision&     peg_revision    = revision_kind::working,
+                   const revision&     op_revision     = revision_kind::working,
                    bool                expand_keywords = true) const;
     cat_result cat(const std::string& path,
-                   const revision&    peg_revision    = revision(revision_kind::working),
-                   const revision&    op_revision     = revision(revision_kind::working),
+                   const revision&    peg_revision    = revision_kind::working,
+                   const revision&    op_revision     = revision_kind::working,
                    bool               expand_keywords = true) const;
 
     int32_t checkout(const std::string& url,
                      const std::string& path,
-                     const revision&    peg_revision             = revision(revision_kind::working),
-                     const revision&    op_revision              = revision(revision_kind::working),
-                     depth              depth                    = depth::infinity,
+                     const revision&    peg_revision             = revision_kind::working,
+                     const revision&    op_revision              = revision_kind::working,
+                     svn::depth         depth                    = svn::depth::infinity,
                      bool               ignore_externals         = false,
                      bool               allow_unver_obstructions = false) const;
 
@@ -119,95 +112,83 @@ class client : public std::enable_shared_from_this<client> {
                  bool               vacuum_pristines,
                  bool               include_externals) const;
 
-    void commit(const std::string&     path,
-                const std::string&     message,
-                const commit_callback& callback,
-                depth                  depth                  = depth::infinity,
-                const string_vector&   changelists            = string_vector(),
-                const string_map&      revprop_table          = string_map(),
-                bool                   keep_locks             = true,
-                bool                   keep_changelists       = false,
-                bool                   commit_as_operations   = false,
-                bool                   include_file_externals = true,
-                bool                   include_dir_externals  = true) const;
-    void commit(const string_vector&   paths,
-                const std::string&     message,
-                const commit_callback& callback,
-                depth                  depth                  = depth::infinity,
-                const string_vector&   changelists            = string_vector(),
-                const string_map&      revprop_table          = string_map(),
-                bool                   keep_locks             = true,
-                bool                   keep_changelists       = false,
-                bool                   commit_as_operations   = false,
-                bool                   include_file_externals = true,
-                bool                   include_dir_externals  = true) const;
+    void commit(const std::vector<std::string>&                      paths,
+                const std::string&                                   message,
+                const commit_callback&                               callback,
+                svn::depth                                           depth                  = svn::depth::infinity,
+                const std::optional<const std::vector<std::string>>& changelists            = {},
+                const string_map&                                    revprop_table          = string_map(),
+                bool                                                 keep_locks             = true,
+                bool                                                 keep_changelists       = false,
+                bool                                                 commit_as_operations   = false,
+                bool                                                 include_file_externals = true,
+                bool                                                 include_dir_externals  = true) const;
 
-    void info(const std::string&   path,
-              const info_callback& callback,
-              const revision&      peg_revision      = revision_kind::unspecified,
-              const revision&      op_revision       = revision_kind::unspecified,
-              depth                depth             = depth::empty,
-              bool                 fetch_excluded    = true,
-              bool                 fetch_actual_only = true,
-              bool                 include_externals = false,
-              const string_vector& changelists       = string_vector()) const;
+    void info(const std::string&                                   path,
+              const info_callback&                                 callback,
+              const revision&                                      peg_revision      = revision_kind::unspecified,
+              const revision&                                      op_revision       = revision_kind::unspecified,
+              svn::depth                                           depth             = svn::depth::infinity,
+              bool                                                 fetch_excluded    = true,
+              bool                                                 fetch_actual_only = true,
+              bool                                                 include_externals = false,
+              const std::optional<const std::vector<std::string>>& changelists       = {}) const;
 
-    void remove(const std::string&     path,
-                const remove_callback& callback,
-                bool                   force         = true,
-                bool                   keep_local    = false,
-                const string_map&      revprop_table = string_map()) const;
-    void remove(const string_vector&   paths,
-                const remove_callback& callback,
-                bool                   force         = true,
-                bool                   keep_local    = false,
-                const string_map&      revprop_table = string_map()) const;
+    void log(const std::vector<std::string>&                              paths,
+             const log_callback&                                          callback,
+             const std::optional<const std::vector<svn::revision_range>>& revision_ranges          = {},
+             const std::optional<int32_t>&                                limit                    = {},
+             const revision&                                              peg_revision             = revision_kind::unspecified,
+             bool                                                         discover_changed_paths   = false,
+             bool                                                         strict_node_history      = false,
+             bool                                                         include_merged_revisions = false,
+             const std::optional<const std::vector<std::string>>&         revprops                 = {}) const;
+
+    void remove(const std::vector<std::string>& paths,
+                const remove_callback&          callback,
+                bool                            force         = true,
+                bool                            keep_local    = false,
+                const string_map&               revprop_table = string_map()) const;
 
     void resolve(const std::string& path,
-                 depth              depth  = depth::empty,
+                 svn::depth         depth  = svn::depth::empty,
                  conflict_choose    choose = conflict_choose::merged) const;
 
-    void revert(const std::string&   path,
-                depth                depth             = depth::infinity,
-                const string_vector& changelists       = string_vector(),
-                bool                 clear_changelists = true,
-                bool                 metadata_only     = false,
-                bool                 added_keep_local  = false) const;
-    void revert(const string_vector& paths,
-                depth                depth             = depth::infinity,
-                const string_vector& changelists       = string_vector(),
-                bool                 clear_changelists = true,
-                bool                 metadata_only     = false,
-                bool                 added_keep_local  = false) const;
+    void revert(const std::vector<std::string>&                      paths,
+                svn::depth                                           depth             = svn::depth::infinity,
+                const std::optional<const std::vector<std::string>>& changelists       = {},
+                bool                                                 clear_changelists = true,
+                bool                                                 metadata_only     = false,
+                bool                                                 added_keep_local  = false) const;
 
-    int32_t status(const std::string&     path,
-                   const status_callback& callback,
-                   const revision&        op_revision        = revision(revision_kind::working),
-                   depth                  depth              = depth::infinity,
-                   bool                   get_all            = false,
-                   bool                   check_out_of_date  = false,
-                   bool                   check_working_copy = true,
-                   bool                   no_ignore          = false,
-                   bool                   ignore_externals   = false,
-                   bool                   depth_as_sticky    = false,
-                   const string_vector&   changelists        = string_vector()) const;
+    int32_t status(const std::string&                                   path,
+                   const status_callback&                               callback,
+                   const revision&                                      op_revision        = revision_kind::working,
+                   svn::depth                                           depth              = svn::depth::infinity,
+                   bool                                                 get_all            = false,
+                   bool                                                 check_out_of_date  = false,
+                   bool                                                 check_working_copy = true,
+                   bool                                                 no_ignore          = false,
+                   bool                                                 ignore_externals   = false,
+                   bool                                                 depth_as_sticky    = false,
+                   const std::optional<const std::vector<std::string>>& changelists        = {}) const;
 
     int32_t              update(const std::string& path,
-                                const revision&    op_revision              = revision(revision_kind::head),
-                                depth              depth                    = depth::infinity,
+                                const revision&    op_revision              = revision_kind::head,
+                                svn::depth         depth                    = svn::depth::infinity,
                                 bool               depth_is_sticky          = false,
                                 bool               ignore_externals         = false,
                                 bool               allow_unver_obstructions = false,
                                 bool               adds_as_modification     = false,
                                 bool               make_parents             = true) const;
-    std::vector<int32_t> update(const string_vector& paths,
-                                const revision&      op_revision              = revision(revision_kind::head),
-                                depth                depth                    = depth::infinity,
-                                bool                 depth_is_sticky          = false,
-                                bool                 ignore_externals         = false,
-                                bool                 allow_unver_obstructions = false,
-                                bool                 adds_as_modification     = false,
-                                bool                 make_parents             = true) const;
+    std::vector<int32_t> update(const std::vector<std::string>& paths,
+                                const revision&                 op_revision              = revision_kind::head,
+                                svn::depth                      depth                    = svn::depth::infinity,
+                                bool                            depth_is_sticky          = false,
+                                bool                            ignore_externals         = false,
+                                bool                            allow_unver_obstructions = false,
+                                bool                            adds_as_modification     = false,
+                                bool                            make_parents             = true) const;
 
     std::string get_working_copy_root(const std::string& path) const;
 

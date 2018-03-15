@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -614,8 +615,7 @@ enum class diff_ignore_space {
     all
 };
 
-using string_vector = std::vector<std::string>;
-using string_map    = std::unordered_map<std::string, std::string>;
+using string_map = std::unordered_map<std::string, std::string>;
 
 struct cat_result {
     std::vector<char> content;
@@ -635,5 +635,125 @@ struct simple_auth {
     std::string username;
     std::string password;
     bool        may_save;
+};
+
+struct revision_range {
+    const revision start;
+    const revision end;
+};
+
+/**
+ * A structure to represent a path that changed for a log entry.
+ *
+ * @note To allow for extending the #svn_log_changed_path2_t structure in
+ * future releases, always use svn_log_changed_path2_create() to allocate
+ * the structure.
+ *
+ * @since New in 1.6.
+ */
+struct log_changed_path {
+    /** 'A'dd, 'D'elete, 'R'eplace, 'M'odify */
+    char action;
+
+    /** Source path of copy (if any). */
+    const char* copyfrom_path;
+
+    /** Source revision of copy (if any). */
+    int32_t copyfrom_rev;
+
+    /** The type of the node, may be svn_node_unknown. */
+    svn::node_kind node_kind;
+
+    /** Is the text modified, may be svn_tristate_unknown.
+   * @since New in 1.7. */
+    std::optional<bool> text_modified;
+
+    /** Are properties modified, may be svn_tristate_unknown.
+   * @since New in 1.7. */
+    std::optional<bool> props_modified;
+
+    /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update
+     svn_log_changed_path2_dup(). */
+};
+
+/**
+ * A structure to represent all the information about a particular log entry.
+ *
+ * @note To allow for extending the #svn_log_entry_t structure in future
+ * releases, always use svn_log_entry_create() to allocate the structure.
+ *
+ * @since New in 1.5.
+ */
+struct log_entry {
+    /** The revision of the commit. */
+    int32_t revision;
+
+    /** The hash of requested revision properties, which may be NULL if it
+   * would contain no revprops.  Maps (const char *) property name to
+   * (svn_string_t *) property value. */
+    std::optional<std::unordered_map<std::string, std::string>> revprops;
+
+    const char* author;
+    const char* date;
+    const char* message;
+
+    /**
+   * Whether or not this message has children.
+   *
+   * When a log operation requests additional merge information, extra log
+   * entries may be returned as a result of this entry.  The new entries, are
+   * considered children of the original entry, and will follow it.  When
+   * the HAS_CHILDREN flag is set, the receiver should increment its stack
+   * depth, and wait until an entry is provided with SVN_INVALID_REVNUM which
+   * indicates the end of the children.
+   *
+   * For log operations which do not request additional merge information, the
+   * HAS_CHILDREN flag is always FALSE.
+   *
+   * For more information see:
+   * https://svn.apache.org/repos/asf/subversion/trunk/notes/merge-tracking/design.html#commutative-reporting
+   */
+    bool has_children;
+
+    /** A hash containing as keys every path committed in @a revision; the
+   * values are (#svn_log_changed_path2_t *) structures.
+   *
+   * If this value is not @c NULL, it MUST have the same value as
+   * changed_paths or svn_log_entry_dup() will not create an identical copy.
+   *
+   * The subversion core libraries will always set this field to the same
+   * value as changed_paths for compatibility with users assuming an older
+   * version.
+   *
+   * @note See http://svn.haxx.se/dev/archive-2010-08/0362.shtml for
+   * further explanation.
+   *
+   * @since New in 1.6.
+   */
+    std::map<std::string, svn::log_changed_path> changed_paths;
+
+    /**
+   * Whether @a revision should be interpreted as non-inheritable in the
+   * same sense of #svn_merge_range_t.
+   *
+   * Only set when this #svn_log_entry_t instance is returned by the
+   * libsvn_client mergeinfo apis. Currently always FALSE when the
+   * #svn_log_entry_t instance is reported by the ra layer.
+   *
+   * @since New in 1.7.
+   */
+    bool non_inheritable;
+
+    /**
+   * Whether @a revision is a merged revision resulting from a reverse merge.
+   *
+   * @since New in 1.7.
+   */
+    bool subtractive_merge;
+
+    /* NOTE: Add new fields at the end to preserve binary compatibility.
+     Also, if you add fields here, you have to update
+     svn_log_entry_dup(). */
 };
 } // namespace svn

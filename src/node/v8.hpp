@@ -93,30 +93,6 @@ struct PropertyAttribute {
     static const v8::PropertyAttribute All                = static_cast<v8::PropertyAttribute>(ReadOnly | DontEnum | DontDelete);
 };
 
-static v8::Local<v8::Boolean> New(v8::Isolate* isolate, bool value) {
-    return v8::Boolean::New(isolate, value);
-}
-
-static v8::Local<v8::Integer> New(v8::Isolate* isolate, int32_t value) {
-    return v8::Integer::New(isolate, value);
-}
-
-static v8::Local<v8::Value> New(v8::Isolate*            isolate,
-                                std::optional<int32_t>& value) {
-    if (value.has_value())
-        return no::New(isolate, *value);
-
-    return v8::Undefined(isolate);
-}
-
-static v8::Local<v8::Integer> New(v8::Isolate* isolate, uint32_t value) {
-    return v8::Integer::NewFromUnsigned(isolate, value);
-}
-
-static v8::Local<v8::Number> New(v8::Isolate* isolate, double value) {
-    return v8::Number::New(isolate, value);
-}
-
 static v8::Local<v8::String> New(v8::Isolate*       isolate,
                                  const std::string& value,
                                  v8::NewStringType  type = v8::NewStringType::kNormal) {
@@ -133,10 +109,9 @@ static v8::Local<v8::Value> New(v8::Isolate*                            isolate,
 }
 
 template <std::size_t N>
-static v8::Local<v8::String> NewString(v8::Isolate* isolate,
-                                       const char (&value)[N],
-                                       v8::NewStringType type = v8::NewStringType::kNormal) {
-    return v8::String::NewFromUtf8(isolate, value, type, N - 1).ToLocalChecked();
+static v8::Local<v8::String> NewName(v8::Isolate* isolate,
+                                     const char (&value)[N]) {
+    return v8::String::NewFromUtf8(isolate, value, v8::NewStringType::kInternalized, N - 1).ToLocalChecked();
 }
 
 static v8::Local<v8::Value> New(v8::Isolate* isolate,
@@ -164,11 +139,35 @@ static v8::Local<v8::String> New(v8::Isolate*      isolate,
     return v8::String::NewFromUtf8(isolate, value, type, size).ToLocalChecked();
 }
 
+static v8::Local<v8::Boolean> New(v8::Isolate* isolate, bool value) {
+    return v8::Boolean::New(isolate, value);
+}
+
+static v8::Local<v8::Integer> New(v8::Isolate* isolate, int32_t value) {
+    return v8::Integer::New(isolate, value);
+}
+
+static v8::Local<v8::Value> New(v8::Isolate*            isolate,
+                                std::optional<int32_t>& value) {
+    if (value.has_value())
+        return no::New(isolate, *value);
+
+    return v8::Undefined(isolate);
+}
+
+static v8::Local<v8::Integer> New(v8::Isolate* isolate, uint32_t value) {
+    return v8::Integer::NewFromUnsigned(isolate, value);
+}
+
 static v8::Local<v8::Value> New(v8::Isolate* isolate, int64_t value) {
     if (value > INT32_MAX)
         return no::New(isolate, std::to_string(value));
     else
         return no::New(isolate, static_cast<int32_t>(value));
+}
+
+static v8::Local<v8::Number> New(v8::Isolate* isolate, double value) {
+    return v8::Number::New(isolate, value);
 }
 
 static v8::Local<v8::External> New(v8::Isolate* isolate, void* value) {

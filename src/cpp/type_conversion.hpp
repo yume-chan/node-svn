@@ -99,33 +99,36 @@ static const char* convert_from_path(const std::optional<const std::string>& val
     return convert_from_path(*value, pool);
 }
 
-static const apr_array_header_t* convert_from_vector(const svn::string_vector& value,
-                                                     apr_pool_t*               pool,
-                                                     bool                      allowEmpty,
-                                                     bool                      isPath) {
+static const apr_array_header_t* convert_from_vector(const std::vector<std::string>& value,
+                                                     apr_pool_t*                     pool,
+                                                     bool                            path = false) {
     if (value.size() == 0) {
-        if (allowEmpty)
-            return nullptr;
-        else
-            throw svn::svn_type_error("");
+        throw svn::svn_type_error("");
     }
 
     auto result = apr_array_make(pool, static_cast<int>(value.size()), sizeof(const char*));
 
     for (auto item : value) {
-        auto converted                      = isPath ? convert_from_path(item, pool) : convert_from_string(item);
+        auto converted                      = path ? convert_from_path(item, pool) : convert_from_string(item);
         APR_ARRAY_PUSH(result, const char*) = converted;
     }
 
     return result;
 }
 
-static const apr_array_header_t* convert_from_vector(const std::string& value,
-                                                     apr_pool_t*        pool) {
-    auto result = apr_array_make(pool, 1, sizeof(const char*));
+static const apr_array_header_t* convert_from_vector(const std::optional<const std::vector<std::string>>& value,
+                                                     apr_pool_t*                                          pool,
+                                                     bool                                                 path = false) {
+    if (!value || value->size() == 0) {
+        return nullptr;
+    }
 
-    auto raw_path                       = convert_from_path(value, pool);
-    APR_ARRAY_PUSH(result, std::string) = raw_path;
+    auto result = apr_array_make(pool, static_cast<int>(value->size()), sizeof(const char*));
+
+    for (auto item : *value) {
+        auto converted                      = path ? convert_from_path(item, pool) : convert_from_string(item);
+        APR_ARRAY_PUSH(result, const char*) = converted;
+    }
 
     return result;
 }
@@ -162,7 +165,7 @@ static svn_opt_revision_t convert_from_revision(const svn::revision& value) {
 }
 
 static std::optional<int32_t> convert_to_revision_number(svn_revnum_t value) {
-    if (value != 0)
+    if (value != SVN_INVALID_REVNUM)
         return static_cast<int32_t>(value);
 
     return {};
@@ -284,4 +287,32 @@ static svn::commit_info convert_to_commit_info(const svn_commit_info_t* raw) {
         raw->author,
         raw->post_commit_err,
         raw->repos_root};
+}
+
+template <class T>
+static T* palloc(apr_pool_t* pool) {
+    return static_cast<T*>(apr_palloc(pool, sizeof(T)));
+}
+
+static svn_opt_revision_range_t* convert_from_revision_range(svn::revision_range& value, apr_pool_t* pool) {
+    auto result = palloc<svn_opt_revision_range_t>(pool);
+
+    result->start = convert_from_revision(value.start);
+    result->end   = convert_from_revision(value.end);
+
+    return result;
+}
+
+static apr_array_header_t* convert_from_revision_ranges(const std::optional<const std::vector<svn::revision_range>>& value, apr_pool_t* pool) {
+    if (!value || value->size() == 0) {
+        return nullptr;
+    }
+
+    auto result = apr_array_make(pool, static_cast<int>(value->size()), sizeof(const char*));
+
+    for (auto item : *value) {
+        APR_ARRAY_PUSH(result, svn_opt_revision_range_t*) = convert_from_revision_range(item, pool);
+    }
+
+    return result;
 }

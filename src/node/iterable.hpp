@@ -35,14 +35,14 @@ class iterable {
         , _iterator_created(false)
         , _status(std::make_shared<iterator_status>()) {
         if (_initializer.IsEmpty()) {
-            auto asyncIteratorName = no::NewString(isolate, "asyncIterator", v8::NewStringType::kInternalized);
+            auto asyncIteratorName = no::NewName(isolate, "asyncIterator");
 
             // polyfill Symbol.asyncIterator
-            auto symbol        = context->Global()->Get(no::NewString(isolate, "Symbol", v8::NewStringType::kInternalized)).As<v8::Object>();
+            auto symbol        = context->Global()->Get(no::NewName(isolate, "Symbol")).As<v8::Object>();
             auto asyncIterator = symbol->Get(context, asyncIteratorName).ToLocalChecked().As<v8::Symbol>();
 
             if (asyncIterator->IsUndefined()) {
-                asyncIterator = v8::Symbol::New(isolate, no::NewString(isolate, "Symbol.asyncIterator"));
+                asyncIterator = v8::Symbol::New(isolate, no::NewName(isolate, "Symbol.asyncIterator"));
                 symbol->DefineOwnProperty(context, asyncIteratorName, asyncIterator, no::PropertyAttribute::All);
             }
 

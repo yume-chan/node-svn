@@ -1,6 +1,6 @@
 import "node";
 
-export interface CommitInfo {
+export interface CommitItem {
     author: string;
     date: string;
     repos_root: string;
@@ -8,7 +8,7 @@ export interface CommitInfo {
     post_commit_error: string | undefined;
 }
 
-export interface NodeInfo {
+export interface InfoItem {
     path: string;
     kind: NodeKind;
     last_changed_author: string;
@@ -18,7 +18,7 @@ export interface NodeInfo {
     url: string;
 }
 
-export interface NodeStatus {
+export interface StatusItem {
     path: string;
     changed_author: string;
     changed_date: number | string;
@@ -94,9 +94,44 @@ interface SimpleAuth {
     may_save: boolean;
 }
 
-interface GetChangelistsResult {
+interface GetChangelistsItem {
     path: string;
     changelist: string;
+}
+
+interface BlameOptions extends PegRevisionOpitons {
+    start_revision: Revision;
+    end_revision: Revision;
+}
+
+interface BlameItem {
+    start_revision: number;
+    end_revision: number;
+    line_number: number;
+    revision: number | undefined;
+    merged_revision: number | undefined;
+    merged_path: string | undefined;
+    line: string;
+    local_change: boolean;
+}
+
+interface RevisionRange {
+    start: Revision;
+    end: Revision;
+}
+
+interface LogOptions extends PegRevisionOpitons {
+    revision_ranges: RevisionRange | RevisionRange[];
+    limit: number;
+}
+
+interface LogItem {
+    revision: number;
+    non_inheritable: boolean;
+    subtractive_merge: boolean;
+    author: string | undefined;
+    date: string | undefined;
+    message: string | undefined;
 }
 
 type AuthProviderResult<T> = undefined | T | Promise<undefined | T>
@@ -109,12 +144,14 @@ export class Client {
     remove_simple_auth_provider(provider: SimpleAuthProvider): void;
 
     add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): Promise<void>;
-
-    get_changelists(path: string, options?: Partial<GetChangelistsOptions>): AsyncIterable<GetChangelistsResult>;
-
+    get_changelists(path: string, options?: Partial<GetChangelistsOptions>): AsyncIterable<GetChangelistsItem>;
     remove_from_changelists(path: string | string[], options?: Partial<RemoveFromChangelistsOptions>): Promise<void>;
 
+    /**
+     * Schedule a working copy path for addition to the repository.
+     */
     add(path: string, options?: Partial<AddOptions>): Promise<void>;
+    blame(path: string, options?: Partial<BlameOptions>): AsyncIterable<BlameItem>;
     cat(path: string, options?: Partial<CatOptions>): Promise<CatResult>;
     /**
      * Check out a working copy from a repository.
@@ -127,15 +164,16 @@ export class Client {
      */
     checkout(url: string, path: string, options?: Partial<CheckoutOptions>): Promise<number>;
     cleanup(path: string): Promise<void>;
-    commit(path: string | string[], message: string): AsyncIterable<CommitInfo>;
+    commit(path: string | string[], message: string): AsyncIterable<CommitItem>;
 
-    info(path: string, options?: Partial<InfoOptions>): AsyncIterable<NodeInfo>;
+    info(path: string, options?: Partial<InfoOptions>): AsyncIterable<InfoItem>;
+    log(path: string | string[], options?: Partial<LogOptions>): AsyncIterable<LogItem>;
 
-    remove(path: string | string[]): AsyncIterable<CommitInfo>;
+    remove(path: string | string[]): AsyncIterable<CommitItem>;
     resolve(path: string): Promise<void>;
     revert(path: string | string[]): Promise<void>;
 
-    status(path: string, options?: Partial<StatusOptions>): AsyncIterator<NodeStatus>;
+    status(path: string, options?: Partial<StatusOptions>): AsyncIterator<StatusItem>;
 
     update(path: string): Promise<number>;
     update(path: string[]): Promise<number[]>;

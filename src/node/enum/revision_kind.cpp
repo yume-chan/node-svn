@@ -20,7 +20,7 @@ void init(v8::Local<v8::Object>&  exports,
     SET_REVISION_KIND(working);
     SET_REVISION_KIND(head);
 
-    SetReadOnly(exports, "RevisionKind", object);
+    SET_READONLY(exports, "RevisionKind", object);
 }
 } // namespace revision_kind
 } // namespace no

@@ -18,7 +18,7 @@
 // clang-format off
 
 #define REPORT_ERROR                                  \
-    } catch (svn::svn_error& raw_error) {             \
+    } catch (const svn::svn_error& raw_error) {       \
         auto _Error = copy_error(isolate, raw_error); \
         _Resolver->Reject(_Error);                    \
     }
@@ -87,7 +87,7 @@
 
 // clang-format on
 
-static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, svn::svn_error& raw_error) {
+static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, const svn::svn_error& raw_error) {
     auto message = raw_error.what();
     auto error   = v8::Exception::Error(no::New(isolate, message).As<v8::String>()).As<v8::Object>();
     error->Set(no::New(isolate, "name", v8::NewStringType::kInternalized), no::New(isolate, "SvnError"));
@@ -131,6 +131,24 @@ static v8::Local<v8::Object> convert_options(const v8::Local<v8::Value> options)
     throw no::type_error("");
 }
 
+static int32_t convert_number(v8::Isolate*                 isolate,
+                              const v8::Local<v8::Object>& options,
+                              const char*                  key,
+                              int32_t                      defaultValue) {
+    if (options.IsEmpty())
+        return defaultValue;
+
+    auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
+    if (value->IsUndefined())
+        return defaultValue;
+
+    if (value->IsNumber()) {
+        return value->Int32Value();
+    }
+
+    throw no::type_error("");
+}
+
 static svn::revision convert_revision(v8::Isolate*                 isolate,
                                       const v8::Local<v8::Object>& options,
                                       const char*                  key,
@@ -169,19 +187,75 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
     throw no::type_error("");
 }
 
+static svn::revision_range convert_revision_range(v8::Isolate*                isolate,
+                                                  const v8::Local<v8::Value>& value) {
+    if (value.IsEmpty()) {
+        throw no::type_error("");
+    }
+
+    if (!value->IsObject()) {
+        throw no::type_error("");
+    }
+
+    auto object = value.As<v8::Object>();
+
+    auto start = convert_revision(isolate, object, "start", svn::revision_kind::unspecified);
+    if (start.kind == svn::revision_kind::unspecified) {
+        throw no::type_error("");
+    }
+
+    auto end = convert_revision(isolate, object, "end", svn::revision_kind::unspecified);
+    if (end.kind == svn::revision_kind::unspecified) {
+        throw no::type_error("");
+    }
+
+    return svn::revision_range{start, end};
+}
+
+static std::optional<std::vector<svn::revision_range>> convert_revision_ranges(v8::Isolate*                 isolate,
+                                                                               const v8::Local<v8::Object>& options,
+                                                                               const char*                  key) {
+    if (options.IsEmpty()) {
+        return {};
+    }
+
+    auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
+    if (value->IsUndefined()) {
+        return {};
+    }
+
+    std::vector<svn::revision_range> result;
+
+    if (value->IsArray()) {
+        auto array  = value.As<v8::Array>();
+        auto length = array->Length();
+        for (uint32_t i = 0; i < length; i++) {
+            auto item = array->Get(i);
+            result.push_back(std::move(convert_revision_range(isolate, item)));
+        }
+    } else if (value->IsObject()) {
+        result.push_back(std::move(convert_revision_range(isolate, value)));
+    }
+
+    return result;
+}
+
 static svn::depth convert_depth(v8::Isolate*                 isolate,
                                 const v8::Local<v8::Object>& options,
                                 const char*                  key,
                                 svn::depth                   defaultValue) {
-    if (options.IsEmpty())
+    if (options.IsEmpty()) {
         return defaultValue;
+    }
 
     auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
-    if (value->IsUndefined())
+    if (value->IsUndefined()) {
         return defaultValue;
+    }
 
-    if (value->IsNumber())
+    if (value->IsNumber()) {
         return static_cast<svn::depth>(value->Int32Value());
+    }
 
     throw no::type_error("");
 }
@@ -233,10 +307,10 @@ static v8::Local<v8::Object> buffer_from_vector(v8::Isolate* isolate, std::vecto
 #define STRINGIFY_INTERNAL(X) #X
 #define STRINGIFY(X) STRINGIFY_INTERNAL(X)
 
-#define SET_READ_ONLY(object, name, value)                                                      \
-    (object)->DefineOwnProperty(context,                                                        \
-                                no::NewString(isolate, name, v8::NewStringType::kInternalized), \
-                                value,                                                          \
+#define SET_READ_ONLY(object, name, value)                  \
+    (object)->DefineOwnProperty(context,                    \
+                                no::NewName(isolate, name), \
+                                value,                      \
                                 no::PropertyAttribute::ReadOnlyDontDelete)
 
 #define CONVERT_OPTIONS_AND_CALLBACK(index)                \
@@ -273,6 +347,7 @@ void client::init(v8::Local<v8::Object>&  exports,
     clazz.add_prototype_method("cleanup", &client::cleanup, 1);
     clazz.add_prototype_method("commit", &client::commit, 1);
     clazz.add_prototype_method("info", &client::info, 1);
+    clazz.add_prototype_method("log", &client::log, 1);
     clazz.add_prototype_method("remove", &client::remove, 1);
     clazz.add_prototype_method("resolve", &client::resolve, 1);
     clazz.add_prototype_method("revert", &client::revert, 1);
@@ -359,14 +434,17 @@ v8::Local<v8::Value> client::get_changelists(const v8::FunctionCallbackInfo<v8::
     };
 
     auto work = [this, path, callback, depth, changelists]() -> void {
-        _client->get_changelists(path, uv::make_async(callback), depth, changelists);
+        _client->get_changelists(path,
+                                 uv::make_async(callback),
+                                 depth,
+                                 changelists);
     };
 
     auto after_work = [isolate, result](std::future<void> future) -> void {
         try {
             future.get();
             result->end();
-        } catch (svn::svn_error& raw) {
+        } catch (const svn::svn_error& raw) {
             v8::HandleScope scope(isolate);
 
             auto error = copy_error(isolate, raw);
@@ -406,24 +484,31 @@ METHOD_BEGIN(add)
     ASYNC_RESULT;
 METHOD_RETURN(v8::Undefined(isolate))
 
-METHOD_BEGIN(blame)
+v8::Local<v8::Value> client::blame(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    auto context = isolate->GetCurrentContext();
+
     auto path = convert_string(args[0]);
 
-    CONVERT_OPTIONS_AND_CALLBACK(1)
+    auto options        = convert_options(args[1]);
+    auto start_revision = convert_revision(isolate, options, "start_revision", svn::revision(0));
+    auto end_revision   = convert_revision(isolate, options, "end_revision", svn::revision_kind::head);
+    auto peg_revision   = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
 
-    auto _callback = [isolate, _raw_callback](int32_t                start_revision,
-                                              int32_t                end_revision,
-                                              int64_t                line_number,
-                                              std::optional<int32_t> revision,
-                                              std::optional<int32_t> merged_revision,
-                                              const char*            merged_path,
-                                              const char*            line,
-                                              bool                   local_change) -> void {
+    auto iterable = std::make_shared<no::iterable>(isolate, context);
+
+    auto callback = [isolate, iterable](int32_t                start_revision,
+                                        int32_t                end_revision,
+                                        int64_t                line_number,
+                                        std::optional<int32_t> revision,
+                                        std::optional<int32_t> merged_revision,
+                                        const char*            merged_path,
+                                        const char*            line,
+                                        bool                   local_change) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
         auto context = isolate->GetCurrentContext();
-
-        auto info = no::New<v8::Object>(isolate);
+        auto info    = no::New<v8::Object>(isolate);
         info->Set(no::New(isolate, "start_revision", v8::NewStringType::kInternalized), no::New(isolate, start_revision));
         info->Set(no::New(isolate, "end_revision", v8::NewStringType::kInternalized), no::New(isolate, end_revision));
         info->Set(no::New(isolate, "line_number", v8::NewStringType::kInternalized), no::New(isolate, line_number));
@@ -433,29 +518,34 @@ METHOD_BEGIN(blame)
         info->Set(no::New(isolate, "line", v8::NewStringType::kInternalized), no::New(isolate, line));
         info->Set(no::New(isolate, "local_change", v8::NewStringType::kInternalized), no::New(isolate, local_change));
 
-        const auto           argc       = 1;
-        v8::Local<v8::Value> argv[argc] = {info};
-
-        auto callback = _raw_callback->Get(isolate);
-        callback->Call(v8::Undefined(isolate), argc, argv);
+        return iterable->yield(info);
     };
-    auto callback = uv::make_async(_callback);
 
-    auto start_revision = convert_revision(isolate, options, "start_revision", svn::revision(0));
-    auto end_revision   = convert_revision(isolate, options, "end_revision", svn::revision_kind::head);
-    auto peg_revision   = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
-
-    ASYNC_BEGIN(void, path, start_revision, end_revision, callback, peg_revision)
+    auto work = [this, path, start_revision, end_revision, callback, peg_revision]() -> void {
         _client->blame(path,
                        start_revision,
                        end_revision,
-                       callback,
+                       uv::make_async(callback),
                        peg_revision,
                        svn::diff_ignore_space::none);
-    ASYNC_END()
+    };
 
-    ASYNC_RESULT;
-METHOD_RETURN(v8::Undefined(isolate))
+    auto after_work = [isolate, iterable](std::future<void> future) -> void {
+        try {
+            future.get();
+            iterable->end();
+        } catch (const svn::svn_error& raw) {
+            v8::HandleScope scope(isolate);
+
+            auto error = copy_error(isolate, raw);
+            iterable->reject(error);
+        }
+    };
+
+    uv::queue_work(work, after_work);
+
+    return iterable->get();
+}
 
 METHOD_BEGIN(cat)
     auto path = convert_string(args[0]);
@@ -511,16 +601,16 @@ static decltype(auto) convert_commit_callback(v8::Isolate* isolate, std::shared_
     auto _callback = [isolate, iterable](const svn::commit_info& raw_commit) -> void {
         v8::HandleScope scope(isolate);
 
-        auto commit = no::New<v8::Object>(isolate);
-        commit->Set(no::NewString(isolate, "author", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.author));
-        commit->Set(no::NewString(isolate, "date", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.date));
-        commit->Set(no::NewString(isolate, "repos_root", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.repos_root));
-        commit->Set(no::NewString(isolate, "revision", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.revision));
+        auto info = no::New<v8::Object>(isolate);
+        info->Set(no::New(isolate, "author", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.author));
+        info->Set(no::New(isolate, "date", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.date));
+        info->Set(no::New(isolate, "repos_root", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.repos_root));
+        info->Set(no::New(isolate, "revision", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.revision));
 
         auto value = no::New(isolate, raw_commit.post_commit_error);
-        commit->Set(no::NewString(isolate, "post_commit_error", v8::NewStringType::kInternalized), value);
+        info->Set(no::New(isolate, "post_commit_error", v8::NewStringType::kInternalized), value);
 
-        iterable->yield(commit);
+        iterable->yield(info);
     };
 
     return uv::make_async(_callback);
@@ -544,7 +634,7 @@ v8::Local<v8::Value> client::commit(const v8::FunctionCallbackInfo<v8::Value>& a
         try {
             future.get();
             iterable->end();
-        } catch (svn::svn_error& raw) {
+        } catch (const svn::svn_error& raw) {
             v8::HandleScope scope(isolate);
 
             auto error = copy_error(isolate, raw);
@@ -600,7 +690,56 @@ v8::Local<v8::Value> client::info(const v8::FunctionCallbackInfo<v8::Value>& arg
         try {
             future.get();
             iterable->end();
-        } catch (svn::svn_error& raw) {
+        } catch (const svn::svn_error& raw) {
+            v8::HandleScope scope(isolate);
+
+            auto error = copy_error(isolate, raw);
+            iterable->reject(error);
+        }
+    };
+
+    uv::queue_work(work, after_work);
+
+    return iterable->get();
+}
+
+v8::Local<v8::Value> client::log(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    auto context = isolate->GetCurrentContext();
+
+    auto paths = convert_array(args[0], false);
+
+    auto options         = convert_options(args[1]);
+    auto peg_revision    = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
+    auto revision_ranges = convert_revision_ranges(isolate, options, "revision_ranges");
+    auto limit           = convert_number(isolate, options, "limit", 0);
+
+    auto iterable = std::make_shared<no::iterable>(isolate, context);
+
+    auto callback = [isolate, iterable](svn::log_entry& entry) -> uv::future<void> {
+        v8::HandleScope scope(isolate);
+
+        auto context = isolate->GetCurrentContext();
+        auto object  = no::New<v8::Object>(isolate);
+        object->Set(no::New(isolate, "revision", v8::NewStringType::kInternalized), no::New(isolate, entry.revision));
+        object->Set(no::New(isolate, "non_inheritable", v8::NewStringType::kInternalized), no::New(isolate, entry.non_inheritable));
+        object->Set(no::New(isolate, "subtractive_merge", v8::NewStringType::kInternalized), no::New(isolate, entry.subtractive_merge));
+        object->Set(no::New(isolate, "author", v8::NewStringType::kInternalized), no::New(isolate, entry.author));
+        object->Set(no::New(isolate, "date", v8::NewStringType::kInternalized), no::New(isolate, entry.date));
+        object->Set(no::New(isolate, "message", v8::NewStringType::kInternalized), no::New(isolate, entry.message));
+
+        return iterable->yield(object);
+    };
+
+    auto work = [this, paths, callback, revision_ranges, limit, peg_revision]() -> void {
+        _client->log(paths, uv::make_async(callback), revision_ranges, limit, peg_revision, false, false, false, {});
+    };
+
+    auto after_work = [isolate, iterable](std::future<void> future) -> void {
+        try {
+            future.get();
+            iterable->end();
+        } catch (const svn::svn_error& raw) {
             v8::HandleScope scope(isolate);
 
             auto error = copy_error(isolate, raw);
@@ -630,7 +769,7 @@ v8::Local<v8::Value> client::remove(const v8::FunctionCallbackInfo<v8::Value>& a
         try {
             future.get();
             iterable->end();
-        } catch (svn::svn_error& raw) {
+        } catch (const svn::svn_error& raw) {
             v8::HandleScope scope(isolate);
 
             auto error = copy_error(isolate, raw);
@@ -714,7 +853,7 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
         try {
             future.get();
             iterable->end();
-        } catch (svn::svn_error& raw) {
+        } catch (const svn::svn_error& raw) {
             v8::HandleScope scope(isolate);
 
             auto error = copy_error(isolate, raw);

@@ -4,7 +4,8 @@ const uri = require("vscode-uri").default;
 
 const { expect } = require("chai");
 
-const config = path.resolve(__dirname, "config");
+const global_config = true;
+const config = global_config ? undefined : path.resolve(__dirname, "config");
 const server = path.resolve(__dirname, "server");
 const repository = path.resolve(__dirname, "repository");
 
@@ -21,7 +22,10 @@ async function async_iterate(value, callback) {
 
 describe("svn.node", () => {
     before(function() {
-        fs.removeSync(config);
+        if (!global_config) {
+            fs.removeSync(config);
+        }
+
         fs.removeSync(server);
         fs.removeSync(repository);
     });
@@ -41,7 +45,10 @@ describe("svn.node", () => {
 
     it("create Client", async () => {
         client = new svn.Client(config);
-        expect(fs.existsSync(config)).to.be.true;
+
+        if (!global_config) {
+            expect(fs.existsSync(config)).to.be.true;
+        }
     });
 
     it("checkout", async function() {
@@ -91,5 +98,72 @@ describe("svn.node", () => {
             expect(value.revision).to.equal(1);
             expect(value.post_commit_error).to.be.undefined;
         });
+    });
+
+    it.skip("blame", async function() {
+        // don't know why but I need this line
+        // to disable timeout to let tests pass
+        // they actually only take less than 100ms
+        this.timeout(0);
+
+        let max = {
+            revision: 0,
+            author: 0,
+            message: 0
+        };
+
+        let iterable = client.blame("c:/Users/Simon/Desktop/dev/webchat/index.html");
+        const revisions = new Map();
+        const lines = [];
+        await async_iterate(iterable, (value) => {
+            let info;
+            if (revisions.has(value.revision)) {
+                info = revisions.get(value.revision);
+            } else {
+                info = {};
+                revisions.set(value.revision, info);
+
+                const length = value.revision.toString().length;
+                if (length > max.revision) {
+                    max.revision = length;
+                }
+            }
+
+            lines.push({
+                revision: value.revision,
+                content: value.line,
+                info: info
+            });
+        });
+
+        const ranges = [];
+        for (const [item] of revisions) {
+            const revision = { number: item };
+            ranges.push({
+                start: revision,
+                end: revision
+            });
+        }
+        iterable = client.log("c:/Users/Simon/Desktop/dev/webchat/index.html", {
+            revision_ranges: ranges
+        });
+        await async_iterate(iterable, (value) => {
+            const info = revisions.get(value.revision);
+            info.message = value.message;
+            info.author = value.author;
+
+            if (value.author.length > max.author) {
+                max.author = value.author.length;
+            }
+            if (value.message.length > max.message) {
+                max.message = value.message.length;
+            }
+        });
+
+        let text = "";
+        for (const line of lines) {
+            text += `${line.revision.toString().padEnd(max.revision)} ${line.info.author.padEnd(max.author)} ${line.info.message.padEnd(max.message)} ${line.content.replace(/\r\n?/g,"")}\r\n`;
+        }
+        await fs.writeFile("blame.txt", text);
     });
 });

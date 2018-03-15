@@ -19,10 +19,10 @@
 
 using namespace std::literals;
 
-#define SetReadOnly(object, name, value)                                                        \
-    (object)->DefineOwnProperty(context,                                                        \
-                                no::NewString(isolate, name, v8::NewStringType::kInternalized), \
-                                (value),                                                        \
+#define SET_READONLY(object, name, value)                   \
+    (object)->DefineOwnProperty(context,                    \
+                                no::NewName(isolate, name), \
+                                (value),                    \
                                 no::PropertyAttribute::ReadOnlyDontDelete)
 
 namespace no {
@@ -33,9 +33,9 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
     auto version = svn_client_version();
 
     auto object = v8::Object::New(isolate);
-    SetReadOnly(object, "major", no::New(isolate, version->major));
-    SetReadOnly(object, "minor", no::New(isolate, version->minor));
-    SetReadOnly(object, "patch", no::New(isolate, version->patch));
+    SET_READONLY(object, "major", no::New(isolate, version->major));
+    SET_READONLY(object, "minor", no::New(isolate, version->minor));
+    SET_READONLY(object, "patch", no::New(isolate, version->patch));
     args.GetReturnValue().Set(object);
 }
 
@@ -71,13 +71,13 @@ void init(v8::Local<v8::Object> exports) {
     auto isolate = exports->GetIsolate();
     auto context = isolate->GetCurrentContext();
 
-    exports->SetAccessor(context,                                                             // context
-                         no::NewString(isolate, "version", v8::NewStringType::kInternalized), // name
-                         version,                                                             // getter
-                         nullptr,                                                             // setter
-                         v8::MaybeLocal<v8::Value>(),                                         // data
-                         v8::AccessControl::ALL_CAN_READ,                                     // settings
-                         no::PropertyAttribute::ReadOnlyDontDelete);                          // attribute
+    exports->SetAccessor(context,                                    // context
+                         no::NewName(isolate, "version"),            // name
+                         version,                                    // getter
+                         nullptr,                                    // setter
+                         v8::MaybeLocal<v8::Value>(),                // data
+                         v8::AccessControl::ALL_CAN_READ,            // settings
+                         no::PropertyAttribute::ReadOnlyDontDelete); // attribute
 
     // NODE_SET_METHOD(exports, "test", test);
 

@@ -25,7 +25,7 @@ void init(v8::Local<v8::Object>&  exports,
     SET_STATUS_KIND(external);
     SET_STATUS_KIND(incomplete);
 
-    SetReadOnly(exports, "StatusKind", object);
+    SET_READONLY(exports, "StatusKind", object);
 }
 } // namespace status_kind
 } // namespace no

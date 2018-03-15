@@ -75,8 +75,9 @@ async function status() {
     await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
     console.log("cleanup complete");
 
-    await client.status("c:/Users/Simon/Desktop/dev/webchat", status => {
-        console.log(status);
+    const iterable = client.status("c:/Users/Simon/Desktop/dev/webchat");
+    await async_iterate(iterable, value => {
+        console.log(value);
     });
     console.log("pass");
 }
@@ -87,13 +88,23 @@ async function status_memory_leak() {
     const before = process.memoryUsage().rss;
     console.log(before);
     for (let i = 0; i < 10000; i++) {
-        await client.status("c:/Users/Simon/Desktop/dev/webchat", status => {
-            // console.log(status);
+        const iterable = client.status("c:/Users/Simon/Desktop/dev/webchat");
+        await async_iterate(iterable, value => {
+            console.log(value);
         });
     }
     const after = process.memoryUsage().rss;
     console.log(after);
     console.log("pass");
+}
+
+async function async_iterate(value, callback) {
+    const iterator = value[Symbol["asyncIterator"]]();
+    let result = await iterator.next();
+    while (result.done === false) {
+        callback(result.value);
+        result = await iterator.next();
+    }
 }
 
 async function info_memory_leak() {
@@ -102,8 +113,9 @@ async function info_memory_leak() {
     const before = process.memoryUsage().rss;
     console.log(before);
     for (let i = 0; i < 100000; i++) {
-        await client.info("c:/Users/Simon/Desktop/dev/webchat", info => {
-            // console.log(info);
+        const iterable = client.info("c:/Users/Simon/Desktop/dev/webchat");
+        await async_iterate(iterable, value => {
+            console.log(value);
         });
     }
     const after = process.memoryUsage().rss;
@@ -111,10 +123,13 @@ async function info_memory_leak() {
     console.log("pass");
 }
 
-async function blame() {
+async function test_blame() {
     const client = new svn.Client();
     await client.cleanup("c:/Users/Simon/Desktop/dev/webchat");
-    // client.blame()
+    const iterable = client.blame("c:/Users/Simon/Desktop/dev/webchat/index.html");
+    await async_iterate(iterable, value => {
+        console.log(value);
+    });
 }
 
 async function test_iterator() {
@@ -139,13 +154,14 @@ async function test_iterator() {
 try {
     console.log("pid: " + process.pid);
 
-    test_changelist();
-    test_info()
+    // test_changelist();
+    // test_info()
     // update_with_simple_auth_provider();
     // status();
     // status_memory_leak();
     // info_memory_leak();
     // test_iterator();
+    test_blame();
 } catch (err) {
     console.log(err);
 }

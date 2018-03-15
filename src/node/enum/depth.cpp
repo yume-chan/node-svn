@@ -17,7 +17,7 @@ void init(v8::Local<v8::Object>&  exports,
     SET_DEPTH(immediates);
     SET_DEPTH(infinity);
 
-    SetReadOnly(exports, "Depth", object);
+    SET_READONLY(exports, "Depth", object);
 }
 } // namespace depth
 } // namespace no

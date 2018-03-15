@@ -14,7 +14,7 @@ void init(v8::Local<v8::Object>&  exports,
     SET_NODE_KIND(dir);
     SET_NODE_KIND(unknown);
 
-    SetReadOnly(exports, "NodeKind", object);
+    SET_READONLY(exports, "NodeKind", object);
 }
 } // namespace node_kind
 } // namespace no

@@ -35,6 +35,7 @@ class client {
     v8::Local<v8::Value> cleanup(const v8::FunctionCallbackInfo<v8::Value>& args);
     v8::Local<v8::Value> commit(const v8::FunctionCallbackInfo<v8::Value>& args);
     v8::Local<v8::Value> info(const v8::FunctionCallbackInfo<v8::Value>& args);
+    v8::Local<v8::Value> log(const v8::FunctionCallbackInfo<v8::Value>& args);
     v8::Local<v8::Value> remove(const v8::FunctionCallbackInfo<v8::Value>& args);
     v8::Local<v8::Value> resolve(const v8::FunctionCallbackInfo<v8::Value>& args);
     v8::Local<v8::Value> revert(const v8::FunctionCallbackInfo<v8::Value>& args);

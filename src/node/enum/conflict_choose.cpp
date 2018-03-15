@@ -20,7 +20,7 @@ void init(v8::Local<v8::Object>&  exports,
     SET_CONFLICT_CHOOSE(merged);
     SET_CONFLICT_CHOOSE(unspecified);
 
-    SetReadOnly(exports, "ConflictChoose", object);
+    SET_READONLY(exports, "ConflictChoose", object);
 }
 } // namespace conflict_choose
 } // namespace no

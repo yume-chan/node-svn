@@ -20,16 +20,19 @@ class class_builder {
         , _signature(v8::Signature::New(isolate, _template))
         , _prototype(_template->PrototypeTemplate()) {}
 
-    void add_prototype_method(const char*     name,
-                              callback_method method,
-                              int             length = 0) {
-        add_prototype_method(no::New(_isolate, name, v8::NewStringType::kInternalized).As<v8::Name>(), method, length);
+    template <size_t N>
+    void add_prototype_method(const char (&name)[N],
+                              callback_method&& method,
+                              int               length = 0) {
+        add_prototype_method(no::NewName(_isolate, name),
+                             std::move(method),
+                             length);
     }
 
     void add_prototype_method(v8::Local<v8::Name> name,
-                              callback_method     method,
+                              callback_method&&   method,
                               int                 length = 0) {
-        auto data     = no::New(_isolate, new callback_method(method));
+        auto data     = no::New(_isolate, new callback_method(std::move(method)));
         auto function = v8::FunctionTemplate::New(_isolate,                         // isolate
                                                   invoke_method,                    // callback
                                                   data,                             // data
@@ -90,12 +93,12 @@ class class_builder {
         auto _this  = static_cast<T*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 
         try {
-            auto result = (*method)(*_this, args);
+            auto result = method->operator()(*_this, args);
             if (!result.IsEmpty()) {
                 scope.Escape(result);
                 args.GetReturnValue().Set(result);
             }
-        } catch (no::type_error& error) {
+        } catch (const no::type_error& error) {
             isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, error.what()).As<v8::String>()));
         } catch (...) {
             isolate->ThrowException(v8::Exception::Error(no::New(isolate, "error invoking method").As<v8::String>()));
