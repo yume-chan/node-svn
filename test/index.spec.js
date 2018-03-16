@@ -85,6 +85,13 @@ describe("svn.node", () => {
             expect(value.path).to.equal(file1);
             expect(value.kind).to.equal(svn.NodeKind.file);
         });
+
+        // WARNING: DONT DO THIS IN PRODUCTION
+        // `status()` runs asynchronously
+        // here is testing threading safety
+        for (let i = 0; i < 100; i++) {
+            client.status(repository);
+        }
     });
 
     it("commit", async function() {

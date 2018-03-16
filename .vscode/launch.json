@@ -27,7 +27,7 @@
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": "node-gyp",
             "sourceFileMap": {
-                "c:/ws/deps/v8/src": "C:/Users/Simon/.node-gyp/9.8.0/deps/v8/src"
+                "c:/ws/deps/": "C:/Users/Simon/.node-gyp/9.8.0/deps/"
             },
             "symbolSearchPath": "C:/Users/Simon/AppData/Local/Temp/SymbolCache;C:/Users/Simon/.node-gyp/9.8.0/x64",
         },

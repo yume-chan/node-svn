@@ -90,7 +90,10 @@
 static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, const svn::svn_error& raw_error) {
     auto message = raw_error.what();
     auto error   = v8::Exception::Error(no::New(isolate, message).As<v8::String>()).As<v8::Object>();
-    error->Set(no::New(isolate, "name", v8::NewStringType::kInternalized), no::New(isolate, "SvnError"));
+    error->Set(no::NewName(isolate, "name"), no::New(isolate, "SvnError"));
+    error->Set(no::NewName(isolate, "code"), no::New(isolate, raw_error.code));
+    error->Set(no::NewName(isolate, "file"), no::New(isolate, raw_error.file));
+    error->Set(no::NewName(isolate, "line"), no::New(isolate, raw_error.line));
     if (raw_error.child != nullptr)
         error.As<v8::Object>()->Set(no::New(isolate, "child", v8::NewStringType::kInternalized), copy_error(isolate, *raw_error.child));
     return error;
