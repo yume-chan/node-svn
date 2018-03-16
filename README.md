@@ -18,16 +18,17 @@ Wrap Subversion (SVN) to Node Native Addon
 
 ## Platform table
 
-|         | x86                     | x64                     |
-| ------- | ----------------------- | ----------------------- |
-| Windows | [![Build status][1]][2] | [![Build status][1]][2] |
-| Linux   | No                      | No                      |
-| macOS   | N/A                     | [![Build status][3]][4] |
+|         | Build                      | Tests                     |
+|---------|----------------------------|---------------------------|
+| Windows | [![AppVeyor Build][1]][2]  | [![AppVeyor Tests][5]][2] |
+| Linux   | [![Travis CI Build][3]][4] |                           |
+| macOS   | [![Travis CI Build][3]][4] |                           |
 
-[1]: https://ci.appveyor.com/api/projects/status/u7klnu47dxei6w0x/branch/master?svg=true
-[2]: https://ci.appveyor.com/project/yume-chan/node-svn/branch/master
-[3]: https://travis-ci.org/yume-chan/node-svn.svg?branch=master
+[1]: https://img.shields.io/appveyor/ci/yume-chan/node-svn.svg
+[2]: https://ci.appveyor.com/project/yume-chan/node-svn
+[3]: https://img.shields.io/travis/yume-chan/node-svn.svg
 [4]: https://travis-ci.org/yume-chan/node-svn
+[5]: https://img.shields.io/appveyor/tests/yume-chan/node-svn.svg
 
 ## Dependencies
 
