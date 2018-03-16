@@ -173,7 +173,7 @@ export class Client {
     resolve(path: string): Promise<void>;
     revert(path: string | string[]): Promise<void>;
 
-    status(path: string, options?: Partial<StatusOptions>): AsyncIterator<StatusItem>;
+    status(path: string, options?: Partial<StatusOptions>): AsyncIterable<StatusItem>;
 
     update(path: string): Promise<number>;
     update(path: string[]): Promise<number[]>;

@@ -80,7 +80,7 @@ describe("svn.node", () => {
         // they actually only take less than 100ms
         this.timeout(0);
 
-        const result = await client.status(repository);
+        const result = client.status(repository);
         await async_iterate(result, (value) => {
             expect(value.path).to.equal(file1);
             expect(value.kind).to.equal(svn.NodeKind.file);

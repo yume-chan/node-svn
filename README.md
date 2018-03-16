@@ -72,9 +72,9 @@ npm install
 npm test
 ````
 
-All dependencies will be built as static library, and linked into one single dynamic library.
+It will takes minutes to build (~120s on my i7-7567U 2C4T 4GHz, 8G DDR4 2133MHz, ~250s if openssl included), so sit back and relax yourself while it's doing its own things.
 
-In this way, on Windows it won't use dlls from other SVN installations, on Linux the binrary doesn't need to be patched to change their library searching path.
+All dependencies will be compiled as static library and be linked into one single dynamic library to avoid any dynamic library searching path problems.
 
 ## Docs
 
@@ -98,8 +98,8 @@ This project includes a patch to use **Serialized** mode instead, so you should 
 
 - [ ] Add options to all methods
 - [ ] Strongly-typed error handling
-- [ ] Iterator/Async Iterator for things like `status()`
-- [ ] Authentication
+- [x] Async Iterator for methods like `status()`
+- [x] Authentication
 - [ ] Cross platform
 - [x] Better multi-threading handling
 - [ ] You name it
