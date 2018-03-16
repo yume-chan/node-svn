@@ -12,6 +12,9 @@
             "include_dirs": [
                 "src"
             ],
+            "defines": [
+                "_HAS_EXCEPTIONS=1"
+            ],
             "sources": [
                 "src/cpp/client.cpp",
                 "src/cpp/svn_error.cpp",

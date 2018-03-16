@@ -7,34 +7,40 @@
 
 namespace no {
 template <class T>
+struct callable_wrapper {
+    T value;
+};
+
+template <class T>
 class class_builder {
     using create_instance = std::function<T*(const v8::FunctionCallbackInfo<v8::Value>& args)>;
-    using callback_method = std::function<v8::Local<v8::Value>(T&, const v8::FunctionCallbackInfo<v8::Value>&)>;
 
   public:
+    template <class F>
     class_builder(v8::Isolate*       isolate,
                   const std::string& name,
-                  create_instance    constructor = default_constructor)
+                  F                  constructor = default_constructor)
         : _isolate(isolate)
         , _template(create_template(isolate, name, constructor))
         , _signature(v8::Signature::New(isolate, _template))
         , _prototype(_template->PrototypeTemplate()) {}
 
-    template <size_t N>
+    template <size_t N, class F>
     void add_prototype_method(const char (&name)[N],
-                              callback_method&& method,
-                              int               length = 0) {
+                              F   method,
+                              int length = 0) {
         add_prototype_method(no::NewName(_isolate, name),
-                             std::move(method),
+                             method,
                              length);
     }
 
+    template <class F>
     void add_prototype_method(v8::Local<v8::Name> name,
-                              callback_method&&   method,
+                              F                   method,
                               int                 length = 0) {
-        auto data     = no::New(_isolate, new callback_method(std::move(method)));
+        auto data     = no::New(_isolate, new callable_wrapper<F>{method});
         auto function = v8::FunctionTemplate::New(_isolate,                         // isolate
-                                                  invoke_method,                    // callback
+                                                  invoke_method<F>,                 // callback
                                                   data,                             // data
                                                   _signature,                       // signature
                                                   length,                           // length
@@ -48,12 +54,13 @@ class class_builder {
     }
 
   private:
+    template <class F>
     static v8::Local<v8::FunctionTemplate> create_template(v8::Isolate*       isolate,
                                                            const std::string& name,
-                                                           create_instance    constructor) {
+                                                           F    constructor) {
         auto result = no::New<v8::FunctionTemplate>(isolate,
-                                                    invoke_constructor,
-                                                    no::New(isolate, new create_instance(constructor)));
+                                                    invoke_constructor<F>,
+                                                    no::New(isolate, new callable_wrapper<F>{constructor}));
 
         result->SetClassName(no::New(isolate, name));
         result->ReadOnlyPrototype();
@@ -67,6 +74,7 @@ class class_builder {
         return new T();
     }
 
+    template <class F>
     static void invoke_constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
         auto isolate = args.GetIsolate();
         if (!args.IsConstructCall()) {
@@ -75,25 +83,26 @@ class class_builder {
             return;
         }
 
-        auto constructor = static_cast<create_instance*>(args.Data().As<v8::External>()->Value());
+        auto constructor = static_cast<callable_wrapper<F>*>(args.Data().As<v8::External>()->Value());
         try {
-            auto result = (*constructor)(args);
+            auto result = std::invoke(constructor->value, args);
             args.This()->SetAlignedPointerInInternalField(0, result);
         } catch (...) {
             isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, "error invoking constructor").As<v8::String>()));
         }
     }
 
+    template <class F>
     static void invoke_method(const v8::FunctionCallbackInfo<v8::Value>& args) {
         auto isolate = args.GetIsolate();
 
         v8::EscapableHandleScope scope(isolate);
 
-        auto method = static_cast<callback_method*>(args.Data().As<v8::External>()->Value());
+        auto method = static_cast<callable_wrapper<F>*>(args.Data().As<v8::External>()->Value());
         auto _this  = static_cast<T*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 
         try {
-            auto result = method->operator()(*_this, args);
+            auto result = std::invoke(method->value, *_this, args);
             if (!result.IsEmpty()) {
                 scope.Escape(result);
                 args.GetReturnValue().Set(result);

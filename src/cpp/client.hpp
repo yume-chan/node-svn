@@ -89,12 +89,12 @@ class client : public std::enable_shared_from_this<client> {
 
     string_map cat(const std::string&  path,
                    const cat_callback& callback,
-                   const revision&     peg_revision    = revision_kind::working,
-                   const revision&     op_revision     = revision_kind::working,
+                   const revision&     peg_revision    = revision_kind::unspecified,
+                   const revision&     op_revision     = revision_kind::unspecified,
                    bool                expand_keywords = true) const;
     cat_result cat(const std::string& path,
-                   const revision&    peg_revision    = revision_kind::working,
-                   const revision&    op_revision     = revision_kind::working,
+                   const revision&    peg_revision    = revision_kind::unspecified,
+                   const revision&    op_revision     = revision_kind::unspecified,
                    bool               expand_keywords = true) const;
 
     int32_t checkout(const std::string& url,
