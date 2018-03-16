@@ -4,7 +4,7 @@ const uri = require("vscode-uri").default;
 
 const { expect } = require("chai");
 
-const global_config = true;
+const global_config = false;
 const config = global_config ? undefined : path.resolve(__dirname, "config");
 const server = path.resolve(__dirname, "server");
 const repository = path.resolve(__dirname, "repository");
@@ -70,7 +70,7 @@ describe("svn.node", () => {
         // they actually only take less than 100ms
         this.timeout(0);
 
-        await fs.writeFile(file1, "file1");
+        await fs.writeFile(file1, file1);
         await client.add(file1);
     });
 
@@ -100,7 +100,26 @@ describe("svn.node", () => {
         });
     });
 
-    it.skip("blame", async function() {
+    it("cat", async function() {
+        // don't know why but I need this line
+        // to disable timeout to let tests pass
+        // they actually only take less than 100ms
+        this.timeout(0);
+
+        let result = await client.cat(file1);
+        expect(result.content.toString("utf-8")).to.equal(file1);
+
+        await fs.writeFile(file1, file1 + file1);
+
+        result = await client.cat(file1, { revision: svn.RevisionKind.base });
+        expect(result.content.toString("utf-8")).to.equal(file1);
+    });
+
+    it("blame", async function() {
+        if (!global_config) {
+            this.skip();
+        }
+
         // don't know why but I need this line
         // to disable timeout to let tests pass
         // they actually only take less than 100ms
@@ -160,9 +179,13 @@ describe("svn.node", () => {
             }
         });
 
+        function count(value) {
+            return value.split("").reduce((a, c) => a += 1);
+        }
+
         let text = "";
         for (const line of lines) {
-            text += `${line.revision.toString().padEnd(max.revision)} ${line.info.author.padEnd(max.author)} ${line.info.message.padEnd(max.message)} ${line.content.replace(/\r\n?/g,"")}\r\n`;
+            text += `${line.revision.toString().padEnd(max.revision)} ${line.info.author.padEnd(max.author)} ${line.info.message.padEnd(max.message)} ${line.content.replace(/\r\n?/g, "")}\r\n`;
         }
         await fs.writeFile("blame.txt", text);
     });

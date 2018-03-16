@@ -551,8 +551,8 @@ METHOD_BEGIN(cat)
     auto path = convert_string(args[0]);
 
     auto options      = convert_options(args[1]);
-    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::working);
-    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::working);
+    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
+    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::unspecified);
 
     ASYNC_BEGIN(svn::cat_result, path, peg_revision, revision)
         ASYNC_RETURN(_client->cat(path, peg_revision, revision));
