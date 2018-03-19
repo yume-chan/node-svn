@@ -86,12 +86,15 @@ describe("svn.node", () => {
             expect(value.kind).to.equal(svn.NodeKind.file);
         });
 
-        // WARNING: DONT DO THIS IN PRODUCTION
+        // WARNING: **NEVER** DO THIS IN PRODUCTION
         // `status()` runs asynchronously
-        // here is testing threading safety
+        // here it's testing threading safety
+        const tasks = [];
         for (let i = 0; i < 100; i++) {
-            client.status(repository);
+            const client = new svn.Client(config);
+            tasks.push(async_iterate(client.status(repository), () => { }));
         }
+        await Promise.all(tasks);
     });
 
     it("commit", async function() {

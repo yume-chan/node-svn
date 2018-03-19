@@ -335,7 +335,7 @@ void client::init(v8::Local<v8::Object>&  exports,
                   v8::Local<v8::Context>& context) {
     v8::HandleScope scope(isolate);
 
-    class_builder<client> clazz(isolate, "Client", create_instance);
+    class_builder<client> clazz(isolate, "Client", constructor);
     clazz.add_prototype_method("add_simple_auth_provider", &client::add_simple_auth_provider, 1);
     clazz.add_prototype_method("remove_simple_auth_provider", &client::remove_simple_auth_provider, 1);
 
@@ -362,7 +362,7 @@ void client::init(v8::Local<v8::Object>&  exports,
     SET_READ_ONLY(exports, "Client", clazz.get_constructor());
 }
 
-client* client::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
+std::shared_ptr<client> client::constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
 
     std::optional<const std::string> config_path;
@@ -370,7 +370,7 @@ client* client::create_instance(const v8::FunctionCallbackInfo<v8::Value>& args)
         config_path.emplace(convert_string(args[0]));
     }
 
-    return new client(isolate, config_path);
+    return std::shared_ptr<client>(new client(isolate, config_path));
 }
 
 v8::Local<v8::Value> client::add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -424,16 +424,16 @@ v8::Local<v8::Value> client::get_changelists(const v8::FunctionCallbackInfo<v8::
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
     auto changelists = convert_array(isolate, options, "changelists");
 
-    auto result = std::make_shared<no::iterable>(isolate, context);
+    auto iterable = no::iterable::create(isolate, context);
 
-    auto callback = [isolate, result](const char* path, const char* changelist) -> uv::future<void> {
+    auto callback = [isolate, iterable](const char* path, const char* changelist) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
         auto object = no::New<v8::Object>(isolate);
         object->Set(no::New(isolate, "path", v8::NewStringType::kInternalized), no::New(isolate, path));
         object->Set(no::New(isolate, "changelist", v8::NewStringType::kInternalized), no::New(isolate, changelist));
 
-        return result->yield(object);
+        return iterable->yield(object);
     };
 
     auto work = [this, path, callback, depth, changelists]() -> void {
@@ -443,21 +443,21 @@ v8::Local<v8::Value> client::get_changelists(const v8::FunctionCallbackInfo<v8::
                                  changelists);
     };
 
-    auto after_work = [isolate, result](std::future<void> future) -> void {
+    auto after_work = [isolate, iterable](std::future<void> future) -> void {
         try {
             future.get();
-            result->end();
+            iterable->end();
         } catch (const svn::svn_error& raw) {
             v8::HandleScope scope(isolate);
 
             auto error = copy_error(isolate, raw);
-            result->reject(error);
+            iterable->reject(error);
         }
     };
 
     uv::queue_work(work, after_work);
 
-    return result->get();
+    return iterable->get();
 }
 
 METHOD_BEGIN(remove_from_changelists)
@@ -498,7 +498,7 @@ v8::Local<v8::Value> client::blame(const v8::FunctionCallbackInfo<v8::Value>& ar
     auto end_revision   = convert_revision(isolate, options, "end_revision", svn::revision_kind::head);
     auto peg_revision   = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
 
-    auto iterable = std::make_shared<no::iterable>(isolate, context);
+    auto iterable = no::iterable::create(isolate, context);
 
     auto callback = [isolate, iterable](int32_t                start_revision,
                                         int32_t                end_revision,
@@ -601,7 +601,7 @@ METHOD_BEGIN(cleanup)
 METHOD_RETURN(v8::Undefined(isolate))
 
 static decltype(auto) convert_commit_callback(v8::Isolate* isolate, std::shared_ptr<no::iterable> iterable) {
-    auto _callback = [isolate, iterable](const svn::commit_info& raw_commit) -> void {
+    auto _callback = [isolate, iterable](const svn::commit_info& raw_commit) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
         auto info = no::New<v8::Object>(isolate);
@@ -613,7 +613,7 @@ static decltype(auto) convert_commit_callback(v8::Isolate* isolate, std::shared_
         auto value = no::New(isolate, raw_commit.post_commit_error);
         info->Set(no::New(isolate, "post_commit_error", v8::NewStringType::kInternalized), value);
 
-        iterable->yield(info);
+        return iterable->yield(info);
     };
 
     return uv::make_async(_callback);
@@ -626,7 +626,7 @@ v8::Local<v8::Value> client::commit(const v8::FunctionCallbackInfo<v8::Value>& a
     auto paths   = convert_array(args[0], false);
     auto message = convert_string(args[1]);
 
-    auto iterable = std::make_shared<no::iterable>(isolate, context);
+    auto iterable = no::iterable::create(isolate, context);
     auto callback = convert_commit_callback(isolate, iterable);
 
     auto work = [this, paths, message, callback]() -> void {
@@ -666,7 +666,7 @@ v8::Local<v8::Value> client::info(const v8::FunctionCallbackInfo<v8::Value>& arg
     auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::unspecified);
     auto depth        = convert_depth(isolate, options, "depth", svn::depth::empty);
 
-    auto iterable = std::make_shared<no::iterable>(isolate, context);
+    auto iterable = no::iterable::create(isolate, context);
 
     auto callback = [isolate, iterable](const char* path, const svn::info& raw_info) -> uv::future<void> {
         v8::HandleScope scope(isolate);
@@ -717,7 +717,7 @@ v8::Local<v8::Value> client::log(const v8::FunctionCallbackInfo<v8::Value>& args
     auto revision_ranges = convert_revision_ranges(isolate, options, "revision_ranges");
     auto limit           = convert_number(isolate, options, "limit", 0);
 
-    auto iterable = std::make_shared<no::iterable>(isolate, context);
+    auto iterable = no::iterable::create(isolate, context);
 
     auto callback = [isolate, iterable](svn::log_entry& entry) -> uv::future<void> {
         v8::HandleScope scope(isolate);
@@ -761,7 +761,7 @@ v8::Local<v8::Value> client::remove(const v8::FunctionCallbackInfo<v8::Value>& a
 
     auto paths = convert_array(args[0], false);
 
-    auto iterable = std::make_shared<no::iterable>(isolate, context);
+    auto iterable = no::iterable::create(isolate, context);
     auto callback = convert_commit_callback(isolate, iterable);
 
     auto work = [this, paths, callback]() -> void {
@@ -822,8 +822,8 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
     auto depth            = convert_depth(isolate, options, "depth", svn::depth::infinity);
     auto ignore_externals = convert_boolean(isolate, options, "ignore_externals", false);
 
-    auto iterable = std::make_shared<no::iterable>(isolate, context);
-    auto callback = [isolate, iterable](const std::string& path, const svn::status& raw_status) -> void {
+    auto iterable = no::iterable::create(isolate, context);
+    auto callback = [isolate, iterable](const std::string& path, const svn::status& raw_status) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
         auto context = isolate->GetCurrentContext();
@@ -845,7 +845,7 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
         status->Set(no::New(isolate, "text_status", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_status.text_status)));
         status->Set(no::New(isolate, "versioned", v8::NewStringType::kInternalized), no::New(isolate, raw_status.versioned));
 
-        iterable->yield(status);
+        return iterable->yield(status);
     };
 
     auto work = [this, path, callback, revision, depth, ignore_externals]() -> void {

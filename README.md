@@ -82,17 +82,11 @@ See the [type definition](scripts/index.d.ts)
 
 ## Thread safety
 
-SVN uses SQLite for databasing, SQLite has three different threading modes: (Original Documentation [here](https://sqlite.org/threadsafe.html))
+Svn has been designed to only work in single-thread mode. So you need to create new `Client` for each concurrency operatons.
 
-1. **Single-thread**. In this mode, all mutexes are disabled and SQLite is unsafe to use in more than a single thread at once.
-1. **Multi-thread**. In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.
-1. **Serialized**. In serialized mode, SQLite can be safely used by multiple threads with no restriction.
+Maybe a Client pool can be used to reduce overhead.
 
-Orignally, SVN uses **Multi-thread** mode, means you *can* use a single client to access multiple repositories concurrently, but *can not* apply multiple operations (even all of them are reading) to a single repository at the same time.
-
-To make things worse, SQLite will just throw access violation when you try to do this, cause your program to crash.
-
-This project includes a patch to use **Serialized** mode instead, so you should be free to do any operations to any repositories as you want.
+*I have tried to enable all mutex in SQLite, but svn still crashes with random access violations.*
 
 ## Roadmap
 
@@ -101,7 +95,6 @@ This project includes a patch to use **Serialized** mode instead, so you should 
 - [x] Async Iterator for methods like `status()`
 - [x] Authentication
 - [ ] Cross platform
-- [x] Better multi-threading handling
 - [ ] You name it
 
 **Help wanted!** How to create custom Error class in Node.js Native Addon?

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <node_object_wrap.h>
-
 #include <future>
 #include <iostream>
 
@@ -19,42 +17,13 @@ static void check_result(v8::Maybe<bool> value) {
     }
 }
 
-struct iterator_status {
-    v8::Global<v8::Value>             value;
-    v8::Global<v8::Promise::Resolver> resolver;
-    bool                              resolver_fulfilled;
-    std::promise<void>                consume_promise;
-};
-
-using shared_iterator_status = std::shared_ptr<iterator_status>;
-
-class iterable {
+class iterable : public std::enable_shared_from_this<iterable> {
   public:
-    iterable(v8::Isolate* isolate, v8::Local<v8::Context>& context)
-        : _isolate(isolate)
-        , _iterator_created(false)
-        , _status(std::make_shared<iterator_status>()) {
-        if (_initializer.IsEmpty()) {
-            auto asyncIteratorName = no::NewName(isolate, "asyncIterator");
-
-            // polyfill Symbol.asyncIterator
-            auto symbol        = context->Global()->Get(no::NewName(isolate, "Symbol")).As<v8::Object>();
-            auto asyncIterator = symbol->Get(context, asyncIteratorName).ToLocalChecked().As<v8::Symbol>();
-
-            if (asyncIterator->IsUndefined()) {
-                asyncIterator = v8::Symbol::New(isolate, no::NewName(isolate, "Symbol.asyncIterator"));
-                symbol->DefineOwnProperty(context, asyncIteratorName, asyncIterator, no::PropertyAttribute::All);
-            }
-
-            class_builder<iterable> clazz(isolate, "Iterator", create_instance);
-            clazz.add_prototype_method(asyncIterator.As<v8::Name>(), &iterable::get_async_iterator);
-            clazz.add_prototype_method("next", &iterable::next);
-
-            _initializer.Reset(isolate, clazz.get_constructor());
-        }
+    static std::shared_ptr<iterable> create(v8::Isolate* isolate, v8::Local<v8::Context>& context) {
+        return std::shared_ptr<iterable>(new iterable(isolate, context));
     }
 
-    std::future<void> yield(v8::Local<v8::Value> value) {
+    [[nodiscard]] std::future<void> yield(v8::Local<v8::Value> value) {
         return resolve(true, value, false);
     }
 
@@ -67,36 +36,56 @@ class iterable {
     }
 
     v8::Local<v8::Value> get() {
-        if (_status->value.IsEmpty()) {
+        if (_value.IsEmpty()) {
             v8::HandleScope scope(_isolate);
 
             auto context = _isolate->GetCurrentContext();
-            auto value   = _initializer.Get(_isolate)->NewInstance(context).ToLocalChecked();
-            value->SetAlignedPointerInInternalField(0, this);
 
-            // due to the nature of AsyncItertor, it's highly possible that
-            // it will live longer at JavaScript side than native side.
-            // so make a copy of the smart pointer and wait for v8 garbage collection.
-            // (It can also happen in reverse, that why shared pointer is used.)
-            _status->value.Reset(_isolate, value);
-            _status->value.SetWeak(new shared_iterator_status(_status), weak_callback, v8::WeakCallbackType::kParameter);
+            const auto           argc       = 1;
+            v8::Local<v8::Value> argv[argc] = {no::New(_isolate, this)};
+
+            auto value = _initializer.Get(_isolate)->NewInstance(context, argc, argv).ToLocalChecked();
+            _value.Reset(_isolate, value);
         }
-        return _status->value.Get(_isolate);
+        return _value.Get(_isolate);
     }
 
   private:
-    static iterable* create_instance(const v8::FunctionCallbackInfo<v8::Value>& args) {
-        return nullptr;
+    iterable(v8::Isolate* isolate, v8::Local<v8::Context>& context)
+        : _isolate(isolate)
+        , _value()
+        , _iterator_created(false)
+        , _resolver()
+        , _resolver_fulfilled(false)
+        , _consume_promise() {
+        if (_initializer.IsEmpty()) {
+            auto name_asyncIterator = no::NewName(isolate, "asyncIterator");
+
+            // polyfill Symbol.asyncIterator
+            auto symbol        = context->Global()->Get(no::NewName(isolate, "Symbol")).As<v8::Object>();
+            auto asyncIterator = symbol->Get(context, name_asyncIterator).ToLocalChecked().As<v8::Symbol>();
+
+            if (asyncIterator->IsUndefined()) {
+                asyncIterator = v8::Symbol::New(isolate, no::NewName(isolate, "Symbol.asyncIterator"));
+                symbol->DefineOwnProperty(context, name_asyncIterator, asyncIterator, no::PropertyAttribute::All);
+            }
+
+            class_builder<iterable> clazz(isolate, "Iterator", constructor);
+            clazz.add_prototype_method(asyncIterator.As<v8::Name>(), &iterable::get_async_iterator);
+            clazz.add_prototype_method("next", &iterable::next);
+
+            _initializer.Reset(isolate, clazz.get_constructor());
+        }
     }
 
-    static void weak_callback(const v8::WeakCallbackInfo<shared_iterator_status>& data) {
-        delete data.GetParameter();
+    static std::shared_ptr<iterable> constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
+        return static_cast<iterable*>(args[0].As<v8::External>()->Value())->shared_from_this();
     }
 
     std::future<void> resolve(bool                 success,
                               v8::Local<v8::Value> value,
                               bool                 done) {
-        if (_status->resolver_fulfilled) {
+        if (_resolver_fulfilled) {
             throw std::runtime_error("");
         }
 
@@ -105,18 +94,18 @@ class iterable {
         auto context = _isolate->GetCurrentContext();
 
         v8::Local<v8::Promise::Resolver> resolver;
-        _status->consume_promise = std::promise<void>();
+        _consume_promise = std::promise<void>();
 
-        if (_status->resolver.IsEmpty()) {
+        if (_resolver.IsEmpty()) {
             resolver = no::New<v8::Promise::Resolver>(context);
-            _status->resolver.Reset(_isolate, resolver);
+            _resolver.Reset(_isolate, resolver);
 
-            _status->resolver_fulfilled = true;
+            _resolver_fulfilled = true;
         } else {
-            resolver = _status->resolver.Get(_isolate);
-            _status->resolver.Reset();
+            resolver = _resolver.Get(_isolate);
+            _resolver.Reset();
 
-            _status->consume_promise.set_value();
+            _consume_promise.set_value();
         }
 
         if (success) {
@@ -132,7 +121,7 @@ class iterable {
         // force it to run, or we will stuck on waiting `_consume_promise` forever.
         _isolate->RunMicrotasks();
 
-        return _status->consume_promise.get_future();
+        return _consume_promise.get_future();
     }
 
     v8::Local<v8::Value> get_async_iterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -150,16 +139,16 @@ class iterable {
 
         v8::Local<v8::Promise::Resolver> resolver;
 
-        if (_status->resolver_fulfilled) {
-            resolver = _status->resolver.Get(isolate);
-            _status->resolver.Reset();
+        if (_resolver_fulfilled) {
+            resolver = _resolver.Get(isolate);
+            _resolver.Reset();
 
-            _status->resolver_fulfilled = false;
-            _status->consume_promise.set_value();
+            _resolver_fulfilled = false;
+            _consume_promise.set_value();
         } else {
             auto context = isolate->GetCurrentContext();
             resolver     = no::New<v8::Promise::Resolver>(context);
-            _status->resolver.Reset(isolate, resolver);
+            _resolver.Reset(isolate, resolver);
         }
 
         return resolver;
@@ -169,9 +158,14 @@ class iterable {
 
     v8::Isolate* _isolate;
 
+    v8::Global<v8::Value> _value;
+
     bool _iterator_created;
 
-    shared_iterator_status _status;
+    v8::Global<v8::Promise::Resolver> _resolver;
+    bool                              _resolver_fulfilled;
+
+    std::promise<void> _consume_promise;
 };
 
 v8::Global<v8::Function> iterable::_initializer;

@@ -74,6 +74,7 @@
                 "subversion/subversion/libsvn_subr/skel.c",
                 "subversion/subversion/libsvn_subr/sorts.c",
                 "subversion/subversion/libsvn_subr/spillbuf.c",
+                "subversion/subversion/libsvn_subr/sqlite.c",
                 "subversion/subversion/libsvn_subr/sqlite3wrapper.c",
                 "subversion/subversion/libsvn_subr/ssl_client_cert_providers.c",
                 "subversion/subversion/libsvn_subr/ssl_client_cert_pw_providers.c",
@@ -100,8 +101,7 @@
                 "subversion/subversion/libsvn_subr/win32_xlate.c",
                 "subversion/subversion/libsvn_subr/x509info.c",
                 "subversion/subversion/libsvn_subr/x509parse.c",
-                "subversion/subversion/libsvn_subr/xml.c",
-                "src/sqlite.c"
+                "subversion/subversion/libsvn_subr/xml.c"
             ],
             "conditions": [
                 [

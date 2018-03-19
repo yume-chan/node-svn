@@ -12,9 +12,19 @@ struct callable_wrapper {
 };
 
 template <class T>
-class class_builder {
-    using create_instance = std::function<T*(const v8::FunctionCallbackInfo<v8::Value>& args)>;
+struct weak_data {
+    v8::Global<v8::Value> global;
+    std::shared_ptr<T>    instance;
+};
 
+template <typename T>
+bool is_empty_weak_ptr(std::weak_ptr<T> const& weak) {
+    using wt = std::weak_ptr<T>;
+    return !weak.owner_before(wt{}) && !wt{}.owner_before(weak);
+}
+
+template <class T>
+class class_builder {
   public:
     template <class F>
     class_builder(v8::Isolate*       isolate,
@@ -57,7 +67,7 @@ class class_builder {
     template <class F>
     static v8::Local<v8::FunctionTemplate> create_template(v8::Isolate*       isolate,
                                                            const std::string& name,
-                                                           F    constructor) {
+                                                           F                  constructor) {
         auto result = no::New<v8::FunctionTemplate>(isolate,
                                                     invoke_constructor<F>,
                                                     no::New(isolate, new callable_wrapper<F>{constructor}));
@@ -85,11 +95,23 @@ class class_builder {
 
         auto constructor = static_cast<callable_wrapper<F>*>(args.Data().As<v8::External>()->Value());
         try {
-            auto result = std::invoke(constructor->value, args);
-            args.This()->SetAlignedPointerInInternalField(0, result);
+            auto instance = std::invoke(constructor->value, args);
+            args.This()->SetAlignedPointerInInternalField(0, instance.get());
+
+            auto data = new weak_data<T>();
+
+            auto global = v8::Global<v8::Value>(isolate, args.This());
+            global.SetWeak(data, weak_callback, v8::WeakCallbackType::kParameter);
+
+            data->global   = std::move(global);
+            data->instance = std::move(instance);
         } catch (...) {
             isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, "error invoking constructor").As<v8::String>()));
         }
+    }
+
+    static void weak_callback(const v8::WeakCallbackInfo<weak_data<T>>& data) {
+        delete data.GetParameter();
     }
 
     template <class F>

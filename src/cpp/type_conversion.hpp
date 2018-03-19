@@ -35,7 +35,7 @@ static svn::svn_error copy_error(svn_error_t& error) {
                           error.line);
 }
 
-static void throw_error(svn_error_t* error) {
+[[noreturn]] static void throw_error(svn_error_t* error) {
     auto purged = svn_error_purge_tracing(error);
     auto result = copy_error(*purged);
     svn_error_clear(error);

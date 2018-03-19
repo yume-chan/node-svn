@@ -7,7 +7,7 @@ class client;
 }
 
 namespace no {
-class client {
+class client : public std::enable_shared_from_this<client> {
   public:
     static void init(v8::Local<v8::Object>&  exports,
                      v8::Isolate*            isolate,
@@ -19,7 +19,7 @@ class client {
   private:
     client(v8::Isolate* isolate, const std::optional<const std::string>& config_path);
 
-    static client* create_instance(const v8::FunctionCallbackInfo<v8::Value>& args);
+    static std::shared_ptr<client> constructor(const v8::FunctionCallbackInfo<v8::Value>& args);
 
     v8::Local<v8::Value> add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args);
     v8::Local<v8::Value> remove_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args);
