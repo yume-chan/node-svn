@@ -82,9 +82,18 @@ decltype(auto) read_config(const char* path, apr_pool_t* pool) {
     return config;
 }
 
+static svn_error_t* cancel_func(void* raw_baton) {
+    auto client = static_cast<svn::client*>(raw_baton);
+    return client->invoke_abort_function() ? svn_error_create(SVN_ERR_CANCELLED, nullptr, nullptr) : nullptr;
+}
+
 namespace svn {
+bool client::_apr_initialized = false;
+
 client::client(const std::optional<const std::string>& config_path) {
-    apr_initialize();
+    if (!_apr_initialized) {
+        apr_initialize();
+    }
 
     check_result(apr_pool_create_ex(&_pool, nullptr, nullptr, nullptr));
 
@@ -120,6 +129,9 @@ client::client(const std::optional<const std::string>& config_path) {
 
     _context->notify_baton2 = this;
     _context->notify_func2  = invoke_notify;
+
+    _context->cancel_baton = this;
+    _context->cancel_func  = cancel_func;
 }
 
 client::client(client&& other)
@@ -131,7 +143,7 @@ client& client::operator=(client&& other) {
     if (this != &other) {
         if (_pool != nullptr) {
             apr_pool_destroy(_pool);
-            apr_terminate();
+            // apr_terminate();
         }
 
         _pool    = std::exchange(other._pool, nullptr);
@@ -145,6 +157,18 @@ client::~client() {
         apr_pool_destroy(_pool);
         // apr_terminate();
     }
+}
+
+void client::set_abort_function(abort_function& function) {
+    _abort_function = function;
+}
+
+void client::clear_abort_functioon() {
+    _abort_function = {};
+}
+
+bool client::invoke_abort_function() {
+    return _abort_function ? _abort_function->operator()() : false;
 }
 
 void client::add_notify_function(std::initializer_list<notify_action> actions,

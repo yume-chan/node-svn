@@ -12,8 +12,8 @@
             "include_dirs": [
                 "src"
             ],
-            "defines": [
-                "_HAS_EXCEPTIONS=1"
+            "defines!": [
+                "_HAS_EXCEPTIONS=0"
             ],
             "sources": [
                 "src/cpp/client.cpp",

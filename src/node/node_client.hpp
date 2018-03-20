@@ -16,6 +16,10 @@ class client : public std::enable_shared_from_this<client> {
     client(const client&) = delete;
     client(client&&)      = delete;
 
+    static int64_t size() {
+        return 16 * 1024;
+    }
+
   private:
     client(v8::Isolate* isolate, const std::optional<const std::string>& config_path);
 

@@ -50,11 +50,20 @@ class iterable : public std::enable_shared_from_this<iterable> {
         return _value.Get(_isolate);
     }
 
+    bool valid() const {
+        return !_iterator_released;
+    }
+
+    static int64_t size() {
+        return 0;
+    }
+
   private:
     iterable(v8::Isolate* isolate, v8::Local<v8::Context>& context)
         : _isolate(isolate)
         , _value()
         , _iterator_created(false)
+        , _iterator_released(false)
         , _resolver()
         , _resolver_fulfilled(false)
         , _consume_promise() {
@@ -70,7 +79,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
                 symbol->DefineOwnProperty(context, name_asyncIterator, asyncIterator, no::PropertyAttribute::All);
             }
 
-            class_builder<iterable> clazz(isolate, "Iterator", constructor);
+            class_builder<iterable> clazz(isolate, "Iterator", constructor, &iterable::destructor);
             clazz.add_prototype_method(asyncIterator.As<v8::Name>(), &iterable::get_async_iterator);
             clazz.add_prototype_method("next", &iterable::next);
 
@@ -82,10 +91,28 @@ class iterable : public std::enable_shared_from_this<iterable> {
         return static_cast<iterable*>(args[0].As<v8::External>()->Value())->shared_from_this();
     }
 
+    void destructor() {
+        // iterable must not die on javascript side first
+        // which means javascript has released it's reference
+        // it will stuck the worker thread forever
+
+        if (_resolver_fulfilled) {
+            _consume_promise.set_exception(std::make_exception_ptr(std::runtime_error("")));
+        }
+
+        _iterator_released = true;
+    }
+
     std::future<void> resolve(bool                 success,
                               v8::Local<v8::Value> value,
                               bool                 done) {
+        // already have a value waiting JS side to retrive
         if (_resolver_fulfilled) {
+            throw std::runtime_error("");
+        }
+
+        // JS side has released their handle, it's invalid now
+        if (_iterator_released) {
             throw std::runtime_error("");
         }
 
@@ -161,6 +188,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
     v8::Global<v8::Value> _value;
 
     bool _iterator_created;
+    bool _iterator_released;
 
     v8::Global<v8::Promise::Resolver> _resolver;
     bool                              _resolver_fulfilled;

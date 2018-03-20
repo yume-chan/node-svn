@@ -436,7 +436,8 @@ v8::Local<v8::Value> client::get_changelists(const v8::FunctionCallbackInfo<v8::
         return iterable->yield(object);
     };
 
-    auto work = [this, path, callback, depth, changelists]() -> void {
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, path, callback, depth, changelists]() -> void {
         _client->get_changelists(path,
                                  uv::make_async(callback),
                                  depth,
@@ -524,7 +525,8 @@ v8::Local<v8::Value> client::blame(const v8::FunctionCallbackInfo<v8::Value>& ar
         return iterable->yield(info);
     };
 
-    auto work = [this, path, start_revision, end_revision, callback, peg_revision]() -> void {
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, path, start_revision, end_revision, callback, peg_revision]() -> void {
         _client->blame(path,
                        start_revision,
                        end_revision,
@@ -629,7 +631,8 @@ v8::Local<v8::Value> client::commit(const v8::FunctionCallbackInfo<v8::Value>& a
     auto iterable = no::iterable::create(isolate, context);
     auto callback = convert_commit_callback(isolate, iterable);
 
-    auto work = [this, paths, message, callback]() -> void {
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, paths, message, callback]() -> void {
         _client->commit(paths, message, callback);
     };
 
@@ -685,7 +688,8 @@ v8::Local<v8::Value> client::info(const v8::FunctionCallbackInfo<v8::Value>& arg
         return iterable->yield(object);
     };
 
-    auto work = [this, path, callback, peg_revision, revision, depth]() -> void {
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, path, callback, peg_revision, revision, depth]() -> void {
         _client->info(path, uv::make_async(callback), peg_revision, revision, depth);
     };
 
@@ -734,7 +738,8 @@ v8::Local<v8::Value> client::log(const v8::FunctionCallbackInfo<v8::Value>& args
         return iterable->yield(object);
     };
 
-    auto work = [this, paths, callback, revision_ranges, limit, peg_revision]() -> void {
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, paths, callback, revision_ranges, limit, peg_revision]() -> void {
         _client->log(paths, uv::make_async(callback), revision_ranges, limit, peg_revision, false, false, false, {});
     };
 
@@ -764,7 +769,8 @@ v8::Local<v8::Value> client::remove(const v8::FunctionCallbackInfo<v8::Value>& a
     auto iterable = no::iterable::create(isolate, context);
     auto callback = convert_commit_callback(isolate, iterable);
 
-    auto work = [this, paths, callback]() -> void {
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, paths, callback]() -> void {
         _client->remove(paths, callback);
     };
 
@@ -848,7 +854,8 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
         return iterable->yield(status);
     };
 
-    auto work = [this, path, callback, revision, depth, ignore_externals]() -> void {
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, path, callback, revision, depth, ignore_externals]() -> void {
         _client->status(path, uv::make_async(callback), revision, depth, false, false, true, false, ignore_externals);
     };
 

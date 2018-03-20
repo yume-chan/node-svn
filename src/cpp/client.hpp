@@ -26,7 +26,9 @@ class client : public std::enable_shared_from_this<client> {
     using info_callback            = std::function<void(const char*, const svn::info&)>;
     using remove_callback          = std::function<void(const commit_info&)>;
     using status_callback          = std::function<void(const char*, const svn::status&)>;
-    using notify_function          = std::shared_ptr<std::function<void(const notify_info&)>>;
+
+    using abort_function  = std::function<bool()>;
+    using notify_function = std::shared_ptr<std::function<void(const notify_info&)>>;
 
     using blame_callback = std::function<void(int32_t                start_revision,
                                               int32_t                end_revision,
@@ -47,6 +49,10 @@ class client : public std::enable_shared_from_this<client> {
     client& operator=(const client&) = delete;
 
     ~client();
+
+    void set_abort_function(abort_function& function);
+    void clear_abort_functioon();
+    bool invoke_abort_function();
 
     void add_notify_function(std::initializer_list<notify_action> actions, const notify_function function);
     void remove_notify_function(std::initializer_list<notify_action> actions, const notify_function function);
@@ -193,9 +199,12 @@ class client : public std::enable_shared_from_this<client> {
     std::string get_working_copy_root(const std::string& path) const;
 
   private:
+    static bool _apr_initialized;
+
     apr_pool_t*       _pool;
     svn_client_ctx_t* _context;
 
+    std::optional<abort_function>                                     _abort_function;
     std::unordered_map<svn::notify_action, std::set<notify_function>> _notify_functions;
     std::set<simple_auth_provider>                                    _simple_auth_providers;
 };
