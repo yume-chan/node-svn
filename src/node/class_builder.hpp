@@ -34,8 +34,6 @@ struct weak_data {
 
         handle.SetWeak(this, weak_callback, v8::WeakCallbackType::kParameter);
         handle.MarkIndependent();
-
-        isolate->SetGetExternallyAllocatedMemoryInBytesCallback
     }
 
     v8::Isolate*           isolate;
