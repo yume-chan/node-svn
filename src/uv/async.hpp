@@ -6,31 +6,6 @@
 #include <uv/future.hpp>
 
 namespace uv {
-using async_handle = std::shared_ptr<uv_async_t>;
-
-static void delete_async_handle(uv_handle_t* handle) {
-    delete reinterpret_cast<uv_async_t*>(handle);
-}
-
-static void close_async_handle(uv_async_t* handle) {
-    uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async_handle);
-}
-
-static async_handle make_async_handle(uv_loop_t* loop = nullptr) {
-    auto raw = new uv_async_t();
-
-    if (!loop) {
-        loop = uv_default_loop();
-    }
-
-    check_uv_error(uv_async_init(loop, raw, nullptr));
-
-    // this handle won't keep event loop running
-    uv_unref(reinterpret_cast<uv_handle_t*>(raw));
-
-    return async_handle(raw, close_async_handle);
-}
-
 template <class F>
 struct async;
 
@@ -50,21 +25,43 @@ struct async_data {
 template <class F>
 struct async {
   public:
-    async(F&& callback)
-        : callback(std::forward<F>(callback))
-        , handle(make_async_handle()) {}
+    explicit async(F&& callback)
+        : async(std::forward<F>(callback), uv_default_loop()) {}
+
+    explicit async(F&& callback, uv_loop_t* loop)
+        : _running(false)
+        , _callback(std::forward<F>(callback)) {
+        auto raw = new uv_async_t();
+
+        if (!loop) {
+            loop = uv_default_loop();
+        }
+
+        check_uv_error(uv_async_init(loop, raw, nullptr));
+
+        // this handle won't keep event loop running
+        uv_unref(reinterpret_cast<uv_handle_t*>(raw));
+
+        _handle = async_handle(raw, close_async_handle);
+    }
 
     template <class... Arg>
-    decltype(auto) operator()(Arg&&... arg) const {
+    decltype(auto) operator()(Arg&&... arg) {
         using Result = std::invoke_result_t<F, Arg...>;
+
+        if (_running) {
+            throw std::runtime_error("");
+        }
+
+        run_scope scope(this);
 
         auto tuple  = std::forward_as_tuple(arg...);
         auto data   = async_data<F, Result, Arg...>(this, std::move(tuple));
         auto future = data.promise.get_future();
 
-        handle->data     = &data;
-        handle->async_cb = &async::invoke_async<Result, Arg...>;
-        check_uv_error(uv_async_send(handle.get()));
+        _handle->data     = &data;
+        _handle->async_cb = &async::invoke_async<Result, Arg...>;
+        check_uv_error(uv_async_send(_handle.get()));
 
         if constexpr (uv::is_future_v<Result>) {
             return future.get().get();
@@ -74,16 +71,18 @@ struct async {
     }
 
   private:
+    using async_handle = std::shared_ptr<uv_async_t>;
+
     template <class Result, class... Arg>
     static void invoke_async(uv_async_t* handle) {
         auto data = static_cast<async_data<F, Result, Arg...>*>(handle->data);
 
         try {
             if constexpr (std::is_void_v<Result>) {
-                std::apply(data->owner->callback, std::move(data->arg));
+                std::apply(data->owner->_callback, std::move(data->arg));
                 data->promise.set_value();
             } else {
-                auto result = std::apply(data->owner->callback, std::move(data->arg));
+                auto result = std::apply(data->owner->_callback, std::move(data->arg));
                 data->promise.set_value(std::move(result));
             }
         } catch (...) {
@@ -91,13 +90,37 @@ struct async {
         }
     }
 
+    static void delete_async_handle(uv_handle_t* handle) {
+        delete reinterpret_cast<uv_async_t*>(handle);
+    }
+
+    static void close_async_handle(uv_async_t* handle) {
+        uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async_handle);
+    }
+
+    bool _running;
+
+    struct run_scope {
+        run_scope(async<F>* owner)
+            : _owner(owner) {
+            _owner->_running = true;
+        }
+
+        ~run_scope() {
+            _owner->_running = false;
+        }
+
+      private:
+        async<F>* _owner;
+    };
+
     // use `std::decay_t` to ensure copy/move,
     // instead of referencing the `callback`.
-    std::decay_t<F> callback;
+    std::decay_t<F> _callback;
 
     // use a `std::shared_ptr<uv_async_t>` to
     // enable copy of `async` struct.
-    async_handle handle;
+    async_handle _handle;
 };
 
 #if !defined(_MSC_VER)
