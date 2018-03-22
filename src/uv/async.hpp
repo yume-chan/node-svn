@@ -5,6 +5,8 @@
 #include <uv/error.hpp>
 #include <uv/future.hpp>
 
+#include <iostream>
+
 namespace uv {
 template <class F>
 struct async;
@@ -37,12 +39,17 @@ struct async {
             loop = uv_default_loop();
         }
 
-        check_uv_error(uv_async_init(loop, raw, nullptr));
+        try {
+            check_result(uv_async_init(loop, raw, nullptr));
 
-        // this handle won't keep event loop running
-        uv_unref(reinterpret_cast<uv_handle_t*>(raw));
+            // this handle won't keep event loop running
+            uv_unref(reinterpret_cast<uv_handle_t*>(raw));
 
-        _handle = async_handle(raw, close_async_handle);
+            _handle = async_handle(raw, close_async_handle);
+        } catch (...) {
+            delete raw;
+            throw;
+        }
     }
 
     template <class... Arg>
@@ -61,7 +68,7 @@ struct async {
 
         _handle->data     = &data;
         _handle->async_cb = &async::invoke_async<Result, Arg...>;
-        check_uv_error(uv_async_send(_handle.get()));
+        check_result(uv_async_send(_handle.get()));
 
         if constexpr (uv::is_future_v<Result>) {
             return future.get().get();
@@ -72,6 +79,17 @@ struct async {
 
   private:
     using async_handle = std::shared_ptr<uv_async_t>;
+
+    static void close_async_handle(uv_async_t* handle) {
+        // FIXME: if there is a javascript loop keeps creating `async` handles,
+        // libuv won't have any chance to call `delete_async_handle`
+        // so this portion of memeory will temporarily leak.
+        uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async_handle);
+    }
+
+    static void delete_async_handle(uv_handle_t* handle) {
+        delete reinterpret_cast<uv_async_t*>(handle);
+    }
 
     template <class Result, class... Arg>
     static void invoke_async(uv_async_t* handle) {
@@ -88,14 +106,6 @@ struct async {
         } catch (...) {
             data->promise.set_exception(std::current_exception());
         }
-    }
-
-    static void delete_async_handle(uv_handle_t* handle) {
-        delete reinterpret_cast<uv_async_t*>(handle);
-    }
-
-    static void close_async_handle(uv_async_t* handle) {
-        uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async_handle);
     }
 
     bool _running;

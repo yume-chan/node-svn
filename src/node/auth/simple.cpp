@@ -7,7 +7,7 @@
 #include <uv/async.hpp>
 
 namespace no {
-namespace Promise {
+namespace promise {
 template <class T>
 using ThenCallback = std::function<T(v8::Isolate*, const v8::Local<v8::Value>& value)>;
 
@@ -31,7 +31,7 @@ static void invoke_callback(const v8::FunctionCallbackInfo<v8::Value>& args) {
 }
 
 template <class T>
-static std::future<T> Then(v8::Isolate*                  isolate,
+static std::future<T> then(v8::Isolate*                  isolate,
                            const v8::Local<v8::Promise>& promise,
                            ThenCallback<T>               then_callback,
                            ThenCallback<T>               catch_callback) {
@@ -92,9 +92,9 @@ static std::optional<svn::simple_auth> convert_simple_auth(v8::Isolate*         
     if (value->IsObject()) {
         auto object = value.As<v8::Object>();
         try {
-            auto username = convert_string(object->Get(no::New(isolate, "username", v8::NewStringType::kInternalized)));
-            auto password = convert_string(object->Get(no::New(isolate, "password", v8::NewStringType::kInternalized)));
-            auto may_save = object->Get(no::New(isolate, "may_save", v8::NewStringType::kInternalized))->BooleanValue();
+            auto username = convert_string(object->Get(no::NewName(isolate, "username")));
+            auto password = convert_string(object->Get(no::NewName(isolate, "password")));
+            auto may_save = object->Get(no::NewName(isolate, "may_save"))->BooleanValue();
             return svn::simple_auth(std::move(username), std::move(password), may_save);
         } catch (const svn::svn_type_error&) {
             // TODO: add warning for wrong return value type.
@@ -164,7 +164,7 @@ std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(const simple_
         auto value    = function->Call(context, undefined, argc, argv).ToLocalChecked();
         if (value->IsPromise()) {
             auto promise = value.As<v8::Promise>();
-            auto result  = no::Promise::Then<std::optional<svn::simple_auth>>(isolate, promise, convert_simple_auth, convert_simple_auth).get();
+            auto result  = no::promise::then<std::optional<svn::simple_auth>>(isolate, promise, convert_simple_auth, convert_simple_auth).get();
             if (result) {
                 return result;
             }

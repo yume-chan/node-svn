@@ -14,6 +14,7 @@
             "name": "Mocha Tests Native",
             "program": "node",
             "args": [
+                "--expose-gc",
                 "${workspaceFolder}/node_modules/mocha/bin/_mocha",
                 "-u",
                 "tdd",

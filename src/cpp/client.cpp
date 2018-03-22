@@ -9,7 +9,8 @@
 #include <svn_compat.h>
 #include <svn_path.h>
 
-#include <cpp/type_conversion.hpp>
+#include "malloc.hpp"
+#include "type_conversion.hpp"
 
 static svn_error_t* throw_on_malfunction(svn_boolean_t can_return,
                                          const char*   file,

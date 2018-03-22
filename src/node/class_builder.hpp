@@ -2,6 +2,8 @@
 
 #include <functional>
 
+#include <cpp/malloc.hpp>
+
 #include <node/error.hpp>
 #include <node/v8.hpp>
 
@@ -27,10 +29,7 @@ struct weak_data {
         , handle(v8::Global<v8::Object>(isolate, value))
         , instance(instance)
         , destructor(destructor) {
-        // report a much higher value to make
-        // v8 collect more frequently
-        size = 128 * (sizeof(this) + sizeof(T) + T::size());
-        isolate->AdjustAmountOfExternalAllocatedMemory(size);
+        isolate->AdjustAmountOfExternalAllocatedMemory(10 * memory_delta.exchange(0));
 
         handle.SetWeak(this, weak_callback, v8::WeakCallbackType::kParameter);
         handle.MarkIndependent();
@@ -40,17 +39,15 @@ struct weak_data {
     v8::Global<v8::Object> handle;
     std::shared_ptr<T>     instance;
     F                      destructor;
-    int64_t                size;
-
-    ~weak_data() {
-        isolate->AdjustAmountOfExternalAllocatedMemory(-size);
-    }
 
   private:
     static void weak_callback(const v8::WeakCallbackInfo<weak_data<T, F>>& info) {
         auto data = info.GetParameter();
         std::invoke(data->destructor, data->instance.get());
         delete data;
+
+        auto isolate = info.GetIsolate();
+        isolate->AdjustAmountOfExternalAllocatedMemory(10 * memory_delta.exchange(0));
     }
 };
 

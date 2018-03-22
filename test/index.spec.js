@@ -90,11 +90,20 @@ describe("svn.node", () => {
         // `status()` runs asynchronously
         // here it's testing threading safety
         const tasks = [];
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < 20; i++) {
             const client = new svn.Client(config);
             tasks.push(async_iterate(client.status(repository), () => { }));
         }
         await Promise.all(tasks);
+    });
+
+    it("memory leak", async function() {
+        this.skip();
+        this.timeout(0);
+
+        while (true) {
+            new svn.Client(config);
+        }
     });
 
     it("commit", async function() {

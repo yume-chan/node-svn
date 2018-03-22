@@ -13,7 +13,7 @@ class work {
         : do_work(std::move(do_work))
         , after_work(std::move(after_work)) {
         uv_work.data = this;
-        check_uv_error(uv_queue_work(uv_default_loop(), &uv_work, invoke_work, invoke_after_work));
+        check_result(uv_queue_work(uv_default_loop(), &uv_work, invoke_work, invoke_after_work));
     }
 
   private:
