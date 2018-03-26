@@ -132,7 +132,7 @@ void simple_auth_provider::remove(const v8::Local<v8::Function>& function) {
     auto context = _isolate->GetCurrentContext();
 
     auto functions = _functions.Get(_isolate);
-    functions->Delete(context, function);
+    no::check_result(functions->Delete(context, function));
 }
 
 std::optional<svn::simple_auth> simple_auth_provider::operator()(const std::string&                      realm,

@@ -173,4 +173,14 @@ static v8::Local<v8::Number> New(v8::Isolate* isolate, double value) {
 static v8::Local<v8::External> New(v8::Isolate* isolate, void* value) {
     return v8::External::New(isolate, value);
 }
+
+static void check_result(v8::Maybe<bool> value) {
+    if (value.IsNothing()) {
+        throw std::runtime_error("");
+    }
+
+    if (!value.ToChecked()) {
+        throw std::runtime_error("");
+    }
+}
 } // namespace no

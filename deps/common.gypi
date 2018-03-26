@@ -7,14 +7,17 @@
             "-Wextra"
         ],
         "cflags": [
-            "-Wno-all",
-            "-Wno-extra"
+            "-w"
         ],
         "xcode_settings": {
             "WARNING_CFLAGS!": [
                 "-Wall",
                 "-Wendif-labels",
-                "-W"
+                "-W",
+                "-Wno-unused-parameter"
+            ],
+            "WARNING_CFLAGS": [
+                "-w"
             ]
         },
         "msvs_settings": {

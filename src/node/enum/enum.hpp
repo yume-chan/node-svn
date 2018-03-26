@@ -6,14 +6,14 @@
     {                                                                                                        \
         auto key   = no::NewName(isolate, #name);                                                            \
         auto value = static_cast<int32_t>(prefix::name);                                                     \
-        target->DefineOwnProperty(context,                                                                   \
+        no::check_result(target->DefineOwnProperty(context,                                                  \
                                   key,                                                                       \
                                   no::New(isolate, value),                                                   \
-                                  no::PropertyAttribute::ReadOnlyDontDelete);                                \
-        target->DefineOwnProperty(context,                                                                   \
+                                  no::PropertyAttribute::ReadOnlyDontDelete));                               \
+        no::check_result(target->DefineOwnProperty(context,                                                  \
                                   no::New(isolate, std::to_string(value), v8::NewStringType::kInternalized), \
                                   key,                                                                       \
-                                  no::PropertyAttribute::ReadOnlyDontDelete);                                \
+                                  no::PropertyAttribute::ReadOnlyDontDelete));                               \
     }
 
 #define SET_READONLY(object, name, value)                   \

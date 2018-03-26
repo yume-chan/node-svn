@@ -7,16 +7,6 @@
 #include <uv/async.hpp>
 
 namespace no {
-static void check_result(v8::Maybe<bool> value) {
-    if (value.IsNothing()) {
-        throw std::runtime_error("empty");
-    }
-
-    if (!value.ToChecked()) {
-        throw std::runtime_error("false");
-    }
-}
-
 class iterable : public std::enable_shared_from_this<iterable> {
   public:
     static std::shared_ptr<iterable> create(v8::Isolate* isolate, v8::Local<v8::Context>& context) {
@@ -72,7 +62,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
 
             // polyfill Symbol.asyncIterator
             auto symbol        = context->Global()->Get(no::NewName(isolate, "Symbol")).As<v8::Object>();
-            auto asyncIterator = symbol->Get(context, name_asyncIterator).ToLocalChecked().As<v8::Symbol>();
+            auto asyncIterator = symbol->Get(context, name_asyncIterator).ToLocalChecked();
 
             if (asyncIterator->IsUndefined()) {
                 asyncIterator = v8::Symbol::New(isolate, no::NewName(isolate, "Symbol.asyncIterator"));

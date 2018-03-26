@@ -5,15 +5,35 @@
             "includePath": [
                 "/usr/include",
                 "/usr/local/include",
-                "${workspaceRoot}"
+                "/usr/include/c++/4.2.1",
+                "/usr/local/include/c++/7.3.0",
+                "${workspaceRoot}/deps/apr/include/unix",
+                "${workspaceRoot}/deps/apr/include/unix/private",
+                "${workspaceRoot}/deps/apr/apr/include",
+                "${workspaceRoot}/deps/apr/apr/include/private",
+                "${workspaceRoot}/deps/apr/apr/include/arch/unix",
+                "${workspaceRoot}/deps/subversion/sqlite-amalgamation",
+                "${workspaceRoot}/deps/subversion/subversion/subversion/include",
+                "${workspaceRoot}/src"
             ],
-            "defines": [],
+            "defines": [
+                "__GLIBC__"
+            ],
             "intelliSenseMode": "clang-x64",
             "browse": {
                 "path": [
                     "/usr/include",
                     "/usr/local/include",
-                    "${workspaceRoot}"
+                    "/usr/local/include/c++/7.3.0",
+                    "/usr/include/c++/4.2.1",
+                    "${workspaceRoot}/deps/apr/include/unix",
+                    "${workspaceRoot}/deps/apr/include/unix/private",
+                    "${workspaceRoot}/deps/apr/apr/include",
+                    "${workspaceRoot}/deps/apr/apr/include/private",
+                    "${workspaceRoot}/deps/apr/apr/include/arch/unix",
+                    "${workspaceRoot}/deps/subversion/sqlite-amalgamation",
+                    "${workspaceRoot}/deps/subversion/subversion/subversion/include",
+                    "${workspaceRoot}/src"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""

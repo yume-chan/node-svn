@@ -1,14 +1,10 @@
 #include "malloc.hpp"
 
-#include <stdio.h>
+std::atomic_int64_t memory_delta = 0;
 
 extern "C" {
 
-std::atomic_int64_t memory_delta = 0;
-
 #if defined(__GLIBC__)
-
-#include <stddef.h>
 
 extern void* __malloc(size_t size);
 extern void* __realloc(void* block, size_t new_size);

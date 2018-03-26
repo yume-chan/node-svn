@@ -42,7 +42,7 @@
             "xcode_settings": {
                 "GCC_ENABLE_CPP_EXCEPTIONS": "YES",
                 "CLANG_CXX_LANGUAGE_STANDARD": "gnu++17",
-                "MACOSX_DEPLOYMENT_TARGET": "10.7",
+                "MACOSX_DEPLOYMENT_TARGET": "10.13",
                 "OTHER_LDFLAGS": [
                     "-static-libstdc++",
                     "-static-libgcc"
@@ -66,6 +66,11 @@
                         "libraries": [
                             "ws2_32.lib",
                             "Mincore.lib"
+                        ]
+                    },
+                    {
+                        "libraries": [
+                            "-liconv"
                         ]
                     }
                 ]
