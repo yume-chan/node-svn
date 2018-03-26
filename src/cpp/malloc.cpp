@@ -1,10 +1,12 @@
 #include "malloc.hpp"
 
-std::atomic_int64_t memory_delta = 0;
+atomic_counter<int64_t> memory_delta;
 
 extern "C" {
 
 #if defined(__GLIBC__)
+
+#include <malloc.h>
 
 extern void* __malloc(size_t size);
 extern void* __realloc(void* block, size_t new_size);

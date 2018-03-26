@@ -29,7 +29,7 @@ struct weak_data {
         , handle(v8::Global<v8::Object>(isolate, value))
         , instance(instance)
         , destructor(destructor) {
-        isolate->AdjustAmountOfExternalAllocatedMemory(10 * memory_delta.exchange(0));
+        isolate->AdjustAmountOfExternalAllocatedMemory(10 * memory_delta.reset());
 
         handle.SetWeak(this, weak_callback, v8::WeakCallbackType::kParameter);
         handle.MarkIndependent();
@@ -47,7 +47,7 @@ struct weak_data {
         delete data;
 
         auto isolate = info.GetIsolate();
-        isolate->AdjustAmountOfExternalAllocatedMemory(10 * memory_delta.exchange(0));
+        isolate->AdjustAmountOfExternalAllocatedMemory(10 * memory_delta.reset());
     }
 };
 

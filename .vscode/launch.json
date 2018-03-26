@@ -11,10 +11,9 @@
         {
             "type": "cppvsdbg",
             "request": "launch",
-            "name": "Mocha Tests Native",
+            "name": "Windows Native",
             "program": "node",
             "args": [
-                "--expose-gc",
                 "${workspaceFolder}/node_modules/mocha/bin/_mocha",
                 "-u",
                 "tdd",
@@ -46,6 +45,25 @@
                 "${workspaceFolder}/test"
             ],
             "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "macOS Native",
+            "program": "/usr/local/bin/node",
+            "externalConsole": true,
+            "internalConsoleOptions": "openOnSessionStart",
+            "MIMode": "lldb",
+            "args": [
+                "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+                "-u",
+                "tdd",
+                "--timeout",
+                "999999",
+                "--colors",
+                "${workspaceFolder}/test"
+            ],
+            "cwd": "${workspaceRoot}"
         }
     ],
     "version": "0.2.0"

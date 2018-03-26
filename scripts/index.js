@@ -1,6 +1,6 @@
 const list = [
-    "../build/Debug/svn.node",
     "../build/Release/svn.node",
+    "../build/Debug/svn.node",
 ];
 
 (function() {

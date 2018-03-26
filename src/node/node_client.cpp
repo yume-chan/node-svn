@@ -54,11 +54,8 @@
 #define CAPTURE_EXPEND(n, ...) CAPTURE_N(n, __VA_ARGS__)
 #define CAPTURE(...) CAPTURE_EXPEND(NUM_ARGS(__VA_ARGS__), __VA_ARGS__)
 
-#define ASYNC_BEGIN(result, ...) \
-    auto _Work = [CAPTURE(__VA_ARGS__) this]() -> result {
-
-#define ASYNC_RETURN(value) \
-    return value;
+#define ASYNC_BEGIN(...) \
+    auto _Work = [CAPTURE(__VA_ARGS__) this]() -> auto {
 
 #define ASYNC_END(...)                                                                                                                      \
     };                                                                                                                                      \
@@ -74,15 +71,15 @@
 #define ASYNC_RESULT \
     _Future.get()
 
-#define METHOD_RETURN(value)                                      \
-                _Resolver->Resolve(context, value);               \
-            REPORT_ERROR;                                         \
-        };                                                        \
-                                                                  \
-        uv::queue_work(std::move(_Work), std::move(_After_work)); \
-    REPORT_ERROR;                                                 \
-                                                                  \
-    return _Resolver;                                             \
+#define METHOD_RETURN(value)                                          \
+                no::check_result(_Resolver->Resolve(context, value)); \
+            REPORT_ERROR;                                             \
+        };                                                            \
+                                                                      \
+        uv::queue_work(std::move(_Work), std::move(_After_work));     \
+    REPORT_ERROR;                                                     \
+                                                                      \
+    return _Resolver;                                                 \
 }
 
 // clang-format on
@@ -311,10 +308,10 @@ static v8::Local<v8::Object> buffer_from_vector(v8::Isolate* isolate, std::vecto
 #define STRINGIFY(X) STRINGIFY_INTERNAL(X)
 
 #define SET_READ_ONLY(object, name, value)                  \
-    (object)->DefineOwnProperty(context,                    \
+    no::check_result((object)->DefineOwnProperty(context,   \
                                 no::NewName(isolate, name), \
                                 value,                      \
-                                no::PropertyAttribute::ReadOnlyDontDelete)
+                                no::PropertyAttribute::ReadOnlyDontDelete))
 
 #define CONVERT_OPTIONS_AND_CALLBACK(index)                \
     v8::Local<v8::Object>   options;                       \
@@ -375,7 +372,6 @@ std::shared_ptr<client> client::constructor(const v8::FunctionCallbackInfo<v8::V
 
 v8::Local<v8::Value> client::add_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
-    auto context = isolate->GetCurrentContext();
 
     if (!args[0]->IsFunction()) {
         isolate->ThrowException(v8::Exception::TypeError(v8::String::Empty(isolate)));
@@ -388,7 +384,6 @@ v8::Local<v8::Value> client::add_simple_auth_provider(const v8::FunctionCallback
 
 v8::Local<v8::Value> client::remove_simple_auth_provider(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
-    auto context = isolate->GetCurrentContext();
 
     if (!args[0]->IsFunction()) {
         isolate->ThrowException(v8::Exception::TypeError(v8::String::Empty(isolate)));
@@ -407,7 +402,7 @@ METHOD_BEGIN(add_to_changelist)
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
     auto changelists = convert_array(isolate, options, "changelists");
 
-    ASYNC_BEGIN(void, paths, changelist, depth, changelists)
+    ASYNC_BEGIN(paths, changelist, depth, changelists)
         _client->add_to_changelist(paths, changelist, depth, changelists);
     ASYNC_END()
 
@@ -468,7 +463,7 @@ METHOD_BEGIN(remove_from_changelists)
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
     auto changelists = convert_array(isolate, options, "changelists");
 
-    ASYNC_BEGIN(void, paths, depth, changelists)
+    ASYNC_BEGIN(paths, depth, changelists)
         _client->remove_from_changelists(paths, depth, changelists);
     ASYNC_END()
 
@@ -481,7 +476,7 @@ METHOD_BEGIN(add)
     auto options = convert_options(args[1]);
     auto depth   = convert_depth(isolate, options, "depth", svn::depth::infinity);
 
-    ASYNC_BEGIN(void, path, depth)
+    ASYNC_BEGIN(path, depth)
         _client->add(path, depth);
     ASYNC_END()
 
@@ -511,7 +506,6 @@ v8::Local<v8::Value> client::blame(const v8::FunctionCallbackInfo<v8::Value>& ar
                                         bool                   local_change) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
-        auto context = isolate->GetCurrentContext();
         auto info    = no::New<v8::Object>(isolate);
         info->Set(no::NewName(isolate, "start_revision"), no::New(isolate, start_revision));
         info->Set(no::NewName(isolate, "end_revision"), no::New(isolate, end_revision));
@@ -559,8 +553,8 @@ METHOD_BEGIN(cat)
     auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
     auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::unspecified);
 
-    ASYNC_BEGIN(svn::cat_result, path, peg_revision, revision)
-        ASYNC_RETURN(_client->cat(path, peg_revision, revision));
+    ASYNC_BEGIN(path, peg_revision, revision)
+        return _client->cat(path, peg_revision, revision);
     ASYNC_END()
 
     auto raw_result = ASYNC_RESULT;
@@ -585,8 +579,8 @@ METHOD_BEGIN(checkout)
     auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::head);
     auto depth        = convert_depth(isolate, options, "depth", svn::depth::infinity);
 
-    ASYNC_BEGIN(int32_t, url, path, peg_revision, revision, depth)
-        ASYNC_RETURN(_client->checkout(url, path, peg_revision, revision, depth));
+    ASYNC_BEGIN(url, path, peg_revision, revision, depth)
+        return _client->checkout(url, path, peg_revision, revision, depth);
     ASYNC_END()
 
     auto result = ASYNC_RESULT;
@@ -595,7 +589,7 @@ METHOD_RETURN(no::New(isolate, result))
 METHOD_BEGIN(cleanup)
     auto path = convert_string(args[0]);
 
-    ASYNC_BEGIN(void, path)
+    ASYNC_BEGIN(path)
         _client->cleanup(path, true, true, true, true, true);
     ASYNC_END()
 
@@ -724,7 +718,6 @@ v8::Local<v8::Value> client::log(const v8::FunctionCallbackInfo<v8::Value>& args
     auto callback = [isolate, iterable](svn::log_entry& entry) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
-        auto context = isolate->GetCurrentContext();
         auto object  = no::New<v8::Object>(isolate);
         object->Set(no::NewName(isolate, "revision"), no::New(isolate, entry.revision));
         object->Set(no::NewName(isolate, "non_inheritable"), no::New(isolate, entry.non_inheritable));
@@ -792,7 +785,7 @@ v8::Local<v8::Value> client::remove(const v8::FunctionCallbackInfo<v8::Value>& a
 METHOD_BEGIN(resolve)
     auto path = convert_string(args[0]);
 
-    ASYNC_BEGIN(void, path)
+    ASYNC_BEGIN(path)
         _client->resolve(path);
     ASYNC_END()
 
@@ -802,7 +795,7 @@ METHOD_RETURN(v8::Undefined(isolate));
 METHOD_BEGIN(revert)
     auto paths = convert_array(args[0], false);
 
-    ASYNC_BEGIN(void, paths)
+    ASYNC_BEGIN(paths)
         _client->revert(paths);
     ASYNC_END()
 
@@ -878,8 +871,8 @@ METHOD_BEGIN(update)
     auto paths  = convert_array(args[0], false);
     auto single = args[0]->IsString();
 
-    ASYNC_BEGIN(std::vector<int32_t>, paths)
-        ASYNC_RETURN(_client->update(paths));
+    ASYNC_BEGIN(paths)
+        return _client->update(paths);
     ASYNC_END(single)
 
     v8::Local<v8::Value> result;
@@ -898,8 +891,8 @@ METHOD_RETURN(result);
 METHOD_BEGIN(get_working_copy_root)
     auto path = convert_string(args[0]);
 
-    ASYNC_BEGIN(std::string, path)
-        ASYNC_RETURN(_client->get_working_copy_root(path));
+    ASYNC_BEGIN(path)
+        return _client->get_working_copy_root(path);
     ASYNC_END()
 
     auto result = no::New(isolate, ASYNC_RESULT);

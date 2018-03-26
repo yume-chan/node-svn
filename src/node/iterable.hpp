@@ -66,7 +66,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
 
             if (asyncIterator->IsUndefined()) {
                 asyncIterator = v8::Symbol::New(isolate, no::NewName(isolate, "Symbol.asyncIterator"));
-                symbol->DefineOwnProperty(context, name_asyncIterator, asyncIterator, no::PropertyAttribute::All);
+                no::check_result(symbol->DefineOwnProperty(context, name_asyncIterator, asyncIterator, no::PropertyAttribute::All));
             }
 
             class_builder<iterable> clazz(isolate, "Iterator", constructor, &iterable::destructor);
