@@ -24,7 +24,7 @@ static decltype(auto) create_pool(apr_pool_t* parent) {
     apr_pool_t* result;
     check_result(apr_pool_create_ex(&result, parent, nullptr, nullptr));
 
-    return std::unique_ptr<apr_pool_t, void (*)(apr_pool_t*)>(result, apr_pool_destroy);
+    return std::unique_ptr<apr_pool_t, decltype(&apr_pool_destroy)>(result, apr_pool_destroy);
 }
 
 template <class T>
