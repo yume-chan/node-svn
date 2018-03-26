@@ -95,7 +95,7 @@ static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, const svn::svn_erro
     error->Set(no::NewName(isolate, "file"), no::New(isolate, raw_error.file));
     error->Set(no::NewName(isolate, "line"), no::New(isolate, raw_error.line));
     if (raw_error.child != nullptr)
-        error.As<v8::Object>()->Set(no::New(isolate, "child", v8::NewStringType::kInternalized), copy_error(isolate, *raw_error.child));
+        error.As<v8::Object>()->Set(no::NewName(isolate, "child"), copy_error(isolate, *raw_error.child));
     return error;
 }
 
@@ -170,7 +170,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
 
     if (value->IsObject()) {
         auto object = value.As<v8::Object>();
-        auto number = object->Get(no::New(isolate, "number", v8::NewStringType::kInternalized));
+        auto number = object->Get(no::NewName(isolate, "number"));
         if (!number->IsUndefined()) {
             if (!number->IsNumber())
                 throw no::type_error("");
@@ -178,7 +178,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
             return svn::revision(number->Int32Value());
         }
 
-        auto date = object->Get(no::New(isolate, "date", v8::NewStringType::kInternalized));
+        auto date = object->Get(no::NewName(isolate, "date"));
         if (!date->IsUndefined()) {
             if (!date->IsNumber())
                 throw no::type_error("");
@@ -430,8 +430,8 @@ v8::Local<v8::Value> client::get_changelists(const v8::FunctionCallbackInfo<v8::
         v8::HandleScope scope(isolate);
 
         auto object = no::New<v8::Object>(isolate);
-        object->Set(no::New(isolate, "path", v8::NewStringType::kInternalized), no::New(isolate, path));
-        object->Set(no::New(isolate, "changelist", v8::NewStringType::kInternalized), no::New(isolate, changelist));
+        object->Set(no::NewName(isolate, "path"), no::New(isolate, path));
+        object->Set(no::NewName(isolate, "changelist"), no::New(isolate, changelist));
 
         return iterable->yield(object);
     };
@@ -513,14 +513,14 @@ v8::Local<v8::Value> client::blame(const v8::FunctionCallbackInfo<v8::Value>& ar
 
         auto context = isolate->GetCurrentContext();
         auto info    = no::New<v8::Object>(isolate);
-        info->Set(no::New(isolate, "start_revision", v8::NewStringType::kInternalized), no::New(isolate, start_revision));
-        info->Set(no::New(isolate, "end_revision", v8::NewStringType::kInternalized), no::New(isolate, end_revision));
-        info->Set(no::New(isolate, "line_number", v8::NewStringType::kInternalized), no::New(isolate, line_number));
-        info->Set(no::New(isolate, "revision", v8::NewStringType::kInternalized), no::New(isolate, revision));
-        info->Set(no::New(isolate, "merged_revision", v8::NewStringType::kInternalized), no::New(isolate, merged_revision));
-        info->Set(no::New(isolate, "merged_path", v8::NewStringType::kInternalized), no::New(isolate, merged_path));
-        info->Set(no::New(isolate, "line", v8::NewStringType::kInternalized), no::New(isolate, line));
-        info->Set(no::New(isolate, "local_change", v8::NewStringType::kInternalized), no::New(isolate, local_change));
+        info->Set(no::NewName(isolate, "start_revision"), no::New(isolate, start_revision));
+        info->Set(no::NewName(isolate, "end_revision"), no::New(isolate, end_revision));
+        info->Set(no::NewName(isolate, "line_number"), no::New(isolate, line_number));
+        info->Set(no::NewName(isolate, "revision"), no::New(isolate, revision));
+        info->Set(no::NewName(isolate, "merged_revision"), no::New(isolate, merged_revision));
+        info->Set(no::NewName(isolate, "merged_path"), no::New(isolate, merged_path));
+        info->Set(no::NewName(isolate, "line"), no::New(isolate, line));
+        info->Set(no::NewName(isolate, "local_change"), no::New(isolate, local_change));
 
         return iterable->yield(info);
     };
@@ -566,13 +566,13 @@ METHOD_BEGIN(cat)
     auto raw_result = ASYNC_RESULT;
 
     auto result = no::New<v8::Object>(isolate);
-    result->Set(no::New(isolate, "content", v8::NewStringType::kInternalized), buffer_from_vector(isolate, raw_result.content));
+    result->Set(no::NewName(isolate, "content"), buffer_from_vector(isolate, raw_result.content));
 
     auto properties = no::New<v8::Object>(isolate);
     for (auto pair : raw_result.properties) {
         properties->Set(no::New(isolate, pair.first), no::New(isolate, pair.second));
     }
-    result->Set(no::New(isolate, "properties", v8::NewStringType::kInternalized), properties);
+    result->Set(no::NewName(isolate, "properties"), properties);
 
 METHOD_RETURN(result)
 
@@ -607,13 +607,11 @@ static decltype(auto) convert_commit_callback(v8::Isolate* isolate, std::shared_
         v8::HandleScope scope(isolate);
 
         auto info = no::New<v8::Object>(isolate);
-        info->Set(no::New(isolate, "author", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.author));
-        info->Set(no::New(isolate, "date", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.date));
-        info->Set(no::New(isolate, "repos_root", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.repos_root));
-        info->Set(no::New(isolate, "revision", v8::NewStringType::kInternalized), no::New(isolate, raw_commit.revision));
-
-        auto value = no::New(isolate, raw_commit.post_commit_error);
-        info->Set(no::New(isolate, "post_commit_error", v8::NewStringType::kInternalized), value);
+        info->Set(no::NewName(isolate, "author"), no::New(isolate, raw_commit.author));
+        info->Set(no::NewName(isolate, "date"), no::New(isolate, raw_commit.date));
+        info->Set(no::NewName(isolate, "repos_root"), no::New(isolate, raw_commit.repos_root));
+        info->Set(no::NewName(isolate, "revision"), no::New(isolate, raw_commit.revision));
+        info->Set(no::NewName(isolate, "post_commit_error"), no::New(isolate, raw_commit.post_commit_error));
 
         return iterable->yield(info);
     };
@@ -676,14 +674,14 @@ v8::Local<v8::Value> client::info(const v8::FunctionCallbackInfo<v8::Value>& arg
 
         auto context = isolate->GetCurrentContext();
         auto object  = no::New<v8::Object>(isolate);
-        object->Set(no::New(isolate, "path", v8::NewStringType::kInternalized), no::New(isolate, path));
-        object->Set(no::New(isolate, "kind", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_info.kind)));
-        object->Set(no::New(isolate, "last_changed_author", v8::NewStringType::kInternalized), no::New(isolate, raw_info.last_changed_author));
-        object->Set(no::New(isolate, "last_changed_date", v8::NewStringType::kInternalized), convert_to_date(context, raw_info.last_changed_date));
-        object->Set(no::New(isolate, "last_changed_rev", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_info.last_changed_rev)));
-        object->Set(no::New(isolate, "repos_root_url", v8::NewStringType::kInternalized), no::New(isolate, raw_info.repos_root_url));
-        object->Set(no::New(isolate, "repos_root_uuid", v8::NewStringType::kInternalized), no::New(isolate, raw_info.repos_uuid));
-        object->Set(no::New(isolate, "url", v8::NewStringType::kInternalized), no::New(isolate, raw_info.url));
+        object->Set(no::NewName(isolate, "path"), no::New(isolate, path));
+        object->Set(no::NewName(isolate, "kind"), no::New(isolate, static_cast<int32_t>(raw_info.kind)));
+        object->Set(no::NewName(isolate, "last_changed_author"), no::New(isolate, raw_info.last_changed_author));
+        object->Set(no::NewName(isolate, "last_changed_date"), convert_to_date(context, raw_info.last_changed_date));
+        object->Set(no::NewName(isolate, "last_changed_revision"), no::New(isolate, static_cast<int32_t>(raw_info.last_changed_revision)));
+        object->Set(no::NewName(isolate, "repos_root_url"), no::New(isolate, raw_info.repos_root_url));
+        object->Set(no::NewName(isolate, "repos_root_uuid"), no::New(isolate, raw_info.repos_uuid));
+        object->Set(no::NewName(isolate, "url"), no::New(isolate, raw_info.url));
 
         return iterable->yield(object);
     };
@@ -728,12 +726,12 @@ v8::Local<v8::Value> client::log(const v8::FunctionCallbackInfo<v8::Value>& args
 
         auto context = isolate->GetCurrentContext();
         auto object  = no::New<v8::Object>(isolate);
-        object->Set(no::New(isolate, "revision", v8::NewStringType::kInternalized), no::New(isolate, entry.revision));
-        object->Set(no::New(isolate, "non_inheritable", v8::NewStringType::kInternalized), no::New(isolate, entry.non_inheritable));
-        object->Set(no::New(isolate, "subtractive_merge", v8::NewStringType::kInternalized), no::New(isolate, entry.subtractive_merge));
-        object->Set(no::New(isolate, "author", v8::NewStringType::kInternalized), no::New(isolate, entry.author));
-        object->Set(no::New(isolate, "date", v8::NewStringType::kInternalized), no::New(isolate, entry.date));
-        object->Set(no::New(isolate, "message", v8::NewStringType::kInternalized), no::New(isolate, entry.message));
+        object->Set(no::NewName(isolate, "revision"), no::New(isolate, entry.revision));
+        object->Set(no::NewName(isolate, "non_inheritable"), no::New(isolate, entry.non_inheritable));
+        object->Set(no::NewName(isolate, "subtractive_merge"), no::New(isolate, entry.subtractive_merge));
+        object->Set(no::NewName(isolate, "author"), no::New(isolate, entry.author));
+        object->Set(no::NewName(isolate, "date"), no::New(isolate, entry.date));
+        object->Set(no::NewName(isolate, "message"), no::New(isolate, entry.message));
 
         return iterable->yield(object);
     };
@@ -835,21 +833,21 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
         auto context = isolate->GetCurrentContext();
 
         auto status = no::New<v8::Object>(isolate);
-        status->Set(no::New(isolate, "path", v8::NewStringType::kInternalized), no::New(isolate, path));
-        status->Set(no::New(isolate, "changelist", v8::NewStringType::kInternalized), copy_string(isolate, raw_status.changelist));
-        status->Set(no::New(isolate, "changed_author", v8::NewStringType::kInternalized), copy_string(isolate, raw_status.changed_author));
-        status->Set(no::New(isolate, "changed_date", v8::NewStringType::kInternalized), convert_to_date(context, raw_status.changed_date));
-        status->Set(no::New(isolate, "changed_rev", v8::NewStringType::kInternalized), no::New(isolate, raw_status.changed_rev));
-        status->Set(no::New(isolate, "conflicted", v8::NewStringType::kInternalized), no::New(isolate, raw_status.conflicted));
-        status->Set(no::New(isolate, "copied", v8::NewStringType::kInternalized), no::New(isolate, raw_status.copied));
-        status->Set(no::New(isolate, "depth", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_status.node_depth)));
-        status->Set(no::New(isolate, "file_external", v8::NewStringType::kInternalized), no::New(isolate, raw_status.file_external));
-        status->Set(no::New(isolate, "kind", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_status.kind)));
-        status->Set(no::New(isolate, "node_status", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_status.node_status)));
-        status->Set(no::New(isolate, "prop_status", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_status.prop_status)));
-        status->Set(no::New(isolate, "revision", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_status.revision)));
-        status->Set(no::New(isolate, "text_status", v8::NewStringType::kInternalized), no::New(isolate, static_cast<int32_t>(raw_status.text_status)));
-        status->Set(no::New(isolate, "versioned", v8::NewStringType::kInternalized), no::New(isolate, raw_status.versioned));
+        status->Set(no::NewName(isolate, "path"), no::New(isolate, path));
+        status->Set(no::NewName(isolate, "changelist"), copy_string(isolate, raw_status.changelist));
+        status->Set(no::NewName(isolate, "changed_author"), copy_string(isolate, raw_status.changed_author));
+        status->Set(no::NewName(isolate, "changed_date"), convert_to_date(context, raw_status.changed_date));
+        status->Set(no::NewName(isolate, "changed_rev"), no::New(isolate, raw_status.changed_rev));
+        status->Set(no::NewName(isolate, "conflicted"), no::New(isolate, raw_status.conflicted));
+        status->Set(no::NewName(isolate, "copied"), no::New(isolate, raw_status.copied));
+        status->Set(no::NewName(isolate, "depth"), no::New(isolate, static_cast<int32_t>(raw_status.node_depth)));
+        status->Set(no::NewName(isolate, "file_external"), no::New(isolate, raw_status.file_external));
+        status->Set(no::NewName(isolate, "kind"), no::New(isolate, static_cast<int32_t>(raw_status.kind)));
+        status->Set(no::NewName(isolate, "node_status"), no::New(isolate, static_cast<int32_t>(raw_status.node_status)));
+        status->Set(no::NewName(isolate, "prop_status"), no::New(isolate, static_cast<int32_t>(raw_status.prop_status)));
+        status->Set(no::NewName(isolate, "revision"), no::New(isolate, static_cast<int32_t>(raw_status.revision)));
+        status->Set(no::NewName(isolate, "text_status"), no::New(isolate, static_cast<int32_t>(raw_status.text_status)));
+        status->Set(no::NewName(isolate, "versioned"), no::New(isolate, raw_status.versioned));
 
         return iterable->yield(status);
     };

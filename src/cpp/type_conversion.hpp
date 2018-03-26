@@ -171,13 +171,6 @@ static std::optional<int32_t> convert_to_revision_number(svn_revnum_t value) {
     return {};
 }
 
-static std::optional<std::string> convert_to_string(const char* value) {
-    if (value)
-        return value;
-
-    return {};
-}
-
 static std::optional<svn::lock> convert_to_lock(const svn_lock_t* raw) {
     if (raw == nullptr)
         return {};
@@ -212,8 +205,8 @@ static svn::status convert_to_status(const svn_client_status_t* raw) {
         raw->repos_root_url,
         raw->repos_uuid,
         raw->repos_relpath,
-        raw->revision,
-        raw->changed_rev,
+        static_cast<int32_t>(raw->revision),
+        static_cast<int32_t>(raw->changed_rev),
         raw->changed_date,
         raw->changed_author,
         static_cast<bool>(raw->switched),
@@ -226,7 +219,7 @@ static svn::status convert_to_status(const svn_client_status_t* raw) {
         static_cast<svn::status_kind>(raw->repos_text_status),
         static_cast<svn::status_kind>(raw->repos_prop_status),
         convert_to_lock(raw->repos_lock),
-        raw->ood_changed_rev,
+        static_cast<int32_t>(raw->ood_changed_rev),
         raw->ood_changed_date,
         raw->ood_changed_author,
         raw->moved_from_abspath,
@@ -248,7 +241,7 @@ static std::optional<svn::working_copy_info> convert_to_working_copy_info(const 
 
     return svn::working_copy_info{
         raw->copyfrom_url,
-        raw->copyfrom_rev,
+        static_cast<int32_t>(raw->copyfrom_rev),
         convert_to_checksum(raw->checksum),
         raw->changelist,
         static_cast<svn::depth>(raw->depth),
@@ -265,12 +258,12 @@ static svn::info convert_to_info(const svn_client_info2_t* raw) {
 
     return svn::info{
         raw->URL,
-        raw->rev,
+        static_cast<int32_t>(raw->rev),
         raw->repos_root_URL,
         raw->repos_UUID,
         static_cast<svn::node_kind>(raw->kind),
         raw->size,
-        raw->last_changed_rev,
+        static_cast<int32_t>(raw->last_changed_rev),
         raw->last_changed_date,
         raw->last_changed_author,
         convert_to_lock(raw->lock),

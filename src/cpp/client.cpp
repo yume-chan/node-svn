@@ -20,11 +20,11 @@ static svn_error_t* throw_on_malfunction(svn_boolean_t can_return,
     return nullptr;
 }
 
-static std::unique_ptr<apr_pool_t, decltype(&apr_pool_destroy)> create_pool(apr_pool_t* parent) {
+static decltype(auto) create_pool(apr_pool_t* parent) {
     apr_pool_t* result;
     check_result(apr_pool_create_ex(&result, parent, nullptr, nullptr));
 
-    return std::unique_ptr<apr_pool_t, decltype(&apr_pool_destroy)>(result, apr_pool_destroy);
+    return std::unique_ptr<apr_pool_t, void (*)(apr_pool_t*)>(result, apr_pool_destroy);
 }
 
 template <class T>
@@ -570,7 +570,7 @@ void client::info(const std::string&                                   path,
 
 static svn_error_t* invoke_log(void* raw_baton, svn_log_entry_t* raw_entry, apr_pool_t* pool) {
     auto entry = svn::log_entry{
-        raw_entry->revision,
+        static_cast<int32_t>(raw_entry->revision),
         {},
         nullptr,
         nullptr,

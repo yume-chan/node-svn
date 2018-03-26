@@ -420,7 +420,7 @@ struct info {
     /** The revision of the object.  If the target is a working-copy
     * path, then this is its current working revnum.  If the target
     * is a URL, then this is the repos revision that it lives in. */
-    int32_t rev;
+    int32_t revision;
 
     /** The root URL of the repository. */
     const char* repos_root_url;
@@ -438,7 +438,7 @@ struct info {
     int64_t size;
 
     /** The last revision in which this object changed. */
-    int32_t last_changed_rev;
+    int32_t last_changed_revision;
 
     /** The date of the last_changed_rev. */
     int64_t last_changed_date;
