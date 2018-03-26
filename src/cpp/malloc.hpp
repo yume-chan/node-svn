@@ -5,16 +5,20 @@
 template <class T>
 struct atomic_counter {
   public:
-    T operator+=(T value) {
-        value.fetch_add(value, std::memory_order_relaxed);
+    void operator+=(T value) {
+        _value.fetch_add(value, std::memory_order_relaxed);
+    }
+
+    void operator-=(T value) {
+        _value.fetch_sub(value, std::memory_order_relaxed);
     }
 
     T reset() {
-        return value.exchange(0, std::memory_order_relaxed);
+        return _value.exchange(0, std::memory_order_relaxed);
     }
 
   private:
-    std::atomic<T> value;
+    std::atomic<T> _value;
 };
 
 extern atomic_counter<int64_t> memory_delta;
