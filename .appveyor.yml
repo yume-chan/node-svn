@@ -1,0 +1,29 @@
+image: Visual Studio 2017
+
+environment:
+  nodejs: "Current"
+
+  matrix:
+    - arch: x86
+    - arch: x64
+
+clone_depth: 2
+
+cache:
+  - node_modules
+
+install:
+  - ps: Install-Product node $env:nodejs $env:arch
+  - git submodule update --init
+
+build_script: npm install
+
+test_script:
+  - npm test -- --reporter mocha-appveyor-reporter
+
+after_test:
+  - ps: |
+      if ($env:APPVEYOR_JOB_NAME -eq "Environment: arch=x86") {
+        npm pack
+        Get-ChildItem node-svn-*.tgz | % { Push-AppveyorArtifact $_.FullName -FileName $_.Name }
+      }

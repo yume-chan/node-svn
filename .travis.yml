@@ -19,6 +19,7 @@ matrix:
 before_install:
     - echo "$TRAVIS_COMMIT_MESSAGE" | grep -E '\[(skip travis|travis skip)\]' && exit 0 || true
     - eval "${MATRIX_EVAL}"
+    - export npm_config_debug=true
 
 language: node_js
 
