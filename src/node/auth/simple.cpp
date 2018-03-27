@@ -4,6 +4,8 @@
 #include <functional>
 #include <future>
 
+#include <node/object.hpp>
+
 #include <uv/async.hpp>
 
 namespace no {
@@ -68,7 +70,7 @@ static std::future<T> then(v8::Isolate*                  isolate,
 
     return future;
 }
-} // namespace Promise
+} // namespace promise
 } // namespace no
 
 static std::string convert_string(const v8::Local<v8::Value>& value) {
@@ -90,11 +92,11 @@ static std::optional<svn::simple_auth> convert_simple_auth(v8::Isolate*         
         return {};
 
     if (value->IsObject()) {
-        auto object = value.As<v8::Object>();
+        no::object object = value.As<v8::Object>();
         try {
-            auto username = convert_string(object->Get(no::NewName(isolate, "username")));
-            auto password = convert_string(object->Get(no::NewName(isolate, "password")));
-            auto may_save = object->Get(no::NewName(isolate, "may_save"))->BooleanValue();
+            auto username = convert_string(object["username"]);
+            auto password = convert_string(object["password"]);
+            auto may_save = object["may_save"]->BooleanValue();
             return svn::simple_auth(std::move(username), std::move(password), may_save);
         } catch (const svn::svn_type_error&) {
             // TODO: add warning for wrong return value type.

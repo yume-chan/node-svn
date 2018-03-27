@@ -64,7 +64,7 @@ static svn_error_t* invoke_get_simple_prompt_provider(svn_auth_cred_simple_t** c
 
     auto result = client->invoke_simple_auth_providers(realm, username, may_save);
     if (result) {
-        auto value      = palloc<svn_auth_cred_simple_t>(pool);
+        auto value      = new (pool) svn_auth_cred_simple_t;
         value->username = duplicate_string(pool, result->username);
         value->password = duplicate_string(pool, result->password);
         value->may_save = result->may_save;

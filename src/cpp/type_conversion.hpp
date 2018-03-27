@@ -282,13 +282,17 @@ static svn::commit_info convert_to_commit_info(const svn_commit_info_t* raw) {
         raw->repos_root};
 }
 
-template <class T>
-static T* palloc(apr_pool_t* pool) {
-    return static_cast<T*>(apr_palloc(pool, sizeof(T)));
+void* operator new(size_t size, apr_pool_t* pool) {
+    auto result = apr_palloc(pool, size);
+    if (result == nullptr) {
+        static const std::bad_alloc error;
+        throw error;
+    }
+    return result;
 }
 
 static svn_opt_revision_range_t* convert_from_revision_range(svn::revision_range& value, apr_pool_t* pool) {
-    auto result = palloc<svn_opt_revision_range_t>(pool);
+    auto result = new (pool) svn_opt_revision_range_t;
 
     result->start = convert_from_revision(value.start);
     result->end   = convert_from_revision(value.end);
