@@ -103,13 +103,15 @@ class client : public std::enable_shared_from_this<client> {
                    const revision&    op_revision     = revision_kind::unspecified,
                    bool               expand_keywords = true) const;
 
-    int32_t checkout(const std::string& url,
-                     const std::string& path,
-                     const revision&    peg_revision             = revision_kind::working,
-                     const revision&    op_revision              = revision_kind::working,
-                     svn::depth         depth                    = svn::depth::infinity,
-                     bool               ignore_externals         = false,
-                     bool               allow_unver_obstructions = false) const;
+    // return                           parameter                                             Linux x64   Windows x64
+    // rax           const svn::client* this,                                                 rdi         rcx
+    int32_t checkout(const std::string& url,                                               // rsi         rdx
+                     const std::string& path,                                              // rdx         r8
+                     const revision&    peg_revision             = revision_kind::working, // rcx         r9
+                     const revision&    op_revision              = revision_kind::working, // r8          stack
+                     svn::depth         depth                    = svn::depth::infinity,   // r9          stack
+                     bool               ignore_externals         = false,                  // stack       stack
+                     bool               allow_unver_obstructions = false) const;           // stack       stack
 
     void cleanup(const std::string& path,
                  bool               break_locks,

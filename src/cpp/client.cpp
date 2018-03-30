@@ -20,12 +20,22 @@ static svn_error_t* throw_on_malfunction(svn_boolean_t can_return,
     return nullptr;
 }
 
-static decltype(auto) create_pool(apr_pool_t* parent) {
-    apr_pool_t* result;
-    check_result(apr_pool_create_ex(&result, parent, nullptr, nullptr));
+struct child_pool {
+    explicit child_pool(apr_pool_t* parent) {
+        check_result(apr_pool_create_ex(&_pool, parent, nullptr, nullptr));
+    }
 
-    return std::unique_ptr<apr_pool_t, decltype(&apr_pool_destroy)>(result, apr_pool_destroy);
-}
+    operator apr_pool_t*() {
+        return _pool;
+    }
+
+    ~child_pool() {
+        apr_pool_destroy(_pool);
+    }
+
+  private:
+    apr_pool_t* _pool;
+};
 
 template <class T>
 static auto get_reference(void* ref) {
@@ -217,8 +227,7 @@ void client::add_to_changelist(const std::vector<std::string>&                  
                                const std::string&                                   changelist,
                                svn::depth                                           depth,
                                const std::optional<const std::vector<std::string>>& changelists) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_paths       = convert_from_vector(paths, pool, true);
     auto raw_changelist  = convert_from_string(changelist);
@@ -251,8 +260,7 @@ void client::get_changelists(const std::string&                                 
                              const get_changelists_callback&                      callback,
                              svn::depth                                           depth,
                              const std::optional<const std::vector<std::string>>& changelists) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_path        = convert_from_path(path, pool);
     auto raw_changelists = convert_from_vector(changelists, pool);
@@ -270,8 +278,7 @@ void client::get_changelists(const std::string&                                 
 void client::remove_from_changelists(const std::vector<std::string>&                      paths,
                                      svn::depth                                           depth,
                                      const std::optional<const std::vector<std::string>>& changelists) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_paths       = convert_from_vector(paths, pool, true);
     auto raw_changelists = convert_from_vector(changelists, pool);
@@ -289,8 +296,7 @@ void client::add(const std::string& path,
                  bool               no_ignore,
                  bool               no_autoprops,
                  bool               add_parents) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_path = convert_from_path(path, pool);
 
@@ -337,8 +343,7 @@ void client::blame(const std::string&    path,
                    bool                  ignore_eol_style,
                    bool                  ignore_mime_type,
                    bool                  include_merged_revisions) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_path           = convert_from_path(path, pool);
     auto raw_start_revision = convert_from_revision(start_revision);
@@ -377,8 +382,7 @@ string_map client::cat(const std::string&  path,
                        const revision&     peg_revision,
                        const revision&     revision,
                        bool                expand_keywords) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     apr_hash_t* raw_properties;
 
@@ -390,9 +394,7 @@ string_map client::cat(const std::string&  path,
     auto stream = svn_stream_create(&raw_callback, pool);
     svn_stream_set_write(stream, invoke_cat_callback);
 
-    auto scratch_pool_ptr = create_pool(_pool);
-    auto scratch_pool     = scratch_pool_ptr.get();
-
+    child_pool scratch_pool(_pool);
     check_result(svn_client_cat3(&raw_properties,
                                  stream,
                                  raw_path,
@@ -442,8 +444,7 @@ int32_t client::checkout(const std::string& url,
                          svn::depth         depth,
                          bool               ignore_externals,
                          bool               allow_unver_obstructions) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_url          = convert_from_url(url, pool);
     auto raw_path         = convert_from_path(path, pool);
@@ -472,8 +473,7 @@ void client::cleanup(const std::string& path,
                      bool               clear_dav_cache,
                      bool               vacuum_pristines,
                      bool               include_externals) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_path = convert_from_path(path, pool);
 
@@ -510,8 +510,7 @@ void client::commit(const std::vector<std::string>&                      paths,
     auto message_ref         = std::cref(message);
     _context->log_msg_baton3 = &message_ref;
 
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_paths       = convert_from_vector(paths, pool, true);
     auto raw_changelists = convert_from_vector(changelists, pool);
@@ -551,8 +550,7 @@ void client::info(const std::string&                                   path,
                   bool                                                 fetch_actual_only,
                   bool                                                 include_externals,
                   const std::optional<const std::vector<std::string>>& changelists) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_path         = convert_from_path(path, pool);
     auto callback_ref     = std::cref(callback);
@@ -602,8 +600,7 @@ void client::log(const std::vector<std::string>&                              pa
                  bool                                                         strict_node_history,
                  bool                                                         include_merged_revisions,
                  const std::optional<const std::vector<std::string>>&         revprops) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_paths          = convert_from_vector(paths, pool, true);
     auto raw_peg_revision   = convert_from_revision(peg_revision);
@@ -631,8 +628,7 @@ void client::remove(const std::vector<std::string>& paths,
                     bool                            force,
                     bool                            keep_local,
                     const string_map&               revprop_table) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_paths    = convert_from_vector(paths, pool, true);
     auto callback_ref = std::cref(callback);
@@ -651,8 +647,7 @@ void client::remove(const std::vector<std::string>& paths,
 void client::resolve(const std::string& path,
                      svn::depth         depth,
                      conflict_choose    choose) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_path = convert_from_path(path, pool);
 
@@ -669,8 +664,7 @@ void client::revert(const std::vector<std::string>&                      paths,
                     bool                                                 clear_changelists,
                     bool                                                 metadata_only,
                     bool                                                 added_keep_local) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_paths       = convert_from_vector(paths, pool, true);
     auto raw_changelists = convert_from_vector(changelists, pool);
@@ -705,8 +699,7 @@ int32_t client::status(const std::string&                                   path
                        bool                                                 ignore_externals,
                        bool                                                 depth_as_sticky,
                        const std::optional<const std::vector<std::string>>& changelists) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_path        = convert_from_path(path, pool);
     auto callback_ref    = std::cref(callback);
@@ -742,8 +735,7 @@ int32_t client::update(const std::string& path,
                        bool               allow_unver_obstructions,
                        bool               adds_as_modification,
                        bool               make_parents) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_paths    = convert_from_vector({path}, pool);
     auto raw_revision = convert_from_revision(revision);
@@ -773,8 +765,7 @@ std::vector<int32_t> client::update(const std::vector<std::string>& paths,
                                     bool                            allow_unver_obstructions,
                                     bool                            adds_as_modification,
                                     bool                            make_parents) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_paths    = convert_from_vector(paths, pool, true);
     auto raw_revision = convert_from_revision(revision);
@@ -800,8 +791,7 @@ std::vector<int32_t> client::update(const std::vector<std::string>& paths,
 }
 
 std::string client::get_working_copy_root(const std::string& path) const {
-    auto pool_ptr = create_pool(_pool);
-    auto pool     = pool_ptr.get();
+    child_pool pool(_pool);
 
     auto raw_path = convert_from_path(path, pool);
 
