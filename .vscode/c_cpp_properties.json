@@ -86,7 +86,6 @@
                 "${workspaceRoot}/src"
             ],
             "defines": [
-                "_HAS_CXX17",
                 "_DEBUG",
                 "WIN32",
                 "UNICODE",
@@ -117,7 +116,9 @@
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""
-            }
+            },
+            "cStandard": "c11",
+            "cppStandard": "c++17"
         }
     ],
     "version": 3

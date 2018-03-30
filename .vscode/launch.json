@@ -1,18 +1,10 @@
 {
     "configurations": [
         {
-            "type": "node",
+            "type": "cppdbg",
             "request": "launch",
-            "name": "Debugger Script",
-            "program": "${workspaceFolder}\\scripts\\debugger.js",
-            "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}"
-        },
-        {
-            "type": "cppvsdbg",
-            "request": "launch",
-            "name": "Windows Native",
-            "program": "node",
+            "name": "Mocha Tests Native",
+            "program": "/usr/local/bin/node",
             "args": [
                 "${workspaceFolder}/node_modules/mocha/bin/_mocha",
                 "-u",
@@ -23,13 +15,20 @@
                 "${workspaceFolder}/test"
             ],
             "cwd": "${workspaceRoot}",
-            "externalConsole": true,
             "internalConsoleOptions": "openOnSessionStart",
             "preLaunchTask": "node-gyp",
             "sourceFileMap": {
                 "c:/ws/deps/": "C:/Users/Simon/.node-gyp/9.8.0/deps/"
             },
-            "symbolSearchPath": "C:/Users/Simon/AppData/Local/Temp/SymbolCache;C:/Users/Simon/.node-gyp/9.8.0/x64",
+            "windows": {
+                "type": "cppvsdbg",
+                "symbolSearchPath": "C:/Users/Simon/AppData/Local/Temp/SymbolCache;C:/Users/Simon/.node-gyp/9.8.0/x64",
+                "program": "node"
+            },
+            "osx": {
+                "program": "/usr/local/bin/node",
+                "MIMode": "lldb"
+            }
         },
         {
             "type": "node",
@@ -45,25 +44,6 @@
                 "${workspaceFolder}/test"
             ],
             "internalConsoleOptions": "openOnSessionStart"
-        },
-        {
-            "type": "cppdbg",
-            "request": "launch",
-            "name": "macOS Native",
-            "program": "/usr/local/bin/node",
-            "externalConsole": true,
-            "internalConsoleOptions": "openOnSessionStart",
-            "MIMode": "lldb",
-            "args": [
-                "${workspaceFolder}/node_modules/mocha/bin/_mocha",
-                "-u",
-                "tdd",
-                "--timeout",
-                "999999",
-                "--colors",
-                "${workspaceFolder}/test"
-            ],
-            "cwd": "${workspaceRoot}"
         }
     ],
     "version": "0.2.0"

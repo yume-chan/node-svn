@@ -9,11 +9,11 @@ namespace uv {
 template <class Work, class AfterWork, class Result>
 class work {
   public:
-    work(Work do_work, AfterWork after_work)
-        : do_work(std::move(do_work))
-        , after_work(std::move(after_work)) {
-        uv_work.data = this;
-        check_result(uv_queue_work(uv_default_loop(), &uv_work, invoke_work, invoke_after_work));
+    work(Work work, AfterWork after_work)
+        : _work(std::move(work))
+        , _after_work(std::move(after_work)) {
+        _handle.data = this;
+        check_result(uv_queue_work(uv_default_loop(), &_handle, invoke_work, invoke_after_work));
     }
 
   private:
@@ -21,45 +21,37 @@ class work {
         auto _this = static_cast<work*>(handle->data);
         try {
             if constexpr (std::is_void_v<Result>) {
-                _this->do_work();
-                _this->promise.set_value();
+                _this->_work();
+                _this->_promise.set_value();
             } else {
-                auto result = _this->do_work();
-                _this->promise.set_value(result);
+                auto result = _this->_work();
+                _this->_promise.set_value(result);
             }
         } catch (...) {
-            _this->promise.set_exception(std::current_exception());
+            _this->_promise.set_exception(std::current_exception());
         }
     }
 
     static void invoke_after_work(uv_work_t* handle, int status) {
         auto _this  = static_cast<work*>(handle->data);
-        auto future = _this->promise.get_future();
-        _this->after_work(std::move(future));
+        auto future = _this->_promise.get_future();
+        _this->_after_work(std::move(future));
 
         delete _this;
     }
 
     ~work() {}
 
-    uv_work_t uv_work;
+    uv_work_t _handle;
 
-    const Work      do_work;
-    const AfterWork after_work;
+    const Work      _work;
+    const AfterWork _after_work;
 
-    std::promise<Result> promise;
+    std::promise<Result> _promise;
 };
 
 template <class Work, class AfterWork>
 static void queue_work(Work work, AfterWork after_work) {
-    static_assert(std::is_move_constructible_v<Work>, "do_work must be move constructible");
-    static_assert(std::is_move_constructible_v<AfterWork>, "after_work must be move constructible");
-
-    static_assert(std::is_invocable_v<Work>, "do_work must be invocable");
-
-    using Result = decltype(work());
-    static_assert(std::is_invocable_r_v<void, AfterWork, std::future<Result>>, "after_work must be invocable");
-
-    new uv::work<Work, AfterWork, Result>(std::move(work), std::move(after_work));
+    new uv::work<Work, AfterWork, decltype(work())>(std::move(work), std::move(after_work));
 }
 } // namespace uv

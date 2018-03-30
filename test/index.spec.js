@@ -112,11 +112,14 @@ describe("svn.node", () => {
         // they actually only take less than 100ms
         this.timeout(0);
 
-        const result = await client.commit(repository, "commit1");
+        let count = 0;
+        const result = client.commit(repository, "commit1");
         await async_iterate(result, (value) => {
+            count++;
             expect(value.revision).to.equal(1);
             expect(value.post_commit_error).to.be.undefined;
         });
+        expect(count).to.equal(1);
     });
 
     it("cat", async function() {
@@ -132,6 +135,41 @@ describe("svn.node", () => {
 
         result = await client.cat(file1, { revision: svn.RevisionKind.base });
         expect(result.content.toString("utf-8")).to.equal(file1);
+    });
+
+    const changelist = Date.now().toString();
+
+    it("add_to_changelist", async function() {
+        // don't know why but I need this line
+        // to disable timeout to let tests pass
+        // they actually only take less than 100ms
+        this.timeout(0);
+
+        await client.add_to_changelist(file1, changelist);
+    });
+
+    it("get_changelists", async function() {
+        let count = 0;
+        const result = client.get_changelists(file1);
+        await async_iterate(result, (item) => {
+            count++;
+            expect(item.path).to.equal(file1);
+        });
+        expect(count).to.equal(1);
+    });
+
+    it("remove_from_changelists", async function() {
+        // don't know why but I need this line
+        // to disable timeout to let tests pass
+        // they actually only take less than 100ms
+        this.timeout(0);
+
+        await client.remove_from_changelists(file1);
+
+        const result = client.get_changelists(file1);
+        await async_iterate(result, (item) => {
+            throw new Error(JSON.stringify(item));
+        });
     });
 
     it("blame", async function() {

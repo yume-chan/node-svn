@@ -236,6 +236,12 @@ static svn_error_t* invoke_get_changelists(void*       raw_baton,
                                            const char* path,
                                            const char* changelist,
                                            apr_pool_t* pool) {
+    // WTF: call `get_changelists` after `remove_from_changelists`,
+    // svn will return paths without any changelist.
+    if (changelist == nullptr) {
+        return nullptr;
+    }
+
     auto callback = get_reference<client::get_changelists_callback>(raw_baton);
     callback(path, changelist);
     return nullptr;
