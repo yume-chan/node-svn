@@ -4,7 +4,6 @@
     ],
     "targets": [
         {
-            "target_name": "libsvn_delta",
             "sources": [
                 "subversion/subversion/libsvn_delta/branch.c",
                 "subversion/subversion/libsvn_delta/branch_compat.c",
@@ -25,7 +24,8 @@
                 "subversion/subversion/libsvn_delta/text_delta.c",
                 "subversion/subversion/libsvn_delta/version.c",
                 "subversion/subversion/libsvn_delta/xdelta.c"
-            ]
+            ],
+            "target_name": "libsvn_delta"
         }
     ]
 }

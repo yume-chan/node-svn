@@ -4,9 +4,13 @@
     ],
     "targets": [
         {
-            "target_name": "apr-iconv",
-            "type": "static_library",
-            "win_delay_load_hook": "false",
+            "configurations": {
+                "Release": {
+                    "defines": [
+                        "NDEBUG"
+                    ]
+                }
+            },
             "include_dirs": [
                 "apr-iconv/include"
             ],
@@ -19,13 +23,7 @@
                 "dependencies/apr-iconv/lib/iconv_module.c",
                 "dependencies/apr-iconv/lib/iconv_uc.c"
             ],
-            "configurations": {
-                "Release": {
-                    "defines": [
-                        "NDEBUG"
-                    ]
-                }
-            }
+            "target_name": "apr-iconv",
         }
     ]
 }

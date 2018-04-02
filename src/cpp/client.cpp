@@ -21,11 +21,11 @@ static svn_error_t* throw_on_malfunction(svn_boolean_t can_return,
 }
 
 struct child_pool {
-    explicit child_pool(apr_pool_t* parent) {
-        check_result(apr_pool_create_ex(&_pool, parent, nullptr, nullptr));
+    explicit child_pool(apr_pool_t* parent)
+        : _pool(create(parent)) {
     }
 
-    operator apr_pool_t*() {
+    operator apr_pool_t*() const {
         return _pool;
     }
 
@@ -34,7 +34,13 @@ struct child_pool {
     }
 
   private:
-    apr_pool_t* _pool;
+    static apr_pool_t* create(apr_pool_t* parent) {
+        apr_pool_t* result;
+        check_result(apr_pool_create_ex(&result, parent, nullptr, nullptr));
+        return result;
+    }
+
+    apr_pool_t* const _pool;
 };
 
 template <class T>
@@ -444,16 +450,16 @@ int32_t client::checkout(const std::string& url,
                          svn::depth         depth,
                          bool               ignore_externals,
                          bool               allow_unver_obstructions) const {
-    child_pool pool(_pool);
+    const child_pool pool(_pool);
 
     auto raw_url          = convert_from_url(url, pool);
     auto raw_path         = convert_from_path(path, pool);
     auto raw_peg_revision = convert_from_revision(peg_revision);
     auto raw_revision     = convert_from_revision(revision);
 
-    int32_t result_rev;
+    svn_revnum_t result_rev;
 
-    check_result(svn_client_checkout3(reinterpret_cast<svn_revnum_t*>(&result_rev),
+    check_result(svn_client_checkout3(&result_rev,
                                       raw_url,
                                       raw_path,
                                       &raw_peg_revision,
@@ -464,7 +470,7 @@ int32_t client::checkout(const std::string& url,
                                       _context,
                                       pool));
 
-    return result_rev;
+    return static_cast<int32_t>(result_rev);
 }
 
 void client::cleanup(const std::string& path,
@@ -706,9 +712,9 @@ int32_t client::status(const std::string&                                   path
     auto raw_revision    = convert_from_revision(revision);
     auto raw_changelists = convert_from_vector(changelists, pool);
 
-    int32_t result_rev;
+    svn_revnum_t result_rev;
 
-    check_result(svn_client_status6(reinterpret_cast<svn_revnum_t*>(&result_rev),
+    check_result(svn_client_status6(&result_rev,
                                     _context,
                                     raw_path,
                                     &raw_revision,
@@ -724,7 +730,7 @@ int32_t client::status(const std::string&                                   path
                                     &callback_ref,
                                     pool));
 
-    return result_rev;
+    return static_cast<int32_t>(result_rev);
 }
 
 int32_t client::update(const std::string& path,

@@ -4,13 +4,178 @@
     ],
     "targets": [
         {
-            "target_name": "apr",
-            "dependencies": [
-                "../libexpat/expat.gyp:expat"
+            "conditions": [
+                [
+                    "OS == 'win'",
+                    {
+                        "defines": [
+                            "_WIN32_WINNT=0x0601"
+                        ],
+                        "direct_dependent_settings": {
+                            "include_dirs": [
+                                "include/win"
+                            ]
+                        },
+                        "include_dirs": [
+                            "../apr-gen-test-char/win32",
+                            "include/win",
+                            "include/win/private",
+                            "apr/include/arch/win32",
+                            "apr/include/arch/unix"
+                        ],
+                        "sources": [
+                            "apr/atomic/win32/apr_atomic.c",
+                            "apr/dso/win32/dso.c",
+                            "apr/file_io/win32/buffer.c",
+                            "apr/file_io/win32/dir.c",
+                            "apr/file_io/win32/filedup.c",
+                            "apr/file_io/win32/filepath.c",
+                            "apr/file_io/win32/filestat.c",
+                            "apr/file_io/win32/filesys.c",
+                            "apr/file_io/win32/flock.c",
+                            "apr/file_io/win32/open.c",
+                            "apr/file_io/win32/pipe.c",
+                            "apr/file_io/win32/readwrite.c",
+                            "apr/file_io/win32/seek.c",
+                            "apr/locks/win32/proc_mutex.c",
+                            "apr/locks/win32/thread_cond.c",
+                            "apr/locks/win32/thread_mutex.c",
+                            "apr/locks/win32/thread_rwlock.c",
+                            "apr/misc/win32/apr_app.c",
+                            "apr/misc/win32/charset.c",
+                            "apr/misc/win32/env.c",
+                            "apr/misc/win32/internal.c",
+                            "apr/misc/win32/misc.c",
+                            "apr/misc/win32/rand.c",
+                            "apr/misc/win32/start.c",
+                            "apr/misc/win32/utf8.c",
+                            "apr/mmap/win32/mmap.c",
+                            "apr/network_io/win32/sendrecv.c",
+                            "apr/network_io/win32/sockets.c",
+                            "apr/network_io/win32/sockopt.c",
+                            "apr/shmem/win32/shm.c",
+                            "apr/threadproc/win32/proc.c",
+                            "apr/threadproc/win32/signals.c",
+                            "apr/threadproc/win32/thread.c",
+                            "apr/threadproc/win32/threadpriv.c",
+                            "apr/time/win32/time.c",
+                            "apr/time/win32/timestr.c",
+                            "apr/user/win32/groupinfo.c",
+                            "apr/user/win32/userinfo.c"
+                        ]
+                    },
+                    {
+                        "include_dirs": [
+                            "../apr-gen-test-char/unix",
+                            "apr/include/arch/unix"
+                        ],
+                        "sources": [
+                            "apr/atomic/unix/builtins.c",
+                            "apr/atomic/unix/ia32.c",
+                            "apr/atomic/unix/mutex.c",
+                            "apr/atomic/unix/ppc.c",
+                            "apr/atomic/unix/s390.c",
+                            "apr/atomic/unix/solaris.c",
+                            "apr/dso/unix/dso.c",
+                            "apr/file_io/unix/buffer.c",
+                            "apr/file_io/unix/dir.c",
+                            "apr/file_io/unix/filedup.c",
+                            "apr/file_io/unix/filepath.c",
+                            "apr/file_io/unix/filestat.c",
+                            "apr/file_io/unix/flock.c",
+                            "apr/file_io/unix/open.c",
+                            "apr/file_io/unix/pipe.c",
+                            "apr/file_io/unix/printf.c",
+                            "apr/file_io/unix/readwrite.c",
+                            "apr/file_io/unix/seek.c",
+                            "apr/locks/unix/global_mutex.c",
+                            "apr/locks/unix/proc_mutex.c",
+                            "apr/locks/unix/thread_cond.c",
+                            "apr/locks/unix/thread_mutex.c",
+                            "apr/locks/unix/thread_rwlock.c",
+                            "apr/misc/unix/charset.c",
+                            "apr/misc/unix/env.c",
+                            "apr/misc/unix/rand.c",
+                            "apr/misc/unix/start.c",
+                            "apr/mmap/unix/mmap.c",
+                            "apr/network_io/unix/sendrecv.c",
+                            "apr/network_io/unix/sockets.c",
+                            "apr/network_io/unix/sockopt.c",
+                            "apr/poll/unix/epoll.c",
+                            "apr/poll/unix/kqueue.c",
+                            "apr/poll/unix/port.c",
+                            "apr/poll/unix/z_asio.c",
+                            "apr/shmem/unix/shm.c",
+                            "apr/support/unix/waitio.c",
+                            "apr/threadproc/unix/proc.c",
+                            "apr/threadproc/unix/procsup.c",
+                            "apr/threadproc/unix/signals.c",
+                            "apr/threadproc/unix/thread.c",
+                            "apr/threadproc/unix/threadpriv.c",
+                            "apr/time/unix/time.c",
+                            "apr/time/unix/timestr.c",
+                            "apr/user/unix/groupinfo.c",
+                            "apr/user/unix/userinfo.c"
+                        ]
+                    }
+                ],
+                [
+                    "OS == 'mac'",
+                    {
+                        "defines": [
+                            "DARWIN"
+                        ],
+                        "direct_dependent_settings": {
+                            "include_dirs": [
+                                "include/unix"
+                            ]
+                        },
+                        "include_dirs": [
+                            "include/unix",
+                            "include/unix/private"
+                        ]
+                    }
+                ],
+                [
+                    "OS == 'linux'",
+                    {
+                        "defines": [
+                            "LINUX",
+                            "_GNU_SOURCE"
+                        ],
+                        "direct_dependent_settings": {
+                            "include_dirs": [
+                                "include/linux"
+                            ]
+                        },
+                        "include_dirs": [
+                            "include/linux",
+                            "include/linux/private"
+                        ]
+                    }
+                ]
             ],
+            "configurations": {
+                "Release": {
+                    "defines": [
+                        "NDEBUG"
+                    ]
+                }
+            },
             "defines": [
                 "APR_DECLARE_STATIC"
             ],
+            "dependencies": [
+                "../libexpat/expat.gyp:expat"
+            ],
+            "direct_dependent_settings": {
+                "defines": [
+                    "APR_DECLARE_STATIC"
+                ],
+                "include_dirs": [
+                    "apr/include"
+                ]
+            },
             "include_dirs": [
                 "apr/include",
                 "apr/include/private"
@@ -96,172 +261,7 @@
                 "apr/xml/apr_xml.c",
                 "apr/xml/apr_xml_expat.c"
             ],
-            "configurations": {
-                "Release": {
-                    "defines": [
-                        "NDEBUG"
-                    ]
-                }
-            },
-            "direct_dependent_settings": {
-                "defines": [
-                    "APR_DECLARE_STATIC"
-                ],
-                "include_dirs": [
-                    "apr/include"
-                ]
-            },
-            "conditions": [
-                [
-                    "OS == 'win'",
-                    {
-                        "defines": [
-                            "_WIN32_WINNT=0x0601"
-                        ],
-                        "include_dirs": [
-                            "../apr-gen-test-char/win32",
-                            "include/win",
-                            "include/win/private",
-                            "apr/include/arch/win32",
-                            "apr/include/arch/unix"
-                        ],
-                        "sources": [
-                            "apr/atomic/win32/apr_atomic.c",
-                            "apr/dso/win32/dso.c",
-                            "apr/file_io/win32/buffer.c",
-                            "apr/file_io/win32/dir.c",
-                            "apr/file_io/win32/filedup.c",
-                            "apr/file_io/win32/filepath.c",
-                            "apr/file_io/win32/filestat.c",
-                            "apr/file_io/win32/filesys.c",
-                            "apr/file_io/win32/flock.c",
-                            "apr/file_io/win32/open.c",
-                            "apr/file_io/win32/pipe.c",
-                            "apr/file_io/win32/readwrite.c",
-                            "apr/file_io/win32/seek.c",
-                            "apr/locks/win32/proc_mutex.c",
-                            "apr/locks/win32/thread_cond.c",
-                            "apr/locks/win32/thread_mutex.c",
-                            "apr/locks/win32/thread_rwlock.c",
-                            "apr/misc/win32/apr_app.c",
-                            "apr/misc/win32/charset.c",
-                            "apr/misc/win32/env.c",
-                            "apr/misc/win32/internal.c",
-                            "apr/misc/win32/misc.c",
-                            "apr/misc/win32/rand.c",
-                            "apr/misc/win32/start.c",
-                            "apr/misc/win32/utf8.c",
-                            "apr/mmap/win32/mmap.c",
-                            "apr/network_io/win32/sendrecv.c",
-                            "apr/network_io/win32/sockets.c",
-                            "apr/network_io/win32/sockopt.c",
-                            "apr/shmem/win32/shm.c",
-                            "apr/threadproc/win32/proc.c",
-                            "apr/threadproc/win32/signals.c",
-                            "apr/threadproc/win32/thread.c",
-                            "apr/threadproc/win32/threadpriv.c",
-                            "apr/time/win32/time.c",
-                            "apr/time/win32/timestr.c",
-                            "apr/user/win32/groupinfo.c",
-                            "apr/user/win32/userinfo.c"
-                        ],
-                        "direct_dependent_settings": {
-                            "include_dirs": [
-                                "include/win"
-                            ]
-                        }
-                    },
-                    {
-                        "include_dirs": [
-                            "../apr-gen-test-char/unix",
-                            "apr/include/arch/unix"
-                        ],
-                        "sources": [
-                            "apr/atomic/unix/builtins.c",
-                            "apr/atomic/unix/ia32.c",
-                            "apr/atomic/unix/mutex.c",
-                            "apr/atomic/unix/ppc.c",
-                            "apr/atomic/unix/s390.c",
-                            "apr/atomic/unix/solaris.c",
-                            "apr/dso/unix/dso.c",
-                            "apr/file_io/unix/buffer.c",
-                            "apr/file_io/unix/dir.c",
-                            "apr/file_io/unix/filedup.c",
-                            "apr/file_io/unix/filepath.c",
-                            "apr/file_io/unix/filestat.c",
-                            "apr/file_io/unix/flock.c",
-                            "apr/file_io/unix/open.c",
-                            "apr/file_io/unix/pipe.c",
-                            "apr/file_io/unix/printf.c",
-                            "apr/file_io/unix/readwrite.c",
-                            "apr/file_io/unix/seek.c",
-                            "apr/locks/unix/global_mutex.c",
-                            "apr/locks/unix/proc_mutex.c",
-                            "apr/locks/unix/thread_cond.c",
-                            "apr/locks/unix/thread_mutex.c",
-                            "apr/locks/unix/thread_rwlock.c",
-                            "apr/misc/unix/charset.c",
-                            "apr/misc/unix/env.c",
-                            "apr/misc/unix/rand.c",
-                            "apr/misc/unix/start.c",
-                            "apr/mmap/unix/mmap.c",
-                            "apr/network_io/unix/sendrecv.c",
-                            "apr/network_io/unix/sockets.c",
-                            "apr/network_io/unix/sockopt.c",
-                            "apr/poll/unix/epoll.c",
-                            "apr/poll/unix/kqueue.c",
-                            "apr/poll/unix/port.c",
-                            "apr/poll/unix/z_asio.c",
-                            "apr/shmem/unix/shm.c",
-                            "apr/support/unix/waitio.c",
-                            "apr/threadproc/unix/proc.c",
-                            "apr/threadproc/unix/procsup.c",
-                            "apr/threadproc/unix/signals.c",
-                            "apr/threadproc/unix/thread.c",
-                            "apr/threadproc/unix/threadpriv.c",
-                            "apr/time/unix/time.c",
-                            "apr/time/unix/timestr.c",
-                            "apr/user/unix/groupinfo.c",
-                            "apr/user/unix/userinfo.c"
-                        ]
-                    }
-                ],
-                [
-                    "OS == 'mac'",
-                    {
-                        "defines": [
-                            "DARWIN"
-                        ],
-                        "include_dirs": [
-                            "include/unix",
-                            "include/unix/private"
-                        ],
-                        "direct_dependent_settings": {
-                            "include_dirs": [
-                                "include/unix"
-                            ]
-                        }
-                    }
-                ],
-                [
-                    "OS == 'linux'",
-                    {
-                        "defines": [
-                            "LINUX",
-                            "_GNU_SOURCE"
-                        ],
-                        "include_dirs": [
-                            "include/linux",
-                            "include/linux/private"
-                        ],
-                        "direct_dependent_settings": {
-                            "include_dirs": [
-                                "include/linux"
-                            ]
-                        }
-                    }
-                ]
-            ]
+            "target_name": "apr"
         }
     ]
 }

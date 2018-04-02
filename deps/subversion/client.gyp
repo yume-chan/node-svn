@@ -4,7 +4,6 @@
     ],
     "targets": [
         {
-            "target_name": "libsvn_client",
             "dependencies": [
                 "subr.gyp:libsvn_subr",
                 "delta.gyp:libsvn_delta",
@@ -65,7 +64,8 @@
                 "subversion/subversion/libsvn_client/url.c",
                 "subversion/subversion/libsvn_client/util.c",
                 "subversion/subversion/libsvn_client/version.c"
-            ]
+            ],
+            "target_name": "libsvn_client"
         }
     ]
 }

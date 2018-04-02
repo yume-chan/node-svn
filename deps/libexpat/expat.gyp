@@ -4,9 +4,36 @@
     ],
     "targets": [
         {
-            "target_name": "expat",
-            "type": "static_library",
-            "win_delay_load_hook": "false",
+            "conditions": [
+                [
+                    "OS != \"win\"",
+                    {
+                        "defines": [
+                            "HAVE_EXPAT_CONFIG_H"
+                        ],
+                        "direct_dependent_settings": {
+                            "defines": [
+                                "HAVE_EXPAT_CONFIG_H"
+                            ],
+                            "include_dirs": [
+                                "include/unix"
+                            ]
+                        },
+                        "include_dirs": [
+                            "include/unix"
+                        ]
+                    }
+                ]
+            ],
+            "direct_dependent_settings": {
+                "defines": [
+                    "XML_STATIC"
+                ],
+                "include_dirs": [
+                    "include",
+                    "libexpat/expat/lib"
+                ]
+            },
             "include_dirs": [
                 "include",
                 "libexpat/expat/lib"
@@ -17,36 +44,7 @@
                 "libexpat/expat/lib/xmltok.c",
                 "libexpat/expat/lib/xmlrole.c"
             ],
-            "direct_dependent_settings": {
-                "include_dirs": [
-                    "include",
-                    "libexpat/expat/lib"
-                ],
-                "defines": [
-                    "XML_STATIC"
-                ]
-            },
-            "conditions": [
-                [
-                    "OS != \"win\"",
-                    {
-                        "include_dirs": [
-                            "include/unix"
-                        ],
-                        "defines": [
-                            "HAVE_EXPAT_CONFIG_H"
-                        ],
-                        "direct_dependent_settings": {
-                            "include_dirs": [
-                                "include/unix"
-                            ],
-                            "defines": [
-                                "HAVE_EXPAT_CONFIG_H"
-                            ]
-                        }
-                    }
-                ]
-            ]
+            "target_name": "expat",
         }
     ]
 }

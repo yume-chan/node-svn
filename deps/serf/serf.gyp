@@ -2,16 +2,33 @@
     "includes": [
         "../common.gypi"
     ],
-    "variables": {
-        "runtime%": "node"
-    },
     "targets": [
         {
-            "target_name": "serf",
-            "type": "static_library",
-            "win_delay_load_hook": "false",
-            "dependencies": [
-                "../apr/apr.gyp:apr"
+            "conditions": [
+                [
+                    "runtime == 'electron'",
+                    {
+                        "dependencies": [
+                            "../openssl/openssl.gyp:openssl"
+                        ],
+                        "include_dirs": [
+                            "<(node_root_dir)/deps/zlib"
+                        ]
+                    }
+                ],
+                [
+                    "OS == 'win'",
+                    {
+                        "defines": [
+                            "SERF_HAVE_SSPI"
+                        ]
+                    },
+                    {
+                        "defines": [
+                            "HAVE_STDBOOL_H"
+                        ]
+                    }
+                ]
             ],
             "defines": [
                 "OPENSSL_NO_DEPRECATED",
@@ -20,6 +37,21 @@
                 "SERF_HAVE_SSL_LOCKING_CALLBACKS",
                 "SERF_HAVE_OPENSSL_ALPN"
             ],
+            "dependencies": [
+                "../apr/apr.gyp:apr"
+            ],
+            "direct_dependent_settings": {
+                "defines": [
+                    "OPENSSL_NO_DEPRECATED",
+                    "SERF_NO_SSL_BIO_WRAPPERS",
+                    "SERF_NO_SSL_X509_STORE_WRAPPERS",
+                    "SERF_HAVE_SSL_LOCKING_CALLBACKS",
+                    "SERF_HAVE_OPENSSL_ALPN"
+                ],
+                "include_dirs": [
+                    "serf"
+                ]
+            },
             "include_dirs": [
                 "serf"
             ],
@@ -72,44 +104,10 @@
                 "serf/src/ssltunnel.c",
                 "src/ssl_buckets.c"
             ],
-            "direct_dependent_settings": {
-                "defines": [
-                    "OPENSSL_NO_DEPRECATED",
-                    "SERF_NO_SSL_BIO_WRAPPERS",
-                    "SERF_NO_SSL_X509_STORE_WRAPPERS",
-                    "SERF_HAVE_SSL_LOCKING_CALLBACKS",
-                    "SERF_HAVE_OPENSSL_ALPN"
-                ],
-                "include_dirs": [
-                    "serf"
-                ]
-            },
-            "conditions": [
-                [
-                    "runtime == 'electron'",
-                    {
-                        "dependencies": [
-                            "../openssl/openssl.gyp:openssl"
-                        ],
-                        "include_dirs": [
-                            "<(node_root_dir)/deps/zlib"
-                        ]
-                    }
-                ],
-                [
-                    "OS == 'win'",
-                    {
-                        "defines": [
-                            "SERF_HAVE_SSPI"
-                        ]
-                    },
-                    {
-                        "defines": [
-                            "HAVE_STDBOOL_H"
-                        ]
-                    }
-                ]
-            ]
+            "target_name": "serf",
         }
-    ]
+    ],
+    "variables": {
+        "runtime%": "node"
+    }
 }
