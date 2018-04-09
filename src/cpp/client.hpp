@@ -51,7 +51,7 @@ class client : public std::enable_shared_from_this<client> {
     ~client();
 
     void set_abort_function(abort_function& function);
-    void clear_abort_functioon();
+    void remove_abort_function();
     bool invoke_abort_function();
 
     void add_notify_function(std::initializer_list<notify_action> actions, const notify_function function);
@@ -111,7 +111,7 @@ class client : public std::enable_shared_from_this<client> {
                      const revision&    op_revision              = revision_kind::working, // r8          stack
                      svn::depth         depth                    = svn::depth::infinity,   // r9          stack
                      bool               ignore_externals         = false,                  // stack       stack
-                     bool               allow_unver_obstructions = false) const;           // stack       stack
+                     bool               allow_unver_obstructions = false) const;                         // stack       stack
 
     void cleanup(const std::string& path,
                  bool               break_locks,

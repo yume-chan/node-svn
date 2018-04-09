@@ -2,24 +2,11 @@
 
 #include <cpp/types.hpp>
 
-#define SET_ENUM(target, prefix, name)                                                                       \
-    {                                                                                                        \
-        auto key   = no::NewName(isolate, #name);                                                            \
-        auto value = static_cast<int32_t>(prefix::name);                                                     \
-        no::check_result(target->DefineOwnProperty(context,                                                  \
-                                  key,                                                                       \
-                                  no::New(isolate, value),                                                   \
-                                  no::PropertyAttribute::ReadOnlyDontDelete));                               \
-        no::check_result(target->DefineOwnProperty(context,                                                  \
-                                  no::New(isolate, std::to_string(value), v8::NewStringType::kInternalized), \
-                                  key,                                                                       \
-                                  no::PropertyAttribute::ReadOnlyDontDelete));                               \
-    }
+#include <objects/object.hpp>
 
-#define SET_READONLY(object, name, value)                   \
-    (object)->DefineOwnProperty(context,                    \
-                                no::NewName(isolate, name), \
-                                value,                      \
-                                no::PropertyAttribute::ReadOnlyDontDelete)
-
-#define SET_NODE_KIND(name) SET_ENUM(object, svn::node_kind, name)
+template <size_t N, class T>
+void set_enum(no::object& object, const char (&name)[N], T value) {
+    auto number = static_cast<int32_t>(value);
+    object[name].set(number, no::property_attribute::read_only | no::property_attribute::dont_delete);
+    object[std::to_string(number)].set(name, no::property_attribute::read_only | no::property_attribute::dont_delete);
+}

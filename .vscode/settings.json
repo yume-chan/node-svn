@@ -64,7 +64,10 @@
         "xstddef": "cpp",
         "xtr1common": "cpp",
         "xutility": "cpp",
-        "optional": "cpp"
+        "optional": "cpp",
+        "deque": "cpp",
+        "stack": "cpp",
+        "unordered_set": "cpp"
     },
     "git.ignoreLimitWarning": true,
     "python.formatting.provider": "autopep8",

@@ -61,11 +61,11 @@ class class_builder {
                            TD destructor)
         : _isolate(isolate) {
         auto info = new class_info<TC, TD>{constructor, destructor};
-        _template = no::New<v8::FunctionTemplate>(isolate,
-                                                  invoke_constructor<TC, TD>,
-                                                  no::New(isolate, info));
+        _template = no::data<v8::FunctionTemplate>(isolate,
+                                                   invoke_constructor<TC, TD>,
+                                                   no::data(isolate, info));
 
-        _template->SetClassName(no::NewName(isolate, name));
+        _template->SetClassName(no::name(isolate, name));
         _template->ReadOnlyPrototype();
 
         _template->InstanceTemplate()->SetInternalFieldCount(1);
@@ -91,7 +91,7 @@ class class_builder {
     void add_prototype_method(const char (&name)[N],
                               F   method,
                               int length = 0) {
-        add_prototype_method(no::NewName(_isolate, name),
+        add_prototype_method(no::name(_isolate, name),
                              method,
                              length);
     }
@@ -100,7 +100,7 @@ class class_builder {
     void add_prototype_method(v8::Local<v8::Name> name,
                               F                   method,
                               int                 length = 0) {
-        auto data     = no::New(_isolate, new callable_wrapper<F>{method});
+        auto data     = no::data(_isolate, new callable_wrapper<F>{method});
         auto function = v8::FunctionTemplate::New(_isolate,                         // isolate
                                                   invoke_method<F>,                 // callback
                                                   data,                             // data
@@ -128,7 +128,7 @@ class class_builder {
         auto isolate = args.GetIsolate();
         if (!args.IsConstructCall()) {
             auto message = "Class constructor cannot be invoked without 'new'";
-            isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, message).As<v8::String>()));
+            isolate->ThrowException(v8::Exception::TypeError(no::data(isolate, message).As<v8::String>()));
             return;
         }
 
@@ -140,7 +140,7 @@ class class_builder {
 
             new weak_data<T, TD>(isolate, value, instance, info->destructor);
         } catch (...) {
-            isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, "error invoking constructor").As<v8::String>()));
+            isolate->ThrowException(v8::Exception::TypeError(no::data(isolate, "error invoking constructor").As<v8::String>()));
         }
     }
 
@@ -160,9 +160,9 @@ class class_builder {
                 args.GetReturnValue().Set(result);
             }
         } catch (const no::type_error& error) {
-            isolate->ThrowException(v8::Exception::TypeError(no::New(isolate, error.what()).As<v8::String>()));
+            isolate->ThrowException(v8::Exception::TypeError(no::data(isolate, error.what()).As<v8::String>()));
         } catch (...) {
-            isolate->ThrowException(v8::Exception::Error(no::New(isolate, "error invoking method").As<v8::String>()));
+            isolate->ThrowException(v8::Exception::Error(no::data(isolate, "error invoking method").As<v8::String>()));
         }
     }
 

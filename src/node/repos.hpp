@@ -25,10 +25,8 @@ static void create_repos(const v8::FunctionCallbackInfo<v8::Value>& args) {
     // apr_terminate();
 }
 
-void init(v8::Local<v8::Object>&  exports,
-          v8::Isolate*            isolate,
-          v8::Local<v8::Context>& context) {
-    NODE_SET_METHOD(exports, "create_repos", create_repos);
+void initialize(no::object& exports) {
+    exports["create_repos"].set(no::data<v8::Function>(exports.context(), create_repos), no::property_attribute::read_only);
 }
 } // namespace repos
 } // namespace no

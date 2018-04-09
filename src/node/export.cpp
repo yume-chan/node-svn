@@ -17,26 +17,22 @@
 
 #include <node/repos.hpp>
 
-using namespace std::literals;
+#include <objects/object.hpp>
 
-#define SET_READONLY(object, name, value)                   \
-    (object)->DefineOwnProperty(context,                    \
-                                no::NewName(isolate, name), \
-                                (value),                    \
-                                no::PropertyAttribute::ReadOnlyDontDelete)
+using namespace std::literals;
 
 namespace no {
 void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
-    auto context = isolate->GetCurrentContext();
 
     auto version = svn_client_version();
 
-    auto object = v8::Object::New(isolate);
-    SET_READONLY(object, "major", no::New(isolate, version->major));
-    SET_READONLY(object, "minor", no::New(isolate, version->minor));
-    SET_READONLY(object, "patch", no::New(isolate, version->patch));
-    args.GetReturnValue().Set(object);
+    no::object object(isolate);
+    object["major"] = version->major;
+    object["minor"] = version->minor;
+    object["patch"] = version->patch;
+
+    args.GetReturnValue().Set(object.value());
 }
 
 // #include <node/iterator.hpp>
@@ -51,7 +47,7 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
 
 //     auto async = [isolate, iterator](int32_t i) -> uv::future<void> {
 //         v8::HandleScope scope(isolate);
-//         return iterator->yield(no::New(isolate, i));
+//         return iterator->yield(no::data(isolate, i));
 //     };
 
 //     auto work = [async = uv::make_async(async)]() -> void {
@@ -67,31 +63,30 @@ void version(v8::Local<v8::Name> property, const v8::PropertyCallbackInfo<v8::Va
 //     uv::queue_work(work, after_work);
 // }
 
-void init(v8::Local<v8::Object> exports) {
-    auto isolate = exports->GetIsolate();
-    auto context = isolate->GetCurrentContext();
+void initialize(v8::Local<v8::Object> raw_exports) {
+    no::object exports(raw_exports);
 
-    exports->SetAccessor(context,                                    // context
-                         no::NewName(isolate, "version"),            // name
-                         version,                                    // getter
-                         nullptr,                                    // setter
-                         v8::MaybeLocal<v8::Value>(),                // data
-                         v8::AccessControl::ALL_CAN_READ,            // settings
-                         no::PropertyAttribute::ReadOnlyDontDelete); // attribute
+    raw_exports->SetAccessor(exports.context(),                                                                                            // context
+                             no::name(exports.isolate(), "version"),                                                                       // name
+                             version,                                                                                                      // getter
+                             nullptr,                                                                                                      // setter
+                             v8::MaybeLocal<v8::Value>(),                                                                                  // data
+                             v8::AccessControl::ALL_CAN_READ,                                                                              // settings
+                             static_cast<v8::PropertyAttribute>(no::property_attribute::read_only | no::property_attribute::dont_delete)); // attribute
 
     // NODE_SET_METHOD(exports, "test", test);
 
-    client::init(exports, isolate, context);
+    client::initialize(exports);
 
-    conflict_choose::init(exports, isolate, context);
-    depth::init(exports, isolate, context);
-    node_kind::init(exports, isolate, context);
-    revision_kind::init(exports, isolate, context);
-    status_kind::init(exports, isolate, context);
-    //SvnError::Init(exports, isolate, context);
+    conflict_choose::initialize(exports);
+    depth::initialize(exports);
+    node_kind::initialize(exports);
+    revision_kind::initialize(exports);
+    status_kind::initialize(exports);
+    //SvnError::Init(exports);
 
-    repos::init(exports, isolate, context);
+    repos::initialize(exports);
 }
 
-NODE_MODULE(svn, init)
+NODE_MODULE(svn, initialize)
 } // namespace no

@@ -4,7 +4,7 @@
 #include <functional>
 #include <future>
 
-#include <node/object.hpp>
+#include <objects/object.hpp>
 
 #include <uv/async.hpp>
 
@@ -92,7 +92,7 @@ static std::optional<svn::simple_auth> convert_simple_auth(v8::Isolate*         
         return {};
 
     if (value->IsObject()) {
-        no::object object = value.As<v8::Object>();
+        no::object object(value.As<v8::Object>());
         try {
             auto username = convert_string(object["username"]);
             auto password = convert_string(object["password"]);
@@ -114,7 +114,7 @@ using simple_auth_future  = std::future<std::optional<svn::simple_auth>>;
 
 simple_auth_provider::simple_auth_provider(v8::Isolate* isolate)
     : _isolate(isolate)
-    , _invoke(uv::make_async(&simple_auth_provider::_invoke_sync)) {
+    , _invoke(uv::make_async(&simple_auth_provider::_invoke_implement)) {
     v8::HandleScope scope(isolate);
     _functions.Reset(isolate, v8::Set::New(isolate));
 }
@@ -143,10 +143,10 @@ std::optional<svn::simple_auth> simple_auth_provider::operator()(const std::stri
     return _invoke(this, realm, username, may_save);
 }
 
-std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(const simple_auth_provider*             _this,
-                                                                   const std::string&                      realm,
-                                                                   const std::optional<const std::string>& username,
-                                                                   bool                                    may_save) {
+std::optional<svn::simple_auth> simple_auth_provider::_invoke_implement(const simple_auth_provider*             _this,
+                                                                        const std::string&                      realm,
+                                                                        const std::optional<const std::string>& username,
+                                                                        bool                                    may_save) {
     auto            isolate = _this->_isolate;
     v8::HandleScope scope(isolate);
     auto            context   = isolate->GetCurrentContext();
@@ -154,9 +154,9 @@ std::optional<svn::simple_auth> simple_auth_provider::_invoke_sync(const simple_
 
     const auto           argc       = 3;
     v8::Local<v8::Value> argv[argc] = {
-        no::New(isolate, realm),
-        no::New(isolate, username),
-        no::New(isolate, may_save)};
+        no::data(isolate, realm),
+        no::data(isolate, username),
+        no::data(isolate, may_save)};
 
     auto functions = _this->_functions.Get(isolate);
     auto array     = functions->AsArray();

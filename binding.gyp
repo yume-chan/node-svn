@@ -20,11 +20,6 @@
                 "src/cpp/malloc.cpp",
                 "src/cpp/svn_error.cpp",
                 "src/node/auth/simple.cpp",
-                "src/node/enum/conflict_choose.cpp",
-                "src/node/enum/depth.cpp",
-                "src/node/enum/node_kind.cpp",
-                "src/node/enum/revision_kind.cpp",
-                "src/node/enum/status_kind.cpp",
                 "src/node/export.cpp",
                 "src/node/node_client.cpp"
             ],

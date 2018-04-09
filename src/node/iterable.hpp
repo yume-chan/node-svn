@@ -3,7 +3,7 @@
 #include <future>
 #include <iostream>
 
-#include <node/class_builder.hpp>
+#include <objects/class_builder.hpp>
 #include <uv/async.hpp>
 
 namespace no {
@@ -32,7 +32,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
             auto context = _isolate->GetCurrentContext();
 
             const auto           argc       = 1;
-            v8::Local<v8::Value> argv[argc] = {no::New(_isolate, this)};
+            v8::Local<v8::Value> argv[argc] = {no::data(_isolate, this)};
 
             auto value = _initializer.Get(_isolate)->NewInstance(context, argc, argv).ToLocalChecked();
             _value.Reset(_isolate, value);
@@ -58,19 +58,20 @@ class iterable : public std::enable_shared_from_this<iterable> {
         , _resolver_fulfilled(false)
         , _consume_promise() {
         if (_initializer.IsEmpty()) {
-            auto name_asyncIterator = no::NewName(isolate, "asyncIterator");
+            auto name_asyncIterator = no::name(isolate, "asyncIterator");
 
             // polyfill Symbol.asyncIterator
-            auto symbol        = context->Global()->Get(no::NewName(isolate, "Symbol")).As<v8::Object>();
-            auto asyncIterator = symbol->Get(context, name_asyncIterator).ToLocalChecked();
+            auto global        = no::object(context->Global());
+            auto symbol        = global["Symbol"].as<no::object>();
+            auto asyncIterator = symbol[name_asyncIterator];
 
             if (asyncIterator->IsUndefined()) {
-                asyncIterator = v8::Symbol::New(isolate, no::NewName(isolate, "Symbol.asyncIterator"));
-                no::check_result(symbol->DefineOwnProperty(context, name_asyncIterator, asyncIterator, no::PropertyAttribute::All));
+                asyncIterator.set(v8::Symbol::New(isolate, no::name(isolate, "Symbol.asyncIterator")),
+                                  no::property_attribute::read_only | no::property_attribute::dont_enum | no::property_attribute::dont_delete);
             }
 
             class_builder<iterable> clazz(isolate, "Iterator", constructor, &iterable::destructor);
-            clazz.add_prototype_method(asyncIterator.As<v8::Name>(), &iterable::get_async_iterator);
+            clazz.add_prototype_method(asyncIterator.as<v8::Name>(), &iterable::get_async_iterator);
             clazz.add_prototype_method("next", &iterable::next);
 
             _initializer.Reset(isolate, clazz.get_constructor());
@@ -114,7 +115,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
         _consume_promise = std::promise<void>();
 
         if (_resolver.IsEmpty()) {
-            resolver = no::New<v8::Promise::Resolver>(context);
+            resolver = no::data<v8::Promise::Resolver>(context);
             _resolver.Reset(_isolate, resolver);
 
             _resolver_fulfilled = true;
@@ -126,9 +127,9 @@ class iterable : public std::enable_shared_from_this<iterable> {
         }
 
         if (success) {
-            auto object = no::New<v8::Object>(_isolate);
-            object->Set(no::New(_isolate, "value"), value);
-            object->Set(no::New(_isolate, "done"), no::New(_isolate, done));
+            auto object = no::data<v8::Object>(_isolate);
+            object->Set(no::data(_isolate, "value"), value);
+            object->Set(no::data(_isolate, "done"), no::data(_isolate, done));
             check_result(resolver->Resolve(context, object));
         } else {
             check_result(resolver->Reject(context, value));
@@ -143,7 +144,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
 
     v8::Local<v8::Value> get_async_iterator(const v8::FunctionCallbackInfo<v8::Value>& args) {
         if (this->_iterator_created) {
-            _isolate->ThrowException(no::New(_isolate, "You can only get iterable once").As<v8::String>());
+            _isolate->ThrowException(no::data(_isolate, "You can only get iterable once").As<v8::String>());
             return v8::Local<v8::Value>();
         }
 
@@ -164,7 +165,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
             _consume_promise.set_value();
         } else {
             auto context = isolate->GetCurrentContext();
-            resolver     = no::New<v8::Promise::Resolver>(context);
+            resolver     = no::data<v8::Promise::Resolver>(context);
             _resolver.Reset(isolate, resolver);
         }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <node/auth/simple.hpp>
+#include <objects/object.hpp>
 
 namespace svn {
 class client;
@@ -9,9 +10,7 @@ class client;
 namespace no {
 class client : public std::enable_shared_from_this<client> {
   public:
-    static void init(v8::Local<v8::Object>&  exports,
-                     v8::Isolate*            isolate,
-                     v8::Local<v8::Context>& context);
+    static void initialize(no::object& exports);
 
     client(const client&) = delete;
     client(client&&)      = delete;

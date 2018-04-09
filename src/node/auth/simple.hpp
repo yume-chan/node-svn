@@ -19,19 +19,19 @@ struct simple_auth_provider {
                                                bool                                    may_save) const;
 
   private:
-    static std::optional<svn::simple_auth> _invoke_sync(const simple_auth_provider*             _this,
-                                                        const std::string&                      realm,
-                                                        const std::optional<const std::string>& username,
-                                                        bool                                    may_save);
+    static std::optional<svn::simple_auth> _invoke_implement(const simple_auth_provider*             _this,
+                                                             const std::string&                      realm,
+                                                             const std::optional<const std::string>& username,
+                                                             bool                                    may_save);
 
     v8::Isolate*        _isolate;
     v8::Global<v8::Set> _functions;
 
-    using invoke_function = std::function<std::optional<svn::simple_auth>(const simple_auth_provider*,
-                                                                          const std::string&,
-                                                                          const std::optional<const std::string>&,
-                                                                          bool)>;
+    using invoke_type = std::function<std::optional<svn::simple_auth>(const simple_auth_provider*,
+                                                                      const std::string&,
+                                                                      const std::optional<const std::string>&,
+                                                                      bool)>;
 
-    const invoke_function _invoke;
+    const invoke_type _invoke;
 };
 } // namespace no

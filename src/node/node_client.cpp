@@ -10,11 +10,10 @@
 #include <cpp/client.hpp>
 #include <cpp/svn_type_error.hpp>
 
-#include <node/class_builder.hpp>
 #include <node/error.hpp>
 #include <node/iterable.hpp>
-#include <node/object.hpp>
 #include <node/type_conversion.hpp>
+#include <objects/class_builder.hpp>
 
 // clang-format off
 
@@ -29,7 +28,7 @@
         auto isolate = args.GetIsolate();                                                \
         auto context = isolate->GetCurrentContext();                                     \
                                                                                          \
-        auto _Resolver = no::New<v8::Promise::Resolver>(context);                        \
+        auto _Resolver = no::data<v8::Promise::Resolver>(context);                       \
                                                                                          \
         try {
 
@@ -88,7 +87,7 @@
 static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, const svn::svn_error& raw_error) {
     auto message = raw_error.what();
 
-    no::object error = v8::Exception::Error(no::New(isolate, message).As<v8::String>()).As<v8::Object>();
+    no::object error(v8::Exception::Error(no::data(isolate, message).As<v8::String>()).As<v8::Object>());
 
     error["name"] = "SvnError";
     error["code"] = raw_error.code;
@@ -143,7 +142,7 @@ static int32_t convert_number(v8::Isolate*                 isolate,
     if (options.IsEmpty())
         return defaultValue;
 
-    auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
         return defaultValue;
 
@@ -161,7 +160,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
     if (options.IsEmpty())
         return defaultValue;
 
-    auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
         return defaultValue;
 
@@ -171,7 +170,7 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
     }
 
     if (value->IsObject()) {
-        no::object object = value.As<v8::Object>();
+        no::object object(value.As<v8::Object>());
 
         auto number = object["number"];
         if (!number->IsUndefined()) {
@@ -225,7 +224,7 @@ static std::optional<std::vector<svn::revision_range>> convert_revision_ranges(v
         return {};
     }
 
-    auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined()) {
         return {};
     }
@@ -254,7 +253,7 @@ static svn::depth convert_depth(v8::Isolate*                 isolate,
         return defaultValue;
     }
 
-    auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined()) {
         return defaultValue;
     }
@@ -273,7 +272,7 @@ static bool convert_boolean(v8::Isolate*                 isolate,
     if (options.IsEmpty())
         return defaultValue;
 
-    auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
         return defaultValue;
 
@@ -289,7 +288,7 @@ static std::vector<std::string> convert_array(v8::Isolate*          isolate,
     if (options.IsEmpty())
         return std::vector<std::string>();
 
-    auto value = options->Get(no::New(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
     if (value->IsUndefined())
         return std::vector<std::string>();
 
@@ -313,19 +312,11 @@ static v8::Local<v8::Object> buffer_from_vector(v8::Isolate* isolate, std::vecto
 #define STRINGIFY_INTERNAL(X) #X
 #define STRINGIFY(X) STRINGIFY_INTERNAL(X)
 
-#define SET_READ_ONLY(object, name, value)                                   \
-    no::check_result((object)->DefineOwnProperty(context,                    \
-                                                 no::NewName(isolate, name), \
-                                                 value,                      \
-                                                 no::PropertyAttribute::ReadOnlyDontDelete))
-
 namespace no {
-void client::init(v8::Local<v8::Object>&  exports,
-                  v8::Isolate*            isolate,
-                  v8::Local<v8::Context>& context) {
-    v8::HandleScope scope(isolate);
+void client::initialize(no::object& exports) {
+    v8::HandleScope scope(exports.isolate());
 
-    class_builder<client> clazz(isolate, "Client", constructor);
+    class_builder<client> clazz(exports.isolate(), "Client", constructor);
     clazz.add_prototype_method("add_simple_auth_provider", &client::add_simple_auth_provider, 1);
     clazz.add_prototype_method("remove_simple_auth_provider", &client::remove_simple_auth_provider, 1);
 
@@ -349,7 +340,7 @@ void client::init(v8::Local<v8::Object>&  exports,
 
     clazz.add_prototype_method("get_working_copy_root", &client::get_working_copy_root, 1);
 
-    SET_READ_ONLY(exports, "Client", clazz.get_constructor());
+    exports["Client"].set(clazz.get_constructor(), no::property_attribute::read_only);
 }
 
 std::shared_ptr<client> client::constructor(const v8::FunctionCallbackInfo<v8::Value>& args) {
@@ -557,7 +548,7 @@ METHOD_BEGIN(cat)
 
     no::object properties(isolate);
     for (auto pair : raw_result.properties) {
-        properties[no::New(isolate, pair.first)] = pair.second;
+        properties[pair.first] = pair.second;
     }
     result["properties"] = properties;
 METHOD_RETURN(result)
@@ -576,7 +567,7 @@ METHOD_BEGIN(checkout)
     ASYNC_END()
 
     auto result = ASYNC_RESULT;
-METHOD_RETURN(no::New(isolate, result))
+METHOD_RETURN(no::data(isolate, result))
 
 METHOD_BEGIN(cleanup)
     auto path = convert_string(args[0]);
@@ -864,12 +855,12 @@ METHOD_BEGIN(update)
 
     v8::Local<v8::Value> result;
     if (single) {
-        result = no::New(isolate, ASYNC_RESULT[0]);
+        result = no::data(isolate, ASYNC_RESULT[0]);
     } else {
         auto vector = ASYNC_RESULT;
-        auto array  = no::New<v8::Array>(isolate, static_cast<int32_t>(vector.size()));
+        auto array  = no::data<v8::Array>(isolate, static_cast<int32_t>(vector.size()));
         for (uint32_t i = 0; i < vector.size(); i++) {
-            array->Set(i, no::New(isolate, vector[i]));
+            array->Set(i, no::data(isolate, vector[i]));
         }
         result = array;
     }
@@ -882,7 +873,7 @@ METHOD_BEGIN(get_working_copy_root)
         return _client->get_working_copy_root(path);
     ASYNC_END()
 
-    auto result = no::New(isolate, ASYNC_RESULT);
+    auto result = no::data(isolate, ASYNC_RESULT);
 METHOD_RETURN(result);
 
 client::client(v8::Isolate*                            isolate,

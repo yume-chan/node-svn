@@ -180,7 +180,7 @@ void client::set_abort_function(abort_function& function) {
     _abort_function = function;
 }
 
-void client::clear_abort_functioon() {
+void client::remove_abort_function() {
     _abort_function = {};
 }
 
