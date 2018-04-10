@@ -111,7 +111,7 @@ class client : public std::enable_shared_from_this<client> {
                      const revision&    op_revision              = revision_kind::working, // r8          stack
                      svn::depth         depth                    = svn::depth::infinity,   // r9          stack
                      bool               ignore_externals         = false,                  // stack       stack
-                     bool               allow_unver_obstructions = false) const;                         // stack       stack
+                     bool               allow_unver_obstructions = false) const;           // stack       stack
 
     void cleanup(const std::string& path,
                  bool               break_locks,

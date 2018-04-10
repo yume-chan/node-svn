@@ -4,7 +4,7 @@
 
 namespace no {
 namespace conflict_choose {
-void initialize(const no::object& exports) {
+void initialize(no::object& exports) {
     no::object object(exports.isolate());
     set_enum(object, "postpone", svn::conflict_choose::postpone);
     set_enum(object, "base", svn::conflict_choose::base);

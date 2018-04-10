@@ -37,6 +37,15 @@ describe("svn.node", () => {
         svn = require("..");
     });
 
+    it("version", () => {
+        const version = svn.version;
+
+        expect(version).to.be.a("object");
+        expect(version.major).to.equal(1);
+        expect(version.minor).to.equal(11);
+        expect(version.patch).to.equal(0);
+    });
+
     it("create repository", () => {
         svn.create_repos(server);
 
