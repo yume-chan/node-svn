@@ -63,7 +63,9 @@ static void invoke_notify(void*                  raw_baton,
                           apr_pool_t*            pool) {
     auto client = static_cast<svn::client*>(raw_baton);
 
-    svn::notify_info info{static_cast<svn::notify_action>(notify->action)};
+    svn::notify_info info{
+        static_cast<svn::notify_action>(notify->action),
+        notify->path};
 
     client->invoke_notify_function(info);
 }

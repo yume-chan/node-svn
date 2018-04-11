@@ -13,11 +13,16 @@ const file1 = path.resolve(repository, "file1.txt").replace(/\\/g, "/");
 
 async function async_iterate(value, callback) {
     const iterator = value[Symbol["asyncIterator"]]();
-    let result = await iterator.next();
-    while (result.done === false) {
+
+    do {
+        let result = await iterator.next();
+
+        if (result.done === true) {
+            break;
+        }
+
         callback(result.value);
-        result = await iterator.next();
-    }
+    } while (true);
 }
 
 describe("svn.node", () => {
@@ -40,7 +45,7 @@ describe("svn.node", () => {
     it("version", () => {
         const version = svn.version;
 
-        expect(version).to.be.a("object");
+        expect(version).to.be.an("object");
         expect(version.major).to.equal(1);
         expect(version.minor).to.equal(11);
         expect(version.patch).to.equal(0);
@@ -52,7 +57,7 @@ describe("svn.node", () => {
         expect(fs.existsSync(server)).to.be.true;
     });
 
-    it("create Client", async () => {
+    it("new Client", async () => {
         client = new svn.Client(config);
 
         if (!global_config) {
@@ -60,40 +65,52 @@ describe("svn.node", () => {
         }
     });
 
-    it("checkout", async function() {
-        // don't know why but I need this line
-        // to disable timeout to let tests pass
-        // they actually only take less than 100ms
+    it("dispose", async function() {
         this.timeout(0);
+
+        const start = process.memoryUsage().rss;
+
+        for (let i = 0; i < 1000; i++) {
+            const client = new svn.Client(config);
+            client.dispose();
+        }
+
+        const end = process.memoryUsage().rss;
+
+        expect(end - start).to.lessThan(2 * 1000 * 1000);
+    });
+
+    it("checkout", async function() {
+        this.timeout(0);
+
+        client.dispose();
+        client = new svn.Client(config);
 
         const url = uri.file(server).toString(true);
         const revision = await client.checkout(url, repository);
-        expect(revision).to.be.a("number");
+        expect(revision, "revision").to.equal(0);
 
         expect(fs.existsSync(repository)).to.be.true;
     });
 
-    it("add file", async function() {
-        // don't know why but I need this line
-        // to disable timeout to let tests pass
-        // they actually only take less than 100ms
+    it("status after creating file", async function() {
         this.timeout(0);
+
+        client.dispose();
+        client = new svn.Client(config);
 
         await fs.writeFile(file1, file1);
-        await client.add(file1);
-    });
 
-    it("status", async function() {
-        // don't know why but I need this line
-        // to disable timeout to let tests pass
-        // they actually only take less than 100ms
-        this.timeout(0);
-
+        let count = 0;
         const result = client.status(repository);
-        await async_iterate(result, (value) => {
-            expect(value.path).to.equal(file1);
-            expect(value.kind).to.equal(svn.NodeKind.file);
+        await async_iterate(result, (item) => {
+            count++;
+            expect(item.path, "item.path").to.equal(file1);
+            expect(item.kind, "item.kind").to.equal(svn.NodeKind.unknown);
+            expect(svn.StatusKind[item.node_status], "item.node_status").to.equal(svn.StatusKind[svn.StatusKind.unversioned]);
+            expect(svn.StatusKind[item.text_status], "item.text_status").to.equal(svn.StatusKind[svn.StatusKind.none]);
         });
+        expect(count, "count").to.equal(1);
 
         // WARNING: **NEVER** DO THIS IN PRODUCTION
         // `status()` runs asynchronously
@@ -106,78 +123,155 @@ describe("svn.node", () => {
         await Promise.all(tasks);
     });
 
-    it("memory leak", async function() {
-        this.skip();
+    it("add file", async function() {
         this.timeout(0);
 
-        while (true) {
-            new svn.Client(config);
-        }
+        client.dispose();
+        client = new svn.Client(config);
+
+        await client.add(file1);
+    });
+
+    it("status after adding file", async function() {
+        this.timeout(0);
+
+        client.dispose();
+        client = new svn.Client(config);
+
+        await fs.writeFile(file1, file1);
+
+        let count = 0;
+        const result = client.status(repository);
+        await async_iterate(result, (item) => {
+            count++;
+            expect(item.path, "item.path").to.equal(file1);
+            expect(item.kind, "item.kind").to.equal(svn.NodeKind.file);
+            expect(svn.StatusKind[item.node_status], "item.node_status").to.equal(svn.StatusKind[svn.StatusKind.added]);
+            expect(svn.StatusKind[item.text_status], "item.text_status").to.equal(svn.StatusKind[svn.StatusKind.modified]);
+        });
+        expect(count, "count").to.equal(1);
     });
 
     it("commit", async function() {
-        // don't know why but I need this line
-        // to disable timeout to let tests pass
-        // they actually only take less than 100ms
         this.timeout(0);
+
+        client.dispose();
+        client = new svn.Client(config);
 
         let count = 0;
         const result = client.commit(repository, "commit1");
-        await async_iterate(result, (value) => {
+        await async_iterate(result, (item) => {
             count++;
-            expect(value.revision).to.equal(1);
-            expect(value.post_commit_error).to.be.undefined;
+            expect(item.revision, "item.revision").to.equal(1);
+            expect(item.post_commit_error, "item.post_commit_error").to.be.undefined;
+        });
+        expect(count, "count").to.equal(1);
+    });
+
+    it("checkout again", async function() {
+        this.timeout(0);
+
+        client.dispose();
+        client = new svn.Client(config);
+
+        fs.removeSync(repository);
+
+        const url = uri.file(server).toString(true);
+        const revision = await client.checkout(url, repository);
+        expect(revision, "revision").to.equal(1);
+
+        expect(fs.existsSync(repository)).to.be.true;
+    });
+
+    // it("update", async function() {
+    //     this.timeout(0);
+
+    // client.dispose();
+    // client = new svn.Client(config);
+
+    //     const result = client.update(repository);
+    //     await async_iterate(result, (item) => {
+    //         console.log(item);
+    //     });
+    // });
+
+    it("status after modifying file", async function() {
+        this.timeout(0);
+
+        client.dispose();
+        client = new svn.Client(config);
+
+        await fs.writeFile(file1, file1 + file1);
+
+        let count = 0;
+        const result = client.status(repository);
+        await async_iterate(result, (item) => {
+            count++;
+            expect(item.path, "item.path").to.equal(file1);
+            expect(item.kind, "item.kind").to.equal(svn.NodeKind.file);
+            expect(svn.StatusKind[item.node_status], "item.node_status").to.equal(svn.StatusKind[svn.StatusKind.modified]);
+            expect(svn.StatusKind[item.text_status], "item.text_status").to.equal(svn.StatusKind[svn.StatusKind.modified]);
         });
         expect(count).to.equal(1);
     });
 
     it("cat", async function() {
-        // don't know why but I need this line
-        // to disable timeout to let tests pass
-        // they actually only take less than 100ms
         this.timeout(0);
+
+        client.dispose();
+        client = new svn.Client(config);
 
         let result = await client.cat(file1);
         expect(result.content.toString("utf-8")).to.equal(file1);
 
         await fs.writeFile(file1, file1 + file1);
 
-        result = await client.cat(file1, { revision: svn.RevisionKind.base });
+        result = await client.cat(file1);
         expect(result.content.toString("utf-8")).to.equal(file1);
+
+        result = await client.cat(file1, { revision: svn.RevisionKind.working });
+        expect(result.content.toString("utf-8")).to.equal(file1 + file1);
     });
 
-    const changelist = Date.now().toString();
+    describe("changelist", () => {
+        const changelist = Date.now().toString();
 
-    it("add_to_changelist", async function() {
-        // don't know why but I need this line
-        // to disable timeout to let tests pass
-        // they actually only take less than 100ms
-        this.timeout(0);
+        it("add_to_changelist", async function() {
+            this.timeout(0);
 
-        await client.add_to_changelist(file1, changelist);
-    });
+            client.dispose();
+            client = new svn.Client(config);
 
-    it("get_changelists", async function() {
-        let count = 0;
-        const result = client.get_changelists(file1);
-        await async_iterate(result, (item) => {
-            count++;
-            expect(item.path).to.equal(file1);
+            await client.add_to_changelist(file1, changelist);
         });
-        expect(count).to.equal(1);
-    });
 
-    it("remove_from_changelists", async function() {
-        // don't know why but I need this line
-        // to disable timeout to let tests pass
-        // they actually only take less than 100ms
-        this.timeout(0);
+        it("get_changelists", async function() {
+            this.timeout(0);
 
-        await client.remove_from_changelists(file1);
+            client.dispose();
+            client = new svn.Client(config);
 
-        const result = client.get_changelists(file1);
-        await async_iterate(result, (item) => {
-            throw new Error(JSON.stringify(item));
+            let count = 0;
+            const result = client.get_changelists(file1);
+            await async_iterate(result, (item) => {
+                count++;
+                expect(item.path).to.equal(file1);
+            });
+            expect(count).to.equal(1);
+        });
+
+        it("remove_from_changelists", async function() {
+            this.timeout(0);
+
+            client.dispose();
+            client = new svn.Client(config);
+
+            await client.remove_from_changelists(file1);
+
+            const result = client.get_changelists(file1);
+            await async_iterate(result, (item) => {
+                throw new Error(JSON.stringify(item));
+            });
         });
     });
 
@@ -186,9 +280,6 @@ describe("svn.node", () => {
             this.skip();
         }
 
-        // don't know why but I need this line
-        // to disable timeout to let tests pass
-        // they actually only take less than 100ms
         this.timeout(0);
 
         let max = {

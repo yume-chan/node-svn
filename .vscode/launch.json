@@ -7,6 +7,7 @@
             "program": "/usr/local/bin/node",
             "args": [
                 "${workspaceFolder}/node_modules/mocha/bin/_mocha",
+                "--bail",
                 "-u",
                 "tdd",
                 "--timeout",
@@ -36,6 +37,7 @@
             "name": "Mocha Tests",
             "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
             "args": [
+                "--bail",
                 "-u",
                 "tdd",
                 "--timeout",

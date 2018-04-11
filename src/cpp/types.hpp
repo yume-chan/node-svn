@@ -529,10 +529,10 @@ struct commit_info {
     int32_t revision;
 
     /** server-side date of the commit. */
-    const char* date;
+    const std::string date;
 
     /** author of the commit. */
-    const char* author;
+    const std::string author;
 
     /** error message from post-commit hook, or NULL. */
     const char* post_commit_error;
@@ -557,8 +557,17 @@ enum class notify_action {
     update_update,
     update_completed,
     update_external,
+    update_replace = 31,
+    update_started = 41,
+    update_skip_obstruction,
+    update_skip_working_only,
+    update_skip_access_denied,
+    update_external_removed,
+    update_shadowed_add,
+    update_shadowed_update,
+    update_shadowed_delete,
 
-    status_completed,
+    status_completed = 13,
     status_external,
 
     commit_modified,
@@ -583,19 +592,24 @@ enum class notify_action {
     merge_begin,
     foreign_merge_begin,
 
-    update_replace,
-
-    property_added,
+    property_added = 32,
     property_modified,
     property_deleted,
     property_deleted_nonexistent,
 
     revprop_set,
     revprop_deleted,
+
+    merge_completed,
+
+    tree_conflict,
+
+    failed_external,
 };
 
 struct notify_info {
     const notify_action action;
+    const std::string   path;
 };
 
 enum class conflict_choose {

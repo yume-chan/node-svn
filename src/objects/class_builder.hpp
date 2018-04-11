@@ -7,12 +7,9 @@
 #include <node/error.hpp>
 #include <node/v8.hpp>
 
-namespace no {
-template <class T>
-struct callable_wrapper {
-    T value;
-};
+#include <objects/value_wrapper.hpp>
 
+namespace no {
 template <class TC, class TD>
 struct class_info {
     TC constructor;
@@ -100,7 +97,7 @@ class class_builder {
     void add_prototype_method(v8::Local<v8::Name> name,
                               F                   method,
                               int                 length = 0) {
-        auto data     = no::data(_isolate, new callable_wrapper<F>{method});
+        auto data     = no::data(_isolate, new value_wrapper<F>{method});
         auto function = v8::FunctionTemplate::New(_isolate,                         // isolate
                                                   invoke_method<F>,                 // callback
                                                   data,                             // data
@@ -150,7 +147,7 @@ class class_builder {
 
         v8::EscapableHandleScope scope(isolate);
 
-        auto method = static_cast<callable_wrapper<F>*>(args.Data().As<v8::External>()->Value());
+        auto method = static_cast<value_wrapper<F>*>(args.Data().As<v8::External>()->Value());
         auto _this  = static_cast<T*>(args.Holder()->GetAlignedPointerFromInternalField(0));
 
         try {

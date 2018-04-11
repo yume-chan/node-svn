@@ -72,7 +72,26 @@ export interface PegRevisionOpitons extends RevisionOption {
     peg_revision: Revision;
 }
 
-export type CatOptions = PegRevisionOpitons;
+export interface UpdateOptions extends RevisionOption {
+
+}
+
+export interface CatOptions extends PegRevisionOpitons {
+    /**
+     * default values:
+     * * `RevisionKind.head` for url
+     * * `RevisionKind.working` for file
+     */
+    peg_revision: Revision;
+
+    /**
+     * default values:
+     * * `peg_revision` if not `RevisionKind.unspecified`
+     * * `RevisionKind.head` for url
+     * * `RevisionKind.base` for file
+     */
+    revision: Revision;
+}
 
 export interface CatResult {
     content: Buffer;
@@ -137,6 +156,29 @@ interface LogItem {
 type AuthProviderResult<T> = undefined | T | Promise<undefined | T>
 type SimpleAuthProvider = (realm: string, username: string | undefined, may_save: boolean) => AuthProviderResult<SimpleAuth>;
 
+export enum UpdateNotifyAction {
+    delete,
+    add,
+    update,
+    completed,
+    external,
+    replace,
+    started,
+    skip_obstruction,
+    skip_working_only,
+    skip_access_denied,
+    external_removed,
+    shadowed_add,
+    shadowed_update,
+    shadowed_delete
+}
+
+interface UpdateNotifyItem {
+    action: UpdateNotifyAction;
+    path: string;
+    revision?: number;
+}
+
 export class Client {
     constructor(config_path?: string);
 
@@ -175,10 +217,11 @@ export class Client {
 
     status(path: string, options?: Partial<StatusOptions>): AsyncIterable<StatusItem>;
 
-    update(path: string): Promise<number>;
-    update(path: string[]): Promise<number[]>;
+    update(path: string | string[], options?: Partial<UpdateOptions>): AsyncIterable<UpdateNotifyItem>;
 
     get_working_copy_root(path: string): Promise<string>;
+
+    dispose(): void;
 }
 
 export enum ConflictChoose {

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <svn_repos.h>
+#include <svn_hash.h>
 
 #include <node.h>
 
@@ -18,6 +19,7 @@ static void create_repos(const v8::FunctionCallbackInfo<v8::Value>& args) {
     apr_pool_create_ex(&pool, nullptr, nullptr, nullptr);
 
     apr_hash_t* fs_config = apr_hash_make(pool);
+    svn_hash_sets(fs_config, SVN_FS_CONFIG_COMPATIBLE_VERSION, "1.9");
 
     svn_repos_t* repos;
     svn_repos_create(&repos, path.c_str(), nullptr, nullptr, nullptr, fs_config, pool);

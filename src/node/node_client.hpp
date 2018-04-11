@@ -47,6 +47,19 @@ class client : public std::enable_shared_from_this<client> {
 
     v8::Local<v8::Value> get_working_copy_root(const v8::FunctionCallbackInfo<v8::Value>& args);
 
+    v8::Local<v8::Value> dispose(const v8::FunctionCallbackInfo<v8::Value>& args);
+
+    template <class T>
+    static decltype(auto) check_disposed(T callback) {
+        return [callback](client& _this, const v8::FunctionCallbackInfo<v8::Value>& args) -> v8::Local<v8::Value> {
+            if (_this._client == nullptr) {
+                throw no::type_error("");
+            }
+
+            return std::invoke(callback, _this, args);
+        };
+    }
+
     std::unique_ptr<svn::client> _client;
     no::simple_auth_provider     _simple_auth_provider;
 };

@@ -129,8 +129,8 @@ class client : public std::enable_shared_from_this<client> {
                 bool                                                 keep_locks             = true,
                 bool                                                 keep_changelists       = false,
                 bool                                                 commit_as_operations   = false,
-                bool                                                 include_file_externals = true,
-                bool                                                 include_dir_externals  = true) const;
+                bool                                                 include_file_externals = false,
+                bool                                                 include_dir_externals  = false) const;
 
     void info(const std::string&                                   path,
               const info_callback&                                 callback,

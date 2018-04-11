@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include <objects/class_builder.hpp>
+
 #include <uv/async.hpp>
 
 namespace no {
@@ -109,7 +110,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
 
         v8::HandleScope scope(_isolate);
 
-        auto context = _isolate->GetCurrentContext();
+        auto context = _isolate->GetEnteredContext();
 
         v8::Local<v8::Promise::Resolver> resolver;
         _consume_promise = std::promise<void>();
@@ -134,10 +135,6 @@ class iterable : public std::enable_shared_from_this<iterable> {
         } else {
             check_result(resolver->Reject(context, value));
         }
-
-        // **crucial!** v8 don't think it's idle so it won't run microtasks.
-        // force it to run, or we will stuck on waiting `_consume_promise` forever.
-        _isolate->RunMicrotasks();
 
         return _consume_promise.get_future();
     }

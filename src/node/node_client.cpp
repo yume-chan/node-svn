@@ -317,28 +317,30 @@ void client::initialize(no::object& exports) {
     v8::HandleScope scope(exports.isolate());
 
     class_builder<client> clazz(exports.isolate(), "Client", constructor);
-    clazz.add_prototype_method("add_simple_auth_provider", &client::add_simple_auth_provider, 1);
-    clazz.add_prototype_method("remove_simple_auth_provider", &client::remove_simple_auth_provider, 1);
+    clazz.add_prototype_method("add_simple_auth_provider", check_disposed(&client::add_simple_auth_provider), 1);
+    clazz.add_prototype_method("remove_simple_auth_provider", check_disposed(&client::remove_simple_auth_provider), 1);
 
-    clazz.add_prototype_method("add_to_changelist", &client::add_to_changelist, 2);
-    clazz.add_prototype_method("get_changelists", &client::get_changelists, 2);
-    clazz.add_prototype_method("remove_from_changelists", &client::remove_from_changelists, 2);
+    clazz.add_prototype_method("add_to_changelist", check_disposed(&client::add_to_changelist), 2);
+    clazz.add_prototype_method("get_changelists", check_disposed(&client::get_changelists), 2);
+    clazz.add_prototype_method("remove_from_changelists", check_disposed(&client::remove_from_changelists), 2);
 
-    clazz.add_prototype_method("add", &client::add, 1);
-    clazz.add_prototype_method("blame", &client::blame, 1);
-    clazz.add_prototype_method("cat", &client::cat, 1);
-    clazz.add_prototype_method("checkout", &client::checkout, 1);
-    clazz.add_prototype_method("cleanup", &client::cleanup, 1);
-    clazz.add_prototype_method("commit", &client::commit, 1);
-    clazz.add_prototype_method("info", &client::info, 1);
-    clazz.add_prototype_method("log", &client::log, 1);
-    clazz.add_prototype_method("remove", &client::remove, 1);
-    clazz.add_prototype_method("resolve", &client::resolve, 1);
-    clazz.add_prototype_method("revert", &client::revert, 1);
-    clazz.add_prototype_method("status", &client::status, 1);
-    clazz.add_prototype_method("update", &client::update, 1);
+    clazz.add_prototype_method("add", check_disposed(&client::add), 1);
+    clazz.add_prototype_method("blame", check_disposed(&client::blame), 1);
+    clazz.add_prototype_method("cat", check_disposed(&client::cat), 1);
+    clazz.add_prototype_method("checkout", check_disposed(&client::checkout), 1);
+    clazz.add_prototype_method("cleanup", check_disposed(&client::cleanup), 1);
+    clazz.add_prototype_method("commit", check_disposed(&client::commit), 1);
+    clazz.add_prototype_method("info", check_disposed(&client::info), 1);
+    clazz.add_prototype_method("log", check_disposed(&client::log), 1);
+    clazz.add_prototype_method("remove", check_disposed(&client::remove), 1);
+    clazz.add_prototype_method("resolve", check_disposed(&client::resolve), 1);
+    clazz.add_prototype_method("revert", check_disposed(&client::revert), 1);
+    clazz.add_prototype_method("status", check_disposed(&client::status), 1);
+    clazz.add_prototype_method("update", check_disposed(&client::update), 1);
 
-    clazz.add_prototype_method("get_working_copy_root", &client::get_working_copy_root, 1);
+    clazz.add_prototype_method("get_working_copy_root", check_disposed(&client::get_working_copy_root), 1);
+
+    clazz.add_prototype_method("dispose", check_disposed(&client::dispose), 0);
 
     exports["Client"].set(clazz.get_constructor(), no::property_attribute::read_only);
 }
@@ -845,26 +847,55 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
     return iterable->get();
 }
 
-METHOD_BEGIN(update)
-    auto paths  = convert_array(args[0], false);
-    auto single = args[0]->IsString();
+v8::Local<v8::Value> client::update(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    static const auto notify_actions = {
+        svn::notify_action::update_add};
 
-    ASYNC_BEGIN(paths)
-        return _client->update(paths);
-    ASYNC_END(single)
+    auto isolate = args.GetIsolate();
+    auto context = isolate->GetCurrentContext();
 
-    v8::Local<v8::Value> result;
-    if (single) {
-        result = no::data(isolate, ASYNC_RESULT[0]);
-    } else {
-        auto vector = ASYNC_RESULT;
-        auto array  = no::data<v8::Array>(isolate, static_cast<int32_t>(vector.size()));
-        for (uint32_t i = 0; i < vector.size(); i++) {
-            array->Set(i, no::data(isolate, vector[i]));
+    auto paths = convert_array(args[0], false);
+
+    auto options  = convert_options(args[1]);
+    auto revision = convert_revision(isolate, options, "revision", svn::revision_kind::head);
+
+    auto iterable = no::iterable::create(isolate, context);
+
+    auto notify = [isolate, iterable](const svn::notify_info& info) -> uv::future<void> {
+        v8::HandleScope scope(isolate);
+
+        no::object object(isolate);
+        object["action"] = static_cast<int32_t>(info.action);
+        object["path"]   = info.path;
+
+        return iterable->yield(object);
+    };
+
+    auto _notify = std::make_shared<svn::client::notify_function::element_type>(notify);
+    _client->add_notify_function(notify_actions, _notify);
+
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, paths, revision]() -> void {
+        _client->update(paths, revision);
+    };
+
+    auto after_work = [this, isolate, iterable, _notify](std::future<void> future) -> void {
+        try {
+            _client->remove_notify_function(notify_actions, _notify);
+            future.get();
+            iterable->end();
+        } catch (const svn::svn_error& raw) {
+            v8::HandleScope scope(isolate);
+
+            auto error = copy_error(isolate, raw);
+            iterable->reject(error);
         }
-        result = array;
-    }
-METHOD_RETURN(result);
+    };
+
+    uv::queue_work(work, after_work);
+
+    return iterable->get();
+}
 
 METHOD_BEGIN(get_working_copy_root)
     auto path = convert_string(args[0]);
@@ -875,6 +906,11 @@ METHOD_BEGIN(get_working_copy_root)
 
     auto result = no::data(isolate, ASYNC_RESULT);
 METHOD_RETURN(result);
+
+v8::Local<v8::Value> client::dispose(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    _client = nullptr;
+    return v8::Local<v8::Value>();
+}
 
 client::client(v8::Isolate*                            isolate,
                const std::optional<const std::string>& config_path)

@@ -12,6 +12,7 @@
 #include <node/enum/conflict_choose.hpp>
 #include <node/enum/depth.hpp>
 #include <node/enum/node_kind.hpp>
+#include <node/enum/notify_action.hpp>
 #include <node/enum/revision_kind.hpp>
 #include <node/enum/status_kind.hpp>
 
@@ -81,6 +82,7 @@ void initialize(v8::Local<v8::Object> raw_exports) {
     conflict_choose::initialize(exports);
     depth::initialize(exports);
     node_kind::initialize(exports);
+    notify_action::initialize(exports);
     revision_kind::initialize(exports);
     status_kind::initialize(exports);
     //SvnError::Init(exports);
