@@ -150,7 +150,8 @@ client::client(const std::optional<const std::string>& config_path) {
 
     _context->log_msg_func3 = invoke_log_message;
 
-    _context->notify_func2 = invoke_notify;
+    _context->notify_baton2 = nullptr;
+    _context->notify_func2  = invoke_notify;
 
     _context->cancel_baton = this;
     _context->cancel_func  = cancel_func;

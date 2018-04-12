@@ -382,6 +382,12 @@ v8::Local<v8::Value> client::remove_simple_auth_provider(const v8::FunctionCallb
     return v8::Local<v8::Value>();
 }
 
+struct task_data {
+    v8::Isolate*                  isolate;
+    std::shared_ptr<no::resolver> resolver;
+    std::future<void>             future;
+};
+
 v8::Local<v8::Value> client::add_to_changelist(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
     auto context = isolate->GetCurrentContext();
@@ -869,9 +875,6 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
 }
 
 v8::Local<v8::Value> client::update(const v8::FunctionCallbackInfo<v8::Value>& args) {
-    static const auto notify_actions = {
-        svn::notify_action::update_add};
-
     auto isolate = args.GetIsolate();
     auto context = isolate->GetCurrentContext();
 

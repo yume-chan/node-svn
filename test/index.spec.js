@@ -63,7 +63,7 @@ describe("svn.node", () => {
         expect(fs.existsSync(server)).to.be.true;
     });
 
-    it("new Client", async () => {
+    it("new Client", () => {
         client = new svn.Client(config);
 
         if (!global_config) {
@@ -71,7 +71,7 @@ describe("svn.node", () => {
         }
     });
 
-    it("dispose", async function() {
+    it("dispose", () => {
         const start = process.memoryUsage().rss;
 
         for (let i = 0; i < 1000; i++) {

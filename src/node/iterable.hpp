@@ -46,8 +46,12 @@ class iterable : public std::enable_shared_from_this<iterable> {
         return !_iterator_released;
     }
 
-    static int64_t size() {
-        return 0;
+    v8::Isolate* isolate() const {
+        return _isolate;
+    }
+
+    v8::Local<v8::Context> context() const {
+        return _context.Get(_isolate);
     }
 
   private:

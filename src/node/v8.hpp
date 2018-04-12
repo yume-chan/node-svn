@@ -105,8 +105,9 @@ static void check_result(v8::Maybe<bool> value) {
 
 template <class T>
 v8::Local<T> check_result(v8::MaybeLocal<T> value) {
-    if (value.IsEmpty())
+    if (value.IsEmpty()) {
         throw std::runtime_error("");
+    }
 
     return value.ToLocalChecked();
 }

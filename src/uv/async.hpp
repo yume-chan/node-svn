@@ -5,72 +5,31 @@
 #include <uv/error.hpp>
 #include <uv/future.hpp>
 
-#include <iostream>
-
 namespace uv {
-template <class F>
-struct async;
-
-template <class F, class Result, class... Arg>
-struct async_data {
-    async_data(const async<F>*      owner,
-               std::tuple<Arg...>&& arg)
-        : owner(owner)
-        , promise()
-        , arg(std::move(arg)) {}
-
-    const async<F>*      owner;
-    std::promise<Result> promise;
-    std::tuple<Arg...>   arg;
-};
-
-template <class F>
+template <class T>
 struct async {
   public:
-    explicit async(F&& callback)
-        : async(std::forward<F>(callback), uv_default_loop()) {}
+    explicit async(T&& callback)
+        : async(std::forward<T>(callback), nullptr) {}
 
-    explicit async(F&& callback, uv_loop_t* loop)
-        : _running(false)
-        , _callback(std::forward<F>(callback)) {
-        auto raw = new uv_async_t();
-
-        if (!loop) {
-            loop = uv_default_loop();
-        }
-
-        try {
-            check_result(uv_async_init(loop, raw, nullptr));
-
-            // this handle won't keep event loop running
-            uv_unref(reinterpret_cast<uv_handle_t*>(raw));
-
-            _handle = async_handle(raw, close_async_handle);
-        } catch (...) {
-            delete raw;
-            throw;
-        }
-    }
+    explicit async(T&& callback, uv_loop_t* loop)
+        : _handle(new async_handle(std::forward<T>(callback), loop)) {}
 
     template <class... Arg>
     decltype(auto) operator()(Arg&&... arg) {
-        using Result = std::invoke_result_t<F, Arg...>;
+        using R = std::invoke_result_t<T, Arg...>;
 
-        if (_running) {
-            throw std::runtime_error("");
-        }
-
-        run_scope scope(this);
+        running_scope scope(_handle);
 
         auto tuple  = std::forward_as_tuple(arg...);
-        auto data   = async_data<F, Result, Arg...>(this, std::move(tuple));
+        auto data   = async_data<R, Arg...>(_handle, std::move(tuple));
         auto future = data.promise.get_future();
 
-        _handle->data     = &data;
-        _handle->async_cb = &async::invoke_async<Result, Arg...>;
-        check_result(uv_async_send(_handle.get()));
+        _handle->handle->data     = &data;
+        _handle->handle->async_cb = &async::invoke_async<R, Arg...>;
+        check_result(uv_async_send(_handle->handle));
 
-        if constexpr (uv::is_future_v<Result>) {
+        if constexpr (uv::is_future_v<R>) {
             return future.get().get();
         } else {
             return future.get();
@@ -78,68 +37,98 @@ struct async {
     }
 
   private:
-    using async_handle = std::shared_ptr<uv_async_t>;
+    struct async_handle {
+      public:
+        async_handle(T&& callback, uv_loop_t* loop)
+            : callback(std::forward<T>(callback))
+            , handle(new uv_async_t)
+            , running(false) {
 
-    static void close_async_handle(uv_async_t* handle) {
-        // FIXME: if there is a javascript loop keeps creating `async` handles,
-        // libuv won't have any chance to call `delete_async_handle`
-        // so this portion of memeory will temporarily leak.
-        uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async_handle);
-    }
+            if (loop == nullptr) {
+                loop = uv_default_loop();
+            }
 
-    static void delete_async_handle(uv_handle_t* handle) {
-        delete reinterpret_cast<uv_async_t*>(handle);
-    }
+            try {
+                check_result(uv_async_init(loop, handle, nullptr));
+                uv_unref(reinterpret_cast<uv_handle_t*>(handle));
+            } catch (...) {
+                delete handle;
+                throw;
+            }
+        }
 
-    template <class Result, class... Arg>
+        ~async_handle() {
+            // FIXME: if there is a javascript loop keeps creating `async` handles,
+            // libuv won't have any chance to call `delete_async_handle`
+            // so this portion of memeory will temporarily leak.
+            uv_close(reinterpret_cast<uv_handle_t*>(handle), delete_async_handle);
+        }
+
+        std::decay_t<T> callback;
+        uv_async_t*     handle;
+
+        std::atomic_bool running;
+
+      private:
+        static void delete_async_handle(uv_handle_t* handle) {
+            delete reinterpret_cast<uv_async_t*>(handle);
+        }
+    };
+
+    using shared_handle = std::shared_ptr<async_handle>;
+
+    struct running_scope {
+      public:
+        running_scope(shared_handle handle)
+            : _handle(handle) {
+            if (_handle->running.exchange(true)) {
+                throw std::runtime_error("");
+            }
+        }
+
+        ~running_scope() {
+            _handle->running = false;
+        }
+
+      private:
+        shared_handle _handle;
+    };
+
+    template <class R, class... Arg>
+    struct async_data {
+        async_data(shared_handle        owner,
+                   std::tuple<Arg...>&& arg)
+            : owner(owner)
+            , arg(std::move(arg))
+            , promise() {}
+
+        shared_handle      owner;
+        std::tuple<Arg...> arg;
+        std::promise<R>    promise;
+    };
+
+    shared_handle _handle;
+
+    template <class R, class... Arg>
     static void invoke_async(uv_async_t* handle) {
-        auto data = static_cast<async_data<F, Result, Arg...>*>(handle->data);
+        auto data = static_cast<async_data<R, Arg...>*>(handle->data);
 
         try {
-            if constexpr (std::is_void_v<Result>) {
-                std::apply(data->owner->_callback, std::move(data->arg));
+            if constexpr (std::is_void_v<R>) {
+                std::apply(data->owner->callback, std::move(data->arg));
                 data->promise.set_value();
             } else {
-                auto result = std::apply(data->owner->_callback, std::move(data->arg));
+                auto result = std::apply(data->owner->callback, std::move(data->arg));
                 data->promise.set_value(std::move(result));
             }
         } catch (...) {
             data->promise.set_exception(std::current_exception());
         }
     }
-
-    bool _running;
-
-    struct run_scope {
-        run_scope(async<F>* owner)
-            : _owner(owner) {
-            _owner->_running = true;
-        }
-
-        ~run_scope() {
-            _owner->_running = false;
-        }
-
-      private:
-        async<F>* _owner;
-    };
-
-    // use `std::decay_t` to ensure copy/move,
-    // instead of referencing the `callback`.
-    std::decay_t<F> _callback;
-
-    // use a `std::shared_ptr<uv_async_t>` to
-    // enable copy of `async` struct.
-    async_handle _handle;
 };
 
-#if !defined(_MSC_VER)
-template <class F>
-async(F &&)->async<F>;
-#endif
-
-template <class F>
-decltype(auto) make_async(F&& callback) {
-    return async<F>(std::forward<F>(callback));
+template <class T>
+decltype(auto) make_async(T&& callback) {
+    return async<T>(std::forward<T>(callback));
 }
 } // namespace uv

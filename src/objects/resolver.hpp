@@ -43,6 +43,8 @@ class resolver : public std::enable_shared_from_this<resolver> {
 
     template <class T, bool Success>
     void set_result(T input) {
+        v8::HandleScope scope(_isolate);
+
         v8::Local<v8::Value> value;
 
         if constexpr (std::is_convertible_v<T, v8::Local<v8::Value>>) {

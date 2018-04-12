@@ -17,7 +17,7 @@
             ],
             "cwd": "${workspaceRoot}",
             "internalConsoleOptions": "openOnSessionStart",
-            "preLaunchTask": "node-gyp",
+            // "preLaunchTask": "node-gyp",
             "sourceFileMap": {
                 "c:/ws/deps/": "C:/Users/Simon/.node-gyp/9.8.0/deps/"
             },
