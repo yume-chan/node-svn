@@ -6,50 +6,40 @@
 #include <node/v8.hpp>
 
 namespace no {
+template <class T>
+struct remove_cvref {
+    typedef std::remove_cv_t<std::remove_reference_t<T>> type;
+};
+
+template <class T>
+using remove_cvref_t = typename remove_cvref<T>::type;
+
 class object {
   public:
     struct reference {
-        reference& operator=(const reference& value) {
-            return set(value.get(), no::property_attribute::none);
-        }
-
-        reference& operator=(const no::object& value) {
-            return set(value.value(), no::property_attribute::none);
-        }
-
         template <class T>
-        reference& operator=(v8::Local<T> value) {
+        reference& operator=(T value) {
             return set(value, no::property_attribute::none);
         }
 
         template <class T>
-        reference& operator=(T value) {
-            return set(no::data(_owner._isolate, value));
-        }
-
-        reference& set(const reference& value, no::property_attribute attribute = no::property_attribute::none) {
-            return set(value.get(), attribute);
-        }
-
-        reference& set(const no::object&      value,
+        reference& set(T                      input,
                        no::property_attribute attribute = no::property_attribute::none) {
-            return set(value.value(), attribute);
-        }
+            v8::Local<v8::Value> value;
 
-        template <class T>
-        reference& set(v8::Local<T>           value,
-                       no::property_attribute attribute = no::property_attribute::none) {
+            if constexpr (std::is_same_v<no::remove_cvref<T>, no::object::reference>) {
+                value = input.get();
+            } else if constexpr (std::is_convertible_v<T, v8::Local<v8::Value>>) {
+                value = static_cast<v8::Local<v8::Value>>(input);
+            } else {
+                value = no::data(_owner._isolate, input);
+            }
+
             no::check_result(_owner._value->DefineOwnProperty(_owner._context,
                                                               _name,
                                                               value,
                                                               static_cast<v8::PropertyAttribute>(attribute)));
             return *this;
-        }
-
-        template <class T>
-        reference& set(T                      value,
-                       no::property_attribute attribute = no::property_attribute::none) {
-            return set(no::data(_owner._isolate, value), attribute);
         }
 
         v8::Local<v8::Value> get() const {
@@ -118,7 +108,7 @@ class object {
 
     explicit object(v8::Local<v8::Object> value)
         : _isolate(value->GetIsolate())
-        , _context(_isolate->GetCurrentContext())
+        , _context(value->CreationContext())
         , _value(value) {}
 
     template <size_t N>

@@ -13,7 +13,9 @@
 #include <node/error.hpp>
 #include <node/iterable.hpp>
 #include <node/type_conversion.hpp>
+
 #include <objects/class_builder.hpp>
+#include <objects/resolver.hpp>
 
 // clang-format off
 
@@ -63,7 +65,7 @@
     v8::Global<v8::Promise::Resolver> __Resolver(isolate, _Resolver);                                                                       \
     auto _After_work = [CAPTURE(__VA_ARGS__) isolate, __Resolver = std::move(__Resolver)](std::future<decltype(_Work())> _Future) -> void { \
         v8::HandleScope _Scope(isolate);                                                                                                    \
-		auto context = isolate->GetCurrentContext();                                                                                        \
+		auto context = isolate->GetEnteredContext();                                                                                        \
                                                                                                                                             \
         auto _Resolver = __Resolver.Get(isolate);                                                                                           \
         try {                                                                                                                               \
@@ -380,7 +382,10 @@ v8::Local<v8::Value> client::remove_simple_auth_provider(const v8::FunctionCallb
     return v8::Local<v8::Value>();
 }
 
-METHOD_BEGIN(add_to_changelist)
+v8::Local<v8::Value> client::add_to_changelist(const v8::FunctionCallbackInfo<v8::Value>& args) {
+    auto isolate = args.GetIsolate();
+    auto context = isolate->GetCurrentContext();
+
     auto paths      = convert_array(args[0], false);
     auto changelist = convert_string(args[1]);
 
@@ -388,12 +393,28 @@ METHOD_BEGIN(add_to_changelist)
     auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
     auto changelists = convert_array(isolate, options, "changelists");
 
-    ASYNC_BEGIN(paths, changelist, depth, changelists)
+    auto keep_alive = shared_from_this();
+    auto work       = [this, keep_alive, paths, changelist, depth, changelists]() -> void {
         _client->add_to_changelist(paths, changelist, depth, changelists);
-    ASYNC_END()
+    };
 
-    ASYNC_RESULT;
-METHOD_RETURN(v8::Undefined(isolate))
+    auto resolver   = no::resolver::create(isolate, context);
+    auto after_work = [isolate, resolver](std::future<void> future) -> void {
+        try {
+            future.get();
+            resolver->resolve();
+        } catch (const svn::svn_error& raw) {
+            v8::HandleScope scope(isolate);
+
+            auto error = copy_error(isolate, raw);
+            resolver->reject(error);
+        }
+    };
+
+    uv::queue_work(work, after_work);
+
+    return *resolver;
+}
 
 v8::Local<v8::Value> client::get_changelists(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();
@@ -651,7 +672,7 @@ v8::Local<v8::Value> client::info(const v8::FunctionCallbackInfo<v8::Value>& arg
     auto callback = [isolate, iterable](const char* path, const svn::info& raw_info) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
-        auto context = isolate->GetCurrentContext();
+        auto context = isolate->GetEnteredContext();
 
         no::object result(isolate);
         result["path"]                  = path;
@@ -803,7 +824,7 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
     auto callback = [isolate, iterable](const std::string& path, const svn::status& raw_status) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
-        auto context = isolate->GetCurrentContext();
+        auto context = isolate->GetEnteredContext();
 
         no::object result(isolate);
         result["path"]           = path;
@@ -860,8 +881,7 @@ v8::Local<v8::Value> client::update(const v8::FunctionCallbackInfo<v8::Value>& a
     auto revision = convert_revision(isolate, options, "revision", svn::revision_kind::head);
 
     auto iterable = no::iterable::create(isolate, context);
-
-    auto notify = [isolate, iterable](const svn::notify_info& info) -> uv::future<void> {
+    auto notify   = [isolate, iterable](const svn::notify_info& info) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
         no::object object(isolate);
@@ -871,17 +891,13 @@ v8::Local<v8::Value> client::update(const v8::FunctionCallbackInfo<v8::Value>& a
         return iterable->yield(object);
     };
 
-    auto _notify = std::make_shared<svn::client::notify_function::element_type>(notify);
-    _client->add_notify_function(notify_actions, _notify);
-
     auto keep_alive = shared_from_this();
-    auto work       = [this, keep_alive, paths, revision]() -> void {
-        _client->update(paths, revision);
+    auto work       = [this, keep_alive, paths, notify, revision]() -> void {
+        _client->update(paths, uv::make_async(notify), revision);
     };
 
-    auto after_work = [this, isolate, iterable, _notify](std::future<void> future) -> void {
+    auto after_work = [this, isolate, iterable](std::future<void> future) -> void {
         try {
-            _client->remove_notify_function(notify_actions, _notify);
             future.get();
             iterable->end();
         } catch (const svn::svn_error& raw) {

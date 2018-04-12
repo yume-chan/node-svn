@@ -10,7 +10,8 @@
 namespace no {
 class iterable : public std::enable_shared_from_this<iterable> {
   public:
-    static std::shared_ptr<iterable> create(v8::Isolate* isolate, v8::Local<v8::Context>& context) {
+    static std::shared_ptr<iterable> create(v8::Isolate*            isolate,
+                                            v8::Local<v8::Context>& context) {
         return std::shared_ptr<iterable>(new iterable(isolate, context));
     }
 
@@ -50,8 +51,9 @@ class iterable : public std::enable_shared_from_this<iterable> {
     }
 
   private:
-    iterable(v8::Isolate* isolate, v8::Local<v8::Context>& context)
+    explicit iterable(v8::Isolate* isolate, v8::Local<v8::Context>& context)
         : _isolate(isolate)
+        , _context(isolate, context)
         , _value()
         , _iterator_created(false)
         , _iterator_released(false)
@@ -110,7 +112,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
 
         v8::HandleScope scope(_isolate);
 
-        auto context = _isolate->GetEnteredContext();
+        auto context = _context.Get(_isolate);
 
         v8::Local<v8::Promise::Resolver> resolver;
         _consume_promise = std::promise<void>();
@@ -161,7 +163,7 @@ class iterable : public std::enable_shared_from_this<iterable> {
             _resolver_fulfilled = false;
             _consume_promise.set_value();
         } else {
-            auto context = isolate->GetCurrentContext();
+            auto context = _context.Get(_isolate);
             resolver     = no::data<v8::Promise::Resolver>(context);
             _resolver.Reset(isolate, resolver);
         }
@@ -171,7 +173,8 @@ class iterable : public std::enable_shared_from_this<iterable> {
 
     static v8::Global<v8::Function> _initializer;
 
-    v8::Isolate* _isolate;
+    v8::Isolate*            _isolate;
+    v8::Global<v8::Context> _context;
 
     v8::Global<v8::Value> _value;
 

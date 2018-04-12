@@ -61,13 +61,17 @@ static svn_error_t* invoke_log_message(const char**              log_msg,
 static void invoke_notify(void*                  raw_baton,
                           const svn_wc_notify_t* notify,
                           apr_pool_t*            pool) {
-    auto client = static_cast<svn::client*>(raw_baton);
+    if (raw_baton == nullptr) {
+        return;
+    }
+
+    auto callback = get_reference<svn::client::notify_function>(raw_baton);
 
     svn::notify_info info{
         static_cast<svn::notify_action>(notify->action),
         notify->path};
 
-    client->invoke_notify_function(info);
+    callback(info);
 }
 
 static svn_error_t* invoke_get_simple_prompt_provider(svn_auth_cred_simple_t** credential,
@@ -146,8 +150,7 @@ client::client(const std::optional<const std::string>& config_path) {
 
     _context->log_msg_func3 = invoke_log_message;
 
-    _context->notify_baton2 = this;
-    _context->notify_func2  = invoke_notify;
+    _context->notify_func2 = invoke_notify;
 
     _context->cancel_baton = this;
     _context->cancel_func  = cancel_func;
@@ -188,28 +191,6 @@ void client::remove_abort_function() {
 
 bool client::invoke_abort_function() {
     return _abort_function ? _abort_function->operator()() : false;
-}
-
-void client::add_notify_function(std::initializer_list<notify_action> actions,
-                                 const notify_function                function) {
-    for (auto action : actions) {
-        auto set = _notify_functions[action];
-        set.insert(function);
-    }
-}
-
-void client::remove_notify_function(std::initializer_list<notify_action> actions,
-                                    const notify_function                function) {
-    for (auto action : actions) {
-        auto set = _notify_functions[action];
-        set.insert(function);
-    }
-}
-
-void client::invoke_notify_function(const notify_info& info) {
-    for (auto function : _notify_functions[info.action]) {
-        (*function)(info);
-    }
 }
 
 void client::add_simple_auth_provider(const simple_auth_provider provider) {
@@ -735,49 +716,43 @@ int32_t client::status(const std::string&                                   path
     return static_cast<int32_t>(result_rev);
 }
 
-int32_t client::update(const std::string& path,
-                       const revision&    revision,
-                       svn::depth         depth,
-                       bool               depth_is_sticky,
-                       bool               ignore_externals,
-                       bool               allow_unver_obstructions,
-                       bool               adds_as_modification,
-                       bool               make_parents) const {
-    child_pool pool(_pool);
+struct notify_scope {
+    explicit notify_scope(svn_client_ctx_t*                   context,
+                          const svn::client::notify_function& notify)
+        : _context(context)
+        , _ref(notify) {
+        if (_context->notify_baton2 != nullptr) {
+            throw svn::svn_error(-1, "");
+        }
 
-    auto raw_paths    = convert_from_vector({path}, pool);
-    auto raw_revision = convert_from_revision(revision);
+        _context->notify_baton2 = &_ref;
+    }
 
-    apr_array_header_t* raw_result_revs;
+    ~notify_scope() {
+        _context->notify_baton2 = nullptr;
+    }
 
-    check_result(svn_client_update4(&raw_result_revs,
-                                    raw_paths,
-                                    &raw_revision,
-                                    static_cast<svn_depth_t>(depth),
-                                    depth_is_sticky,
-                                    ignore_externals,
-                                    allow_unver_obstructions,
-                                    adds_as_modification,
-                                    make_parents,
-                                    _context,
-                                    pool));
+  private:
+    svn_client_ctx_t*                                          _context;
+    std::reference_wrapper<const svn::client::notify_function> _ref;
+};
 
-    return APR_ARRAY_IDX(raw_result_revs, 0, int32_t);
-}
-
-std::vector<int32_t> client::update(const std::vector<std::string>& paths,
-                                    const revision&                 revision,
-                                    svn::depth                      depth,
-                                    bool                            depth_is_sticky,
-                                    bool                            ignore_externals,
-                                    bool                            allow_unver_obstructions,
-                                    bool                            adds_as_modification,
-                                    bool                            make_parents) const {
+void client::update(const std::vector<std::string>& paths,
+                    const notify_function&          notify,
+                    const revision&                 revision,
+                    svn::depth                      depth,
+                    bool                            depth_is_sticky,
+                    bool                            ignore_externals,
+                    bool                            allow_unver_obstructions,
+                    bool                            adds_as_modification,
+                    bool                            make_parents) const {
     child_pool pool(_pool);
 
     auto raw_paths    = convert_from_vector(paths, pool, true);
     auto raw_revision = convert_from_revision(revision);
 
+    notify_scope scope(_context, notify);
+
     apr_array_header_t* raw_result_revs;
 
     check_result(svn_client_update4(&raw_result_revs,
@@ -791,11 +766,6 @@ std::vector<int32_t> client::update(const std::vector<std::string>& paths,
                                     make_parents,
                                     _context,
                                     pool));
-
-    auto result = std::vector<int32_t>(raw_result_revs->nelts);
-    for (int i = 0; i < raw_result_revs->nelts; i++)
-        result[i] = APR_ARRAY_IDX(raw_result_revs, i, int32_t);
-    return result;
 }
 
 std::string client::get_working_copy_root(const std::string& path) const {

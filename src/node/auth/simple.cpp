@@ -40,33 +40,41 @@ static std::future<T> then(v8::Isolate*                  isolate,
     auto _promise = std::make_shared<std::promise<T>>();
     auto future   = _promise->get_future();
 
-    auto context = isolate->GetCurrentContext();
+    auto context = isolate->GetEnteredContext();
 
-    switch (promise->State()) {
-        case v8::Promise::kPending: {
-            auto external = v8::External::New(isolate, new then_data<T>{std::move(then_callback), _promise});
-            auto function = v8::Function::New(context, invoke_callback<T>, external).ToLocalChecked();
-            promise->Then(context, function).ToLocalChecked();
+    auto external = no::data(isolate, new then_data<T>{std::move(then_callback), _promise});
+    auto function = v8::Function::New(context, invoke_callback<T>, external).ToLocalChecked();
+    promise->Then(context, function).ToLocalChecked();
 
-            external = v8::External::New(isolate, new then_data<T>{std::move(catch_callback), _promise});
-            function = v8::Function::New(context, invoke_callback<T>, external).ToLocalChecked();
-            promise->Catch(context, function).ToLocalChecked();
-        } break;
-        case v8::Promise::kFulfilled:
-            try {
-                _promise->set_value(then_callback(isolate, promise->Result()));
-            } catch (...) {
-                _promise->set_exception(std::current_exception());
-            }
-            break;
-        case v8::Promise::kRejected:
-            try {
-                _promise->set_value(catch_callback(isolate, promise->Result()));
-            } catch (...) {
-                _promise->set_exception(std::current_exception());
-            }
-            break;
-    }
+    external = no::data(isolate, new then_data<T>{std::move(catch_callback), _promise});
+    function = v8::Function::New(context, invoke_callback<T>, external).ToLocalChecked();
+    promise->Catch(context, function).ToLocalChecked();
+
+    // switch (promise->State()) {
+    //     case v8::Promise::kPending: {
+    //         auto external = v8::External::New(isolate, new then_data<T>{std::move(then_callback), _promise});
+    //         auto function = v8::Function::New(context, invoke_callback<T>, external).ToLocalChecked();
+    //         promise->Then(context, function).ToLocalChecked();
+
+    //         external = v8::External::New(isolate, new then_data<T>{std::move(catch_callback), _promise});
+    //         function = v8::Function::New(context, invoke_callback<T>, external).ToLocalChecked();
+    //         promise->Catch(context, function).ToLocalChecked();
+    //     } break;
+    //     case v8::Promise::kFulfilled:
+    //         try {
+    //             _promise->set_value(then_callback(isolate, promise->Result()));
+    //         } catch (...) {
+    //             _promise->set_exception(std::current_exception());
+    //         }
+    //         break;
+    //     case v8::Promise::kRejected:
+    //         try {
+    //             _promise->set_value(catch_callback(isolate, promise->Result()));
+    //         } catch (...) {
+    //             _promise->set_exception(std::current_exception());
+    //         }
+    //         break;
+    // }
 
     return future;
 }
@@ -149,7 +157,7 @@ std::optional<svn::simple_auth> simple_auth_provider::_invoke_implement(const si
                                                                         bool                                    may_save) {
     auto            isolate = _this->_isolate;
     v8::HandleScope scope(isolate);
-    auto            context   = isolate->GetCurrentContext();
+    auto            context   = isolate->GetEnteredContext();
     auto            undefined = v8::Undefined(isolate);
 
     const auto           argc       = 3;

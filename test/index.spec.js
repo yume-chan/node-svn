@@ -7,9 +7,9 @@ const { expect } = require("chai");
 const global_config = false;
 const config = global_config ? undefined : path.resolve(__dirname, "config");
 const server = path.resolve(__dirname, "server");
-const repository = path.resolve(__dirname, "repository");
+const local = path.resolve(__dirname, "local");
 
-const file1 = path.resolve(repository, "file1.txt").replace(/\\/g, "/");
+const file1 = path.resolve(local, "file1.txt").replace(/\\/g, "/");
 
 async function async_iterate(value, callback) {
     const iterator = value[Symbol["asyncIterator"]]();
@@ -32,7 +32,7 @@ describe("svn.node", () => {
         }
 
         fs.removeSync(server);
-        fs.removeSync(repository);
+        fs.removeSync(local);
     });
 
     let svn;
@@ -40,6 +40,12 @@ describe("svn.node", () => {
 
     it("load", () => {
         svn = require("..");
+    });
+
+    it("delay", async function() {
+        await new Promise(resolve => {
+            setTimeout(resolve, 500);
+        });
     });
 
     it("version", () => {
@@ -51,7 +57,7 @@ describe("svn.node", () => {
         expect(version.patch).to.equal(0);
     });
 
-    it("create repository", () => {
+    it("create local", () => {
         svn.create_repos(server);
 
         expect(fs.existsSync(server)).to.be.true;
@@ -66,8 +72,6 @@ describe("svn.node", () => {
     });
 
     it("dispose", async function() {
-        this.timeout(0);
-
         const start = process.memoryUsage().rss;
 
         for (let i = 0; i < 1000; i++) {
@@ -83,26 +87,20 @@ describe("svn.node", () => {
     it("checkout", async function() {
         this.timeout(0);
 
-        client.dispose();
-        client = new svn.Client(config);
-
         const url = uri.file(server).toString(true);
-        const revision = await client.checkout(url, repository);
+        const revision = await client.checkout(url, local);
         expect(revision, "revision").to.equal(0);
 
-        expect(fs.existsSync(repository)).to.be.true;
+        expect(fs.existsSync(local)).to.be.true;
     });
 
     it("status after creating file", async function() {
         this.timeout(0);
 
-        client.dispose();
-        client = new svn.Client(config);
-
         await fs.writeFile(file1, file1);
 
         let count = 0;
-        const result = client.status(repository);
+        const result = client.status(local);
         await async_iterate(result, (item) => {
             count++;
             expect(item.path, "item.path").to.equal(file1);
@@ -118,7 +116,7 @@ describe("svn.node", () => {
         const tasks = [];
         for (let i = 0; i < 20; i++) {
             const client = new svn.Client(config);
-            tasks.push(async_iterate(client.status(repository), () => { }));
+            tasks.push(async_iterate(client.status(local), () => { }));
         }
         await Promise.all(tasks);
     });
@@ -126,22 +124,16 @@ describe("svn.node", () => {
     it("add file", async function() {
         this.timeout(0);
 
-        client.dispose();
-        client = new svn.Client(config);
-
         await client.add(file1);
     });
 
     it("status after adding file", async function() {
         this.timeout(0);
 
-        client.dispose();
-        client = new svn.Client(config);
-
         await fs.writeFile(file1, file1);
 
         let count = 0;
-        const result = client.status(repository);
+        const result = client.status(local);
         await async_iterate(result, (item) => {
             count++;
             expect(item.path, "item.path").to.equal(file1);
@@ -155,11 +147,8 @@ describe("svn.node", () => {
     it("commit", async function() {
         this.timeout(0);
 
-        client.dispose();
-        client = new svn.Client(config);
-
         let count = 0;
-        const result = client.commit(repository, "commit1");
+        const result = client.commit(local, "commit1");
         await async_iterate(result, (item) => {
             count++;
             expect(item.revision, "item.revision").to.equal(1);
@@ -168,43 +157,38 @@ describe("svn.node", () => {
         expect(count, "count").to.equal(1);
     });
 
-    it("checkout again", async function() {
-        this.timeout(0);
-
-        client.dispose();
-        client = new svn.Client(config);
-
-        fs.removeSync(repository);
-
-        const url = uri.file(server).toString(true);
-        const revision = await client.checkout(url, repository);
-        expect(revision, "revision").to.equal(1);
-
-        expect(fs.existsSync(repository)).to.be.true;
-    });
-
-    // it("update", async function() {
+    // it("checkout again", async function() {
     //     this.timeout(0);
 
-    // client.dispose();
-    // client = new svn.Client(config);
+    //     client.dispose();
+    //     client = new svn.Client(config);
 
-    //     const result = client.update(repository);
-    //     await async_iterate(result, (item) => {
-    //         console.log(item);
-    //     });
+    //     fs.removeSync(local);
+
+    //     const url = uri.file(server).toString(true);
+    //     const revision = await client.checkout(url, local);
+    //     expect(revision, "revision").to.equal(1);
+
+    //     expect(fs.existsSync(local)).to.be.true;
     // });
+
+    it("update", async function() {
+        this.skip();
+        this.timeout(0);
+
+        const result = client.update(local);
+        await async_iterate(result, (item) => {
+            console.log(item);
+        });
+    });
 
     it("status after modifying file", async function() {
         this.timeout(0);
 
-        client.dispose();
-        client = new svn.Client(config);
-
         await fs.writeFile(file1, file1 + file1);
 
         let count = 0;
-        const result = client.status(repository);
+        const result = client.status(local);
         await async_iterate(result, (item) => {
             count++;
             expect(item.path, "item.path").to.equal(file1);
@@ -217,9 +201,6 @@ describe("svn.node", () => {
 
     it("cat", async function() {
         this.timeout(0);
-
-        client.dispose();
-        client = new svn.Client(config);
 
         let result = await client.cat(file1);
         expect(result.content.toString("utf-8")).to.equal(file1);
@@ -239,17 +220,11 @@ describe("svn.node", () => {
         it("add_to_changelist", async function() {
             this.timeout(0);
 
-            client.dispose();
-            client = new svn.Client(config);
-
             await client.add_to_changelist(file1, changelist);
         });
 
         it("get_changelists", async function() {
             this.timeout(0);
-
-            client.dispose();
-            client = new svn.Client(config);
 
             let count = 0;
             const result = client.get_changelists(file1);
@@ -262,9 +237,6 @@ describe("svn.node", () => {
 
         it("remove_from_changelists", async function() {
             this.timeout(0);
-
-            client.dispose();
-            client = new svn.Client(config);
 
             await client.remove_from_changelists(file1);
 

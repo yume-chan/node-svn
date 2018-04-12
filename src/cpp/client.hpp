@@ -28,7 +28,7 @@ class client : public std::enable_shared_from_this<client> {
     using status_callback          = std::function<void(const char*, const svn::status&)>;
 
     using abort_function  = std::function<bool()>;
-    using notify_function = std::shared_ptr<std::function<void(const notify_info&)>>;
+    using notify_function = std::function<void(const notify_info&)>;
 
     using blame_callback = std::function<void(int32_t                start_revision,
                                               int32_t                end_revision,
@@ -53,10 +53,6 @@ class client : public std::enable_shared_from_this<client> {
     void set_abort_function(abort_function& function);
     void remove_abort_function();
     bool invoke_abort_function();
-
-    void add_notify_function(std::initializer_list<notify_action> actions, const notify_function function);
-    void remove_notify_function(std::initializer_list<notify_action> actions, const notify_function function);
-    void invoke_notify_function(const notify_info& info);
 
     void                       add_simple_auth_provider(const simple_auth_provider provider);
     void                       remove_simple_auth_provider(const simple_auth_provider provider);
@@ -111,7 +107,7 @@ class client : public std::enable_shared_from_this<client> {
                      const revision&    op_revision              = revision_kind::working, // r8          stack
                      svn::depth         depth                    = svn::depth::infinity,   // r9          stack
                      bool               ignore_externals         = false,                  // stack       stack
-                     bool               allow_unver_obstructions = false) const;           // stack       stack
+                     bool               allow_unver_obstructions = false) const;                         // stack       stack
 
     void cleanup(const std::string& path,
                  bool               break_locks,
@@ -181,22 +177,15 @@ class client : public std::enable_shared_from_this<client> {
                    bool                                                 depth_as_sticky    = false,
                    const std::optional<const std::vector<std::string>>& changelists        = {}) const;
 
-    int32_t              update(const std::string& path,
-                                const revision&    op_revision              = revision_kind::head,
-                                svn::depth         depth                    = svn::depth::infinity,
-                                bool               depth_is_sticky          = false,
-                                bool               ignore_externals         = false,
-                                bool               allow_unver_obstructions = false,
-                                bool               adds_as_modification     = false,
-                                bool               make_parents             = true) const;
-    std::vector<int32_t> update(const std::vector<std::string>& paths,
-                                const revision&                 op_revision              = revision_kind::head,
-                                svn::depth                      depth                    = svn::depth::infinity,
-                                bool                            depth_is_sticky          = false,
-                                bool                            ignore_externals         = false,
-                                bool                            allow_unver_obstructions = false,
-                                bool                            adds_as_modification     = false,
-                                bool                            make_parents             = true) const;
+    void update(const std::vector<std::string>& paths,
+                const notify_function&          notify,
+                const revision&                 op_revision              = revision_kind::head,
+                svn::depth                      depth                    = svn::depth::infinity,
+                bool                            depth_is_sticky          = false,
+                bool                            ignore_externals         = false,
+                bool                            allow_unver_obstructions = false,
+                bool                            adds_as_modification     = false,
+                bool                            make_parents             = true) const;
 
     std::string get_working_copy_root(const std::string& path) const;
 
@@ -206,8 +195,7 @@ class client : public std::enable_shared_from_this<client> {
     apr_pool_t*       _pool;
     svn_client_ctx_t* _context;
 
-    std::optional<abort_function>                                     _abort_function;
-    std::unordered_map<svn::notify_action, std::set<notify_function>> _notify_functions;
-    std::set<simple_auth_provider>                                    _simple_auth_providers;
+    std::optional<abort_function>  _abort_function;
+    std::set<simple_auth_provider> _simple_auth_providers;
 };
 } // namespace svn
