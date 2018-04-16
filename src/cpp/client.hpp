@@ -118,7 +118,7 @@ class client : public std::enable_shared_from_this<client> {
 
     void commit(const std::vector<std::string>&                      paths,
                 const std::string&                                   message,
-                const commit_callback&                               callback,
+                const notify_function&                               notify,
                 svn::depth                                           depth                  = svn::depth::infinity,
                 const std::optional<const std::vector<std::string>>& changelists            = {},
                 const string_map&                                    revprop_table          = string_map(),

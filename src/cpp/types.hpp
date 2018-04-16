@@ -575,8 +575,9 @@ enum class notify_action {
     commit_deleted,
     commit_replaced,
     commit_postfix_txdelta,
+    commit_finalizing = 79,
 
-    blame_revision,
+    blame_revision = 20,
 
     locked,
     unlocked,

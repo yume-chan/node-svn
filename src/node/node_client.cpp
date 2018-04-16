@@ -633,11 +633,19 @@ v8::Local<v8::Value> client::commit(const v8::FunctionCallbackInfo<v8::Value>& a
     auto message = convert_string(args[1]);
 
     auto iterable = no::iterable::create(isolate, context);
-    auto callback = convert_commit_callback(isolate, iterable);
+    auto notify   = [isolate, iterable](const svn::notify_info& info) -> uv::future<void> {
+        v8::HandleScope scope(isolate);
+
+        no::object object(isolate);
+        object["action"] = static_cast<int32_t>(info.action);
+        object["path"]   = info.path;
+
+        return iterable->yield(object);
+    };
 
     auto keep_alive = shared_from_this();
-    auto work       = [this, keep_alive, paths, message, callback]() -> void {
-        _client->commit(paths, message, callback);
+    auto work       = [this, keep_alive, paths, message, notify]() -> void {
+        _client->commit(paths, message, uv::make_async(notify));
     };
 
     auto after_work = [isolate, iterable](std::future<void> future) -> void {

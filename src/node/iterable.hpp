@@ -90,10 +90,6 @@ class iterable : public std::enable_shared_from_this<iterable> {
     }
 
     void destructor() {
-        // iterable must not die on javascript side first
-        // which means javascript has released it's reference
-        // it will stuck the worker thread forever
-
         if (_resolver_fulfilled) {
             _consume_promise.set_exception(std::make_exception_ptr(std::runtime_error("")));
         }
