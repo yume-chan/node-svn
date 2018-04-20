@@ -57,7 +57,7 @@ describe("svn.node", () => {
         expect(version.patch).to.equal(0);
     });
 
-    it("create local", () => {
+    it("create repository", () => {
         svn.create_repos(server);
 
         expect(fs.existsSync(server)).to.be.true;
@@ -150,12 +150,27 @@ describe("svn.node", () => {
         let count = 0;
         const result = client.commit(local, "commit1");
         await async_iterate(result, (item) => {
-            console.log(item);
-            // count++;
-            // expect(item.revision, "item.revision").to.equal(1);
-            // expect(item.post_commit_error, "item.post_commit_error").to.be.undefined;
+            switch (count) {
+                case 0:
+                    expect(item.action, "action").to.equal(16);
+                    expect(item.path, "path").to.equal(file1);
+                    break;
+                case 1:
+                    expect(item.action, "action").to.equal(19);
+                    expect(item.path, "path").to.equal(file1);
+                    break;
+                case 2:
+                    expect(item.action, "action").to.equal(79);
+                    expect(item.path, "path").to.equal(".");
+                    expect(item.revision, "item.revision").to.equal(1);
+                    expect(item.post_commit_error, "item.post_commit_error").to.be.undefined;
+                    break;
+                default:
+                    throw new Error();
+            }
+
+            count++;
         });
-        // expect(count, "count").to.equal(1);
     });
 
     it("checkout again", async function() {

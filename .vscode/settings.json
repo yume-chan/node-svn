@@ -67,7 +67,8 @@
         "optional": "cpp",
         "deque": "cpp",
         "stack": "cpp",
-        "unordered_set": "cpp"
+        "unordered_set": "cpp",
+        "string_view": "cpp"
     },
     "git.ignoreLimitWarning": true,
     "python.formatting.provider": "autopep8",

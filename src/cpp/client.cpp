@@ -50,7 +50,7 @@ struct callback_data {
         , _exception() {}
 
     template <class... Args>
-    svn_error_t* invoke(Args... args) {
+    svn_error_t* invoke(Args&&... args) {
         try {
             std::invoke(_callback, std::forward<Args>(args)...);
             return nullptr;
@@ -95,41 +95,41 @@ static svn_error_t* invoke_log_message(const char**              log_msg,
 }
 
 struct notify_scope {
+  public:
     explicit notify_scope(svn_client_ctx_t*                   context,
                           const svn::client::notify_function& notify)
         : _context(context)
-        , _ref(notify) {
-        if (_context->notify_baton2 != nullptr) {
+        , _notify(notify) {
+        if (_context->notify_func2 != nullptr) {
             throw svn::svn_error(-1, "");
         }
 
-        _context->notify_baton2 = &_ref;
+        _context->notify_baton2 = this;
+        _context->notify_func2  = _invoke;
     }
 
     ~notify_scope() {
+        _context->notify_func2  = nullptr;
         _context->notify_baton2 = nullptr;
     }
 
   private:
-    svn_client_ctx_t*                                          _context;
-    std::reference_wrapper<const svn::client::notify_function> _ref;
-};
+    static void _invoke(void*                  baton,
+                        const svn_wc_notify_t* notify,
+                        apr_pool_t*            pool) {
+        auto _this = static_cast<notify_scope*>(baton);
 
-static void invoke_notify(void*                  raw_baton,
-                          const svn_wc_notify_t* notify,
-                          apr_pool_t*            pool) {
-    if (raw_baton == nullptr) {
-        return;
+        svn::notify_info info{
+            static_cast<svn::notify_action>(notify->action),
+            notify->path,
+            convert_to_revision_number(notify->revision)};
+
+        _this->_notify(info);
     }
 
-    auto callback = get_reference<svn::client::notify_function>(raw_baton);
-
-    svn::notify_info info{
-        static_cast<svn::notify_action>(notify->action),
-        notify->path};
-
-    callback(info);
-}
+    svn_client_ctx_t*                   _context;
+    const svn::client::notify_function& _notify;
+};
 
 static svn_error_t* invoke_get_simple_prompt_provider(svn_auth_cred_simple_t** credential,
                                                       void*                    raw_baton,
@@ -162,9 +162,11 @@ decltype(auto) read_config(const char* path, apr_pool_t* pool) {
     return config;
 }
 
-static svn_error_t* cancel_func(void* raw_baton) {
+static svn_error_t* invoke_cancel_func(void* raw_baton) {
     auto client = static_cast<svn::client*>(raw_baton);
-    return client->invoke_abort_function() ? svn_error_create(SVN_ERR_CANCELLED, nullptr, nullptr) : nullptr;
+    return client->invoke_abort_function()
+               ? svn_error_create(SVN_ERR_CANCELLED, nullptr, nullptr)
+               : nullptr;
 }
 
 namespace svn {
@@ -207,11 +209,14 @@ client::client(const std::optional<const std::string>& config_path) {
 
     _context->log_msg_func3 = invoke_log_message;
 
+    _context->notify_func  = nullptr;
+    _context->notify_baton = nullptr;
+
+    _context->notify_func2  = nullptr;
     _context->notify_baton2 = nullptr;
-    _context->notify_func2  = invoke_notify;
 
     _context->cancel_baton = this;
-    _context->cancel_func  = cancel_func;
+    _context->cancel_func  = invoke_cancel_func;
 }
 
 client::client(client&& other)
@@ -531,13 +536,15 @@ void client::cleanup(const std::string& path,
                                      pool));
 }
 
-static svn_error_t* invoke_commit(const svn_commit_info_t*, void*, apr_pool_t*) {
-    return nullptr;
+static svn_error_t* invoke_commit(const svn_commit_info_t* info, void* raw_baton, apr_pool_t*) {
+    auto callback = get_callback_data<client::commit_callback>(raw_baton);
+    return callback->invoke(convert_to_commit_info(info));
 }
 
 void client::commit(const std::vector<std::string>&                      paths,
                     const std::string&                                   message,
                     const notify_function&                               notify,
+                    const commit_callback&                               callback,
                     svn::depth                                           depth,
                     const std::optional<const std::vector<std::string>>& changelists,
                     const string_map&                                    revprop_table,
@@ -556,21 +563,22 @@ void client::commit(const std::vector<std::string>&                      paths,
     auto raw_changelists = convert_from_vector(changelists, pool);
     auto raw_props       = convert_from_map(revprop_table, _pool);
 
-    notify_scope scope(_context, notify);
+    notify_scope                   scope(_context, notify);
+    callback_data<commit_callback> data(callback);
 
-    check_result(svn_client_commit6(raw_paths,
-                                    static_cast<svn_depth_t>(depth),
-                                    keep_locks,
-                                    keep_changelists,
-                                    commit_as_operations,
-                                    include_file_externals,
-                                    include_dir_externals,
-                                    raw_changelists,
-                                    raw_props,
-                                    invoke_commit,
-                                    nullptr,
-                                    _context,
-                                    pool));
+    data.check_result(svn_client_commit6(raw_paths,
+                                         static_cast<svn_depth_t>(depth),
+                                         keep_locks,
+                                         keep_changelists,
+                                         commit_as_operations,
+                                         include_file_externals,
+                                         include_dir_externals,
+                                         raw_changelists,
+                                         raw_props,
+                                         invoke_commit,
+                                         &data,
+                                         _context,
+                                         pool));
 }
 
 static svn_error_t* invoke_info(void*                     raw_baton,
@@ -613,7 +621,7 @@ void client::info(const std::string&                                   path,
 }
 
 static svn_error_t* invoke_log(void* raw_baton, svn_log_entry_t* raw_entry, apr_pool_t* pool) {
-    auto entry = svn::log_entry{
+    svn::log_entry entry{
         static_cast<int32_t>(raw_entry->revision),
         {},
         nullptr,
@@ -643,7 +651,7 @@ void client::log(const std::vector<std::string>&                              pa
     auto raw_paths          = convert_from_vector(paths, pool, true);
     auto raw_peg_revision   = convert_from_revision(peg_revision);
     auto raw_revision_rangs = convert_from_revision_ranges(revision_ranges, pool);
-    auto raw_limit          = limit ? *limit : 0;
+    auto raw_limit          = limit.value_or(0);
     auto raw_revprops       = convert_from_vector(revprops, pool);
 
     callback_data<log_callback> data(callback);

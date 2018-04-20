@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include <uv.h>
 #include <v8.h>
@@ -115,7 +116,15 @@ v8::Local<T> check_result(v8::MaybeLocal<T> value) {
 static v8::Local<v8::String> data(v8::Isolate*       isolate,
                                   const std::string& value) {
     return no::check_result(v8::String::NewFromUtf8(isolate,
-                                                    value.c_str(),
+                                                    value.data(),
+                                                    v8::NewStringType::kNormal,
+                                                    static_cast<int>(value.size())));
+}
+
+static v8::Local<v8::String> data(v8::Isolate*            isolate,
+                                  const std::string_view& value) {
+    return no::check_result(v8::String::NewFromUtf8(isolate,
+                                                    value.data(),
                                                     v8::NewStringType::kNormal,
                                                     static_cast<int>(value.size())));
 }

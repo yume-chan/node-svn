@@ -64,10 +64,12 @@ class client : public std::enable_shared_from_this<client> {
                            const std::string&                                   changelist,
                            svn::depth                                           depth       = svn::depth::infinity,
                            const std::optional<const std::vector<std::string>>& changelists = {}) const;
+
     void get_changelists(const std::string&                                   path,
                          const get_changelists_callback&                      callback,
                          svn::depth                                           depth       = svn::depth::infinity,
                          const std::optional<const std::vector<std::string>>& changelists = {}) const;
+
     void remove_from_changelists(const std::vector<std::string>&                      paths,
                                  svn::depth                                           depth       = svn::depth::infinity,
                                  const std::optional<const std::vector<std::string>>& changelists = {}) const;
@@ -119,6 +121,7 @@ class client : public std::enable_shared_from_this<client> {
     void commit(const std::vector<std::string>&                      paths,
                 const std::string&                                   message,
                 const notify_function&                               notify,
+                const commit_callback&                               callback,
                 svn::depth                                           depth                  = svn::depth::infinity,
                 const std::optional<const std::vector<std::string>>& changelists            = {},
                 const string_map&                                    revprop_table          = string_map(),

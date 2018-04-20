@@ -1,5 +1,3 @@
-import "node";
-
 export interface CommitItem {
     author: string;
     date: string;
@@ -36,12 +34,7 @@ export interface StatusItem {
     changelist?: string;
 }
 
-export type Revision = RevisionKind.base |
-    RevisionKind.committed |
-    RevisionKind.head |
-    RevisionKind.previous |
-    RevisionKind.unspecified |
-    RevisionKind.working |
+export type Revision = RevisionKind |
     { number: number } |
     { date: number };
 
@@ -72,6 +65,7 @@ export interface PegRevisionOpitons extends RevisionOption {
     peg_revision: Revision;
 }
 
+// tslint:disable-next-line
 export interface UpdateOptions extends RevisionOption {
 
 }
@@ -153,10 +147,10 @@ interface LogItem {
     message: string | undefined;
 }
 
-type AuthProviderResult<T> = undefined | T | Promise<undefined | T>
+type AuthProviderResult<T> = undefined | T | Promise<undefined | T>;
 type SimpleAuthProvider = (realm: string, username: string | undefined, may_save: boolean) => AuthProviderResult<SimpleAuth>;
 
-export enum UpdateNotifyAction {
+export declare enum UpdateNotifyAction {
     delete,
     add,
     update,
@@ -170,31 +164,64 @@ export enum UpdateNotifyAction {
     external_removed,
     shadowed_add,
     shadowed_update,
-    shadowed_delete
+    shadowed_delete,
 }
 
-interface UpdateNotifyItem {
-    action: UpdateNotifyAction;
+interface Notify<T> {
+    action: T;
     path: string;
+}
+
+interface UpdateProgressNotify extends Notify<UpdateNotifyAction> {
     revision?: number;
 }
 
-export class Client {
+export declare enum CommitNotifyAction {
+    modified,
+    added,
+    deleted,
+    replaced,
+    postfix_txdelta,
+    finalize,
+}
+
+interface CommitProgressNotify extends Notify<CommitNotifyAction> {
+
+}
+
+interface CommitFinalizeNotify extends CommitProgressNotify {
+    author: string;
+    date: string;
+    repos_root: string;
+    revision: number;
+    post_commit_error: string | undefined;
+}
+
+type CommitNotify = CommitProgressNotify | CommitFinalizeNotify;
+
+export declare function is_commit_finalize_notify(value: CommitNotify): value is CommitFinalizeNotify;
+
+interface RemoveOptions {
+    force: boolean;
+    keep_local: boolean;
+}
+
+export declare class Client {
     constructor(config_path?: string);
 
-    add_simple_auth_provider(provider: SimpleAuthProvider): void;
-    remove_simple_auth_provider(provider: SimpleAuthProvider): void;
+    public add_simple_auth_provider(provider: SimpleAuthProvider): void;
+    public remove_simple_auth_provider(provider: SimpleAuthProvider): void;
 
-    add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): Promise<void>;
-    get_changelists(path: string, options?: Partial<GetChangelistsOptions>): AsyncIterable<GetChangelistsItem>;
-    remove_from_changelists(path: string | string[], options?: Partial<RemoveFromChangelistsOptions>): Promise<void>;
+    public add_to_changelist(path: string | string[], changelist: string, options?: Partial<AddToChangelistOptions>): Promise<void>;
+    public get_changelists(path: string, options?: Partial<GetChangelistsOptions>): AsyncIterable<GetChangelistsItem>;
+    public remove_from_changelists(path: string | string[], options?: Partial<RemoveFromChangelistsOptions>): Promise<void>;
 
     /**
      * Schedule a working copy path for addition to the repository.
      */
-    add(path: string, options?: Partial<AddOptions>): Promise<void>;
-    blame(path: string, options?: Partial<BlameOptions>): AsyncIterable<BlameItem>;
-    cat(path: string, options?: Partial<CatOptions>): Promise<CatResult>;
+    public add(path: string, options?: Partial<AddOptions>): Promise<void>;
+    public blame(path: string, options?: Partial<BlameOptions>): AsyncIterable<BlameItem>;
+    public cat(path: string, options?: Partial<CatOptions>): Promise<CatResult>;
     /**
      * Check out a working copy from a repository.
      *
@@ -204,27 +231,27 @@ export class Client {
      *
      * @returns The value of the revision checked out from the repository.
      */
-    checkout(url: string, path: string, options?: Partial<CheckoutOptions>): Promise<number>;
-    cleanup(path: string): Promise<void>;
-    commit(path: string | string[], message: string): AsyncIterable<CommitItem>;
+    public checkout(url: string, path: string, options?: Partial<CheckoutOptions>): Promise<number>;
+    public cleanup(path: string): Promise<void>;
+    public commit(path: string | string[], message: string): AsyncIterable<CommitNotify>;
 
-    info(path: string, options?: Partial<InfoOptions>): AsyncIterable<InfoItem>;
-    log(path: string | string[], options?: Partial<LogOptions>): AsyncIterable<LogItem>;
+    public info(path: string, options?: Partial<InfoOptions>): AsyncIterable<InfoItem>;
+    public log(path: string | string[], options?: Partial<LogOptions>): AsyncIterable<LogItem>;
 
-    remove(path: string | string[]): AsyncIterable<CommitItem>;
-    resolve(path: string): Promise<void>;
-    revert(path: string | string[]): Promise<void>;
+    public remove(path: string | string[], options?: Partial<RemoveOptions>): AsyncIterable<CommitItem>;
+    public resolve(path: string): Promise<void>;
+    public revert(path: string | string[]): Promise<void>;
 
-    status(path: string, options?: Partial<StatusOptions>): AsyncIterable<StatusItem>;
+    public status(path: string, options?: Partial<StatusOptions>): AsyncIterable<StatusItem>;
 
-    update(path: string | string[], options?: Partial<UpdateOptions>): AsyncIterable<UpdateNotifyItem>;
+    public update(path: string | string[], options?: Partial<UpdateOptions>): AsyncIterable<UpdateProgressNotify>;
 
-    get_working_copy_root(path: string): Promise<string>;
+    public get_working_copy_root(path: string): Promise<string>;
 
-    dispose(): void;
+    public dispose(): void;
 }
 
-export enum ConflictChoose {
+export declare enum ConflictChoose {
     postpone,
     base,
     theirs_full,
@@ -235,7 +262,7 @@ export enum ConflictChoose {
     unspecified,
 }
 
-export enum Depth {
+export declare enum Depth {
     unknown,
     empty,
     files,
@@ -243,33 +270,33 @@ export enum Depth {
     infinity,
 }
 
-export enum NodeKind {
+export declare enum NodeKind {
     none,
     file,
     dir,
     unknown,
 }
 
-export enum RevisionKind {
+export declare enum RevisionKind {
     /** No revision information given */
-    unspecified = 0,
+    unspecified,
     /** revision given as number */
-    number = 1,
+    number,
     /** revision given as date */
-    date = 2,
+    date,
     /** rev of most recent change */
-    committed = 3,
+    committed,
     /** (rev of most recent change) - 1 */
-    previous = 4,
+    previous,
     /** .svn/entries current revision */
-    base = 5,
+    base,
     /** current, plus local mods */
-    working = 6,
+    working,
     /** repository youngest */
-    head = 7,
+    head,
 }
 
-export enum StatusKind {
+export declare enum StatusKind {
     none,
     unversioned,
     normal,
@@ -285,4 +312,4 @@ export enum StatusKind {
     incomplete,
 }
 
-export function create_repos(path: string): void;
+export declare function create_repos(path: string): void;

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -212,10 +213,10 @@ struct status {
     const char* repos_relpath;
 
     /** Base revision. */
-    int32_t revision;
+    std::optional<int32_t> revision;
 
     /** Last revision this was changed */
-    int32_t changed_rev;
+    std::optional<int32_t> changed_rev;
 
     /** Date of last commit. */
     int64_t changed_date;
@@ -570,7 +571,7 @@ enum class notify_action {
     status_completed = 13,
     status_external,
 
-    commit_modified,
+    commit_modified = 15,
     commit_added,
     commit_deleted,
     commit_replaced,
@@ -609,8 +610,9 @@ enum class notify_action {
 };
 
 struct notify_info {
-    const notify_action action;
-    const std::string   path;
+    const notify_action          action;
+    const std::string_view       path;
+    const std::optional<int32_t> revision;
 };
 
 enum class conflict_choose {

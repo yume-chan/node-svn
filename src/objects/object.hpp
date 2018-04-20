@@ -27,7 +27,7 @@ class object {
                        no::property_attribute attribute = no::property_attribute::none) {
             v8::Local<v8::Value> value;
 
-            if constexpr (std::is_same_v<no::remove_cvref<T>, no::object::reference>) {
+            if constexpr (std::is_same_v<no::remove_cvref_t<T>, no::object::reference>) {
                 value = input.get();
             } else if constexpr (std::is_convertible_v<T, v8::Local<v8::Value>>) {
                 value = static_cast<v8::Local<v8::Value>>(input);
@@ -43,7 +43,7 @@ class object {
         }
 
         v8::Local<v8::Value> get() const {
-            return no::check_result(_owner._value->Get(_owner._context, _name));
+            return _owner._get(_name);
         }
 
         operator v8::Local<v8::Value>() const {
@@ -64,6 +64,9 @@ class object {
 
         template <bool D>
         struct as_type<no::object, D> { using type = no::object; };
+
+        template <bool D>
+        struct as_type<int32_t, D> { using type = int32_t; };
 
         template <class T>
         using as_type_v = typename as_type<T, true>::type;
@@ -124,6 +127,19 @@ class object {
         return reference(*this, name);
     }
 
+    template <size_t N>
+    v8::Local<v8::Value> operator[](const char (&name)[N]) const {
+        return _get(no::name(_isolate, name));
+    }
+
+    v8::Local<v8::Value> operator[](const std::string& name) const {
+        return _get(no::name(_isolate, name));
+    }
+
+    v8::Local<v8::Value> operator[](v8::Local<v8::Name> name) const {
+        return _get(name);
+    }
+
     v8::Local<v8::Object> value() const {
         return _value;
     }
@@ -148,5 +164,9 @@ class object {
     v8::Isolate* const     _isolate;
     v8::Local<v8::Context> _context;
     v8::Local<v8::Object>  _value;
+
+    v8::Local<v8::Value> _get(v8::Local<v8::Name> name) const {
+        return no::check_result(_value->Get(_context, name));
+    }
 };
 } // namespace no

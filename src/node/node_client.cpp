@@ -102,7 +102,8 @@ static v8::Local<v8::Value> copy_error(v8::Isolate* isolate, const svn::svn_erro
     return error;
 }
 
-static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value, bool allowEmpty) {
+static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value,
+                                              bool                        allowEmpty) {
     if (value->IsUndefined()) {
         if (allowEmpty)
             return std::vector<std::string>();
@@ -110,8 +111,9 @@ static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value,
             throw no::type_error("");
     }
 
-    if (value->IsString())
+    if (value->IsString()) {
         return std::vector<std::string>{convert_string(value)};
+    }
 
     if (value->IsArray()) {
         auto array  = value.As<v8::Array>();
@@ -127,24 +129,27 @@ static std::vector<std::string> convert_array(const v8::Local<v8::Value>& value,
     throw no::type_error("");
 }
 
-static v8::Local<v8::Object> convert_options(const v8::Local<v8::Value> options) {
-    if (options->IsUndefined())
-        return v8::Local<v8::Object>();
+static std::optional<no::object> convert_options(const v8::Local<v8::Value> options) {
+    if (options->IsUndefined()) {
+        return {};
+    }
 
-    if (options->IsObject())
-        return options.As<v8::Object>();
+    if (options->IsObject()) {
+        return no::object(options.As<v8::Object>());
+    }
 
     throw no::type_error("");
 }
 
-static int32_t convert_number(v8::Isolate*                 isolate,
-                              const v8::Local<v8::Object>& options,
-                              const char*                  key,
-                              int32_t                      defaultValue) {
-    if (options.IsEmpty())
+template <size_t N>
+static int32_t convert_number(const std::optional<no::object>& options,
+                              const char (&key)[N],
+                              int32_t defaultValue) {
+    if (!options.has_value()) {
         return defaultValue;
+    }
 
-    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
+    v8::Local<v8::Value> value = options.value()[key];
     if (value->IsUndefined())
         return defaultValue;
 
@@ -155,14 +160,34 @@ static int32_t convert_number(v8::Isolate*                 isolate,
     throw no::type_error("");
 }
 
-static svn::revision convert_revision(v8::Isolate*                 isolate,
-                                      const v8::Local<v8::Object>& options,
-                                      const char*                  key,
-                                      svn::revision                defaultValue) {
-    if (options.IsEmpty())
+template <size_t N>
+static bool convert_bool(const std::optional<no::object>& options,
+                         const char (&key)[N],
+                         bool defaultValue) {
+    if (!options.has_value()) {
+        return defaultValue;
+    }
+
+    v8::Local<v8::Value> value = options.value()[key];
+    if (value->IsUndefined())
         return defaultValue;
 
-    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
+    if (value->IsBoolean()) {
+        return value->BooleanValue();
+    }
+
+    throw no::type_error("");
+}
+
+template <size_t N>
+static svn::revision convert_revision(const std::optional<no::object>& options,
+                                      const char (&key)[N],
+                                      svn::revision defaultValue) {
+    if (!options.has_value()) {
+        return defaultValue;
+    }
+
+    v8::Local<v8::Value> value = options.value()[key];
     if (value->IsUndefined())
         return defaultValue;
 
@@ -172,30 +197,31 @@ static svn::revision convert_revision(v8::Isolate*                 isolate,
     }
 
     if (value->IsObject()) {
-        no::object object(value.As<v8::Object>());
+        const no::object object(value.As<v8::Object>());
 
         auto number = object["number"];
-        if (!number->IsUndefined()) {
-            if (!number->IsNumber())
-                throw no::type_error("");
-
+        if (number->IsNumber()) {
             return svn::revision(number->Int32Value());
         }
 
-        auto date = object["date"];
-        if (!date->IsUndefined()) {
-            if (!date->IsNumber())
-                throw no::type_error("");
+        if (!number->IsUndefined()) {
+            throw no::type_error("");
+        }
 
+        auto date = object["date"];
+        if (date->IsNumber()) {
             return svn::revision(date->IntegerValue());
+        }
+
+        if (!date->IsUndefined()) {
+            throw no::type_error("");
         }
     }
 
     throw no::type_error("");
 }
 
-static svn::revision_range convert_revision_range(v8::Isolate*                isolate,
-                                                  const v8::Local<v8::Value>& value) {
+static svn::revision_range convert_revision_range(const v8::Local<v8::Value>& value) {
     if (value.IsEmpty()) {
         throw no::type_error("");
     }
@@ -204,14 +230,14 @@ static svn::revision_range convert_revision_range(v8::Isolate*                is
         throw no::type_error("");
     }
 
-    auto object = value.As<v8::Object>();
+    const no::object object(value.As<v8::Object>());
 
-    auto start = convert_revision(isolate, object, "start", svn::revision_kind::unspecified);
+    auto start = convert_revision(object, "start", svn::revision_kind::unspecified);
     if (start.kind == svn::revision_kind::unspecified) {
         throw no::type_error("");
     }
 
-    auto end = convert_revision(isolate, object, "end", svn::revision_kind::unspecified);
+    auto end = convert_revision(object, "end", svn::revision_kind::unspecified);
     if (end.kind == svn::revision_kind::unspecified) {
         throw no::type_error("");
     }
@@ -219,14 +245,14 @@ static svn::revision_range convert_revision_range(v8::Isolate*                is
     return svn::revision_range{start, end};
 }
 
-static std::optional<std::vector<svn::revision_range>> convert_revision_ranges(v8::Isolate*                 isolate,
-                                                                               const v8::Local<v8::Object>& options,
-                                                                               const char*                  key) {
-    if (options.IsEmpty()) {
+template <size_t N>
+static std::optional<std::vector<svn::revision_range>> convert_revision_ranges(const std::optional<no::object>& options,
+                                                                               const char (&key)[N]) {
+    if (!options.has_value()) {
         return {};
     }
 
-    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options.value()[key];
     if (value->IsUndefined()) {
         return {};
     }
@@ -238,24 +264,24 @@ static std::optional<std::vector<svn::revision_range>> convert_revision_ranges(v
         auto length = array->Length();
         for (uint32_t i = 0; i < length; i++) {
             auto item = array->Get(i);
-            result.push_back(std::move(convert_revision_range(isolate, item)));
+            result.push_back(std::move(convert_revision_range(item)));
         }
     } else if (value->IsObject()) {
-        result.push_back(std::move(convert_revision_range(isolate, value)));
+        result.push_back(std::move(convert_revision_range(value)));
     }
 
     return result;
 }
 
-static svn::depth convert_depth(v8::Isolate*                 isolate,
-                                const v8::Local<v8::Object>& options,
-                                const char*                  key,
-                                svn::depth                   defaultValue) {
-    if (options.IsEmpty()) {
+template <size_t N>
+static svn::depth convert_depth(const std::optional<no::object>& options,
+                                const char (&key)[N],
+                                svn::depth defaultValue) {
+    if (!options.has_value()) {
         return defaultValue;
     }
 
-    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options.value()[key];
     if (value->IsUndefined()) {
         return defaultValue;
     }
@@ -267,30 +293,14 @@ static svn::depth convert_depth(v8::Isolate*                 isolate,
     throw no::type_error("");
 }
 
-static bool convert_boolean(v8::Isolate*                 isolate,
-                            const v8::Local<v8::Object>& options,
-                            const char*                  key,
-                            bool                         defaultValue) {
-    if (options.IsEmpty())
-        return defaultValue;
-
-    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
-    if (value->IsUndefined())
-        return defaultValue;
-
-    if (value->IsBoolean())
-        return value->BooleanValue();
-
-    throw no::type_error("");
-}
-
-static std::vector<std::string> convert_array(v8::Isolate*          isolate,
-                                              v8::Local<v8::Object> options,
-                                              const char*           key) {
-    if (options.IsEmpty())
+template <size_t N>
+static std::vector<std::string> convert_array(const std::optional<no::object>& options,
+                                              const char (&key)[N]) {
+    if (!options.has_value()) {
         return std::vector<std::string>();
+    }
 
-    auto value = options->Get(no::data(isolate, key, v8::NewStringType::kInternalized));
+    auto value = options.value()[key];
     if (value->IsUndefined())
         return std::vector<std::string>();
 
@@ -331,7 +341,7 @@ void client::initialize(no::object& exports) {
     clazz.add_prototype_method("cat", check_disposed(&client::cat), 1);
     clazz.add_prototype_method("checkout", check_disposed(&client::checkout), 1);
     clazz.add_prototype_method("cleanup", check_disposed(&client::cleanup), 1);
-    clazz.add_prototype_method("commit", check_disposed(&client::commit), 1);
+    clazz.add_prototype_method("commit", check_disposed(&client::commit), 2);
     clazz.add_prototype_method("info", check_disposed(&client::info), 1);
     clazz.add_prototype_method("log", check_disposed(&client::log), 1);
     clazz.add_prototype_method("remove", check_disposed(&client::remove), 1);
@@ -396,8 +406,8 @@ v8::Local<v8::Value> client::add_to_changelist(const v8::FunctionCallbackInfo<v8
     auto changelist = convert_string(args[1]);
 
     auto options     = convert_options(args[2]);
-    auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto changelists = convert_array(isolate, options, "changelists");
+    auto depth       = convert_depth(options, "depth", svn::depth::infinity);
+    auto changelists = convert_array(options, "changelists");
 
     auto keep_alive = shared_from_this();
     auto work       = [this, keep_alive, paths, changelist, depth, changelists]() -> void {
@@ -429,8 +439,8 @@ v8::Local<v8::Value> client::get_changelists(const v8::FunctionCallbackInfo<v8::
     auto path = convert_string(args[0]);
 
     auto options     = convert_options(args[1]);
-    auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto changelists = convert_array(isolate, options, "changelists");
+    auto depth       = convert_depth(options, "depth", svn::depth::infinity);
+    auto changelists = convert_array(options, "changelists");
 
     auto iterable = no::iterable::create(isolate, context);
 
@@ -473,8 +483,8 @@ METHOD_BEGIN(remove_from_changelists)
     auto paths = convert_array(args[0], false);
 
     auto options     = convert_options(args[1]);
-    auto depth       = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto changelists = convert_array(isolate, options, "changelists");
+    auto depth       = convert_depth(options, "depth", svn::depth::infinity);
+    auto changelists = convert_array(options, "changelists");
 
     ASYNC_BEGIN(paths, depth, changelists)
         _client->remove_from_changelists(paths, depth, changelists);
@@ -487,7 +497,7 @@ METHOD_BEGIN(add)
     auto path = convert_string(args[0]);
 
     auto options = convert_options(args[1]);
-    auto depth   = convert_depth(isolate, options, "depth", svn::depth::infinity);
+    auto depth   = convert_depth(options, "depth", svn::depth::infinity);
 
     ASYNC_BEGIN(path, depth)
         _client->add(path, depth);
@@ -503,9 +513,9 @@ v8::Local<v8::Value> client::blame(const v8::FunctionCallbackInfo<v8::Value>& ar
     auto path = convert_string(args[0]);
 
     auto options        = convert_options(args[1]);
-    auto start_revision = convert_revision(isolate, options, "start_revision", svn::revision(0));
-    auto end_revision   = convert_revision(isolate, options, "end_revision", svn::revision_kind::head);
-    auto peg_revision   = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
+    auto start_revision = convert_revision(options, "start_revision", svn::revision(0));
+    auto end_revision   = convert_revision(options, "end_revision", svn::revision_kind::head);
+    auto peg_revision   = convert_revision(options, "peg_revision", svn::revision_kind::unspecified);
 
     auto iterable = no::iterable::create(isolate, context);
 
@@ -563,8 +573,8 @@ METHOD_BEGIN(cat)
     auto path = convert_string(args[0]);
 
     auto options      = convert_options(args[1]);
-    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
-    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::unspecified);
+    auto peg_revision = convert_revision(options, "peg_revision", svn::revision_kind::unspecified);
+    auto revision     = convert_revision(options, "revision", svn::revision_kind::unspecified);
 
     ASYNC_BEGIN(path, peg_revision, revision)
         return _client->cat(path, peg_revision, revision);
@@ -587,9 +597,9 @@ METHOD_BEGIN(checkout)
     auto path = convert_string(args[1]);
 
     auto options      = convert_options(args[2]);
-    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::head);
-    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::head);
-    auto depth        = convert_depth(isolate, options, "depth", svn::depth::infinity);
+    auto peg_revision = convert_revision(options, "peg_revision", svn::revision_kind::head);
+    auto revision     = convert_revision(options, "revision", svn::revision_kind::head);
+    auto depth        = convert_depth(options, "depth", svn::depth::infinity);
 
     ASYNC_BEGIN(url, path, peg_revision, revision, depth)
         return _client->checkout(url, path, peg_revision, revision, depth);
@@ -632,8 +642,18 @@ v8::Local<v8::Value> client::commit(const v8::FunctionCallbackInfo<v8::Value>& a
     auto paths   = convert_array(args[0], false);
     auto message = convert_string(args[1]);
 
+    std::string notify_path;
+
     auto iterable = no::iterable::create(isolate, context);
-    auto notify   = [isolate, iterable](const svn::notify_info& info) -> uv::future<void> {
+    auto notify   = [isolate, iterable, &notify_path](const svn::notify_info& info) -> uv::future<void> {
+        if (info.action == svn::notify_action::commit_finalizing) {
+            notify_path = info.path;
+
+            std::promise<void> promise;
+            promise.set_value();
+            return promise.get_future();
+        }
+
         v8::HandleScope scope(isolate);
 
         no::object object(isolate);
@@ -643,9 +663,27 @@ v8::Local<v8::Value> client::commit(const v8::FunctionCallbackInfo<v8::Value>& a
         return iterable->yield(object);
     };
 
+    auto callback = [isolate, iterable, &notify_path](const svn::commit_info& info) -> uv::future<void> {
+        v8::HandleScope scope(isolate);
+
+        no::object object(isolate);
+        object["action"]            = static_cast<int32_t>(svn::notify_action::commit_finalizing);
+        object["path"]              = notify_path;
+        object["revision"]          = info.revision;
+        object["date"]              = info.date;
+        object["author"]            = info.author;
+        object["post_commit_error"] = info.post_commit_error;
+        object["repos_root"]        = info.repos_root;
+
+        return iterable->yield(object);
+    };
+
     auto keep_alive = shared_from_this();
-    auto work       = [this, keep_alive, paths, message, notify]() -> void {
-        _client->commit(paths, message, uv::make_async(notify));
+    auto work       = [this, keep_alive, paths, message, notify, callback]() -> void {
+        _client->commit(paths,
+                        message,
+                        uv::make_async(notify),
+                        uv::make_async(callback));
     };
 
     auto after_work = [isolate, iterable](std::future<void> future) -> void {
@@ -677,9 +715,9 @@ v8::Local<v8::Value> client::info(const v8::FunctionCallbackInfo<v8::Value>& arg
     auto path = convert_string(args[0]);
 
     auto options      = convert_options(args[1]);
-    auto peg_revision = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
-    auto revision     = convert_revision(isolate, options, "revision", svn::revision_kind::unspecified);
-    auto depth        = convert_depth(isolate, options, "depth", svn::depth::empty);
+    auto peg_revision = convert_revision(options, "peg_revision", svn::revision_kind::unspecified);
+    auto revision     = convert_revision(options, "revision", svn::revision_kind::unspecified);
+    auto depth        = convert_depth(options, "depth", svn::depth::empty);
 
     auto iterable = no::iterable::create(isolate, context);
 
@@ -730,9 +768,9 @@ v8::Local<v8::Value> client::log(const v8::FunctionCallbackInfo<v8::Value>& args
     auto paths = convert_array(args[0], false);
 
     auto options         = convert_options(args[1]);
-    auto peg_revision    = convert_revision(isolate, options, "peg_revision", svn::revision_kind::unspecified);
-    auto revision_ranges = convert_revision_ranges(isolate, options, "revision_ranges");
-    auto limit           = convert_number(isolate, options, "limit", 0);
+    auto peg_revision    = convert_revision(options, "peg_revision", svn::revision_kind::unspecified);
+    auto revision_ranges = convert_revision_ranges(options, "revision_ranges");
+    auto limit           = convert_number(options, "limit", 0);
 
     auto iterable = no::iterable::create(isolate, context);
 
@@ -778,12 +816,16 @@ v8::Local<v8::Value> client::remove(const v8::FunctionCallbackInfo<v8::Value>& a
 
     auto paths = convert_array(args[0], false);
 
+    auto options    = convert_options(args[1]);
+    auto force      = convert_bool(options, "force", true);
+    auto keep_local = convert_bool(options, "keep_local", false);
+
     auto iterable = no::iterable::create(isolate, context);
     auto callback = convert_commit_callback(isolate, iterable);
 
     auto keep_alive = shared_from_this();
-    auto work       = [this, keep_alive, paths, callback]() -> void {
-        _client->remove(paths, callback);
+    auto work       = [this, keep_alive, paths, callback, force, keep_local]() -> void {
+        _client->remove(paths, callback, force, keep_local);
     };
 
     auto after_work = [isolate, iterable](std::future<void> future) -> void {
@@ -830,9 +872,9 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
     auto path = convert_string(args[0]);
 
     auto options          = convert_options(args[1]);
-    auto revision         = convert_revision(isolate, options, "revision", svn::revision_kind::working);
-    auto depth            = convert_depth(isolate, options, "depth", svn::depth::infinity);
-    auto ignore_externals = convert_boolean(isolate, options, "ignore_externals", false);
+    auto revision         = convert_revision(options, "revision", svn::revision_kind::working);
+    auto depth            = convert_depth(options, "depth", svn::depth::infinity);
+    auto ignore_externals = convert_bool(options, "ignore_externals", false);
 
     auto iterable = no::iterable::create(isolate, context);
     auto callback = [isolate, iterable](const std::string& path, const svn::status& raw_status) -> uv::future<void> {
@@ -853,7 +895,7 @@ v8::Local<v8::Value> client::status(const v8::FunctionCallbackInfo<v8::Value>& a
         result["kind"]           = static_cast<int32_t>(raw_status.kind);
         result["node_status"]    = static_cast<int32_t>(raw_status.node_status);
         result["prop_status"]    = static_cast<int32_t>(raw_status.prop_status);
-        result["revision"]       = static_cast<int32_t>(raw_status.revision);
+        result["revision"]       = raw_status.revision;
         result["text_status"]    = static_cast<int32_t>(raw_status.text_status);
         result["versioned"]      = raw_status.versioned;
 
@@ -889,15 +931,16 @@ v8::Local<v8::Value> client::update(const v8::FunctionCallbackInfo<v8::Value>& a
     auto paths = convert_array(args[0], false);
 
     auto options  = convert_options(args[1]);
-    auto revision = convert_revision(isolate, options, "revision", svn::revision_kind::head);
+    auto revision = convert_revision(options, "revision", svn::revision_kind::head);
 
     auto iterable = no::iterable::create(isolate, context);
     auto notify   = [isolate, iterable](const svn::notify_info& info) -> uv::future<void> {
         v8::HandleScope scope(isolate);
 
         no::object object(isolate);
-        object["action"] = static_cast<int32_t>(info.action);
-        object["path"]   = info.path;
+        object["action"]   = static_cast<int32_t>(info.action);
+        object["path"]     = info.path;
+        object["revision"] = info.revision;
 
         return iterable->yield(object);
     };
