@@ -25,12 +25,16 @@ class resolver : public std::enable_shared_from_this<resolver> {
         set_result<T, false>(input);
     }
 
-    operator v8::Local<v8::Promise::Resolver>() const {
+    v8::Local<v8::Promise::Resolver> value() const {
         return _value.Get(_isolate);
     }
 
+    operator v8::Local<v8::Promise::Resolver>() const {
+        return value();
+    }
+
     operator v8::Local<v8::Value>() const {
-        return _value.Get(_isolate);
+        return value();
     }
 
   private:
@@ -58,6 +62,8 @@ class resolver : public std::enable_shared_from_this<resolver> {
         } else {
             no::check_result(_value.Get(_isolate)->Reject(_context.Get(_isolate), value));
         }
+
+        _isolate->RunMicrotasks();
     }
 
     v8::Isolate*            _isolate;

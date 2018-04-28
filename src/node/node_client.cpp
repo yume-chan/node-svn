@@ -22,7 +22,7 @@
 #define REPORT_ERROR                                  \
     } catch (const svn::svn_error& raw_error) {       \
         auto _Error = copy_error(isolate, raw_error); \
-        _Resolver->Reject(_Error);                    \
+        resolver->reject(_Error);                     \
     }
 
 #define METHOD_BEGIN(name)                                                               \
@@ -30,7 +30,7 @@
         auto isolate = args.GetIsolate();                                                \
         auto context = isolate->GetCurrentContext();                                     \
                                                                                          \
-        auto _Resolver = no::data<v8::Promise::Resolver>(context);                       \
+        auto resolver = no::resolver::create(isolate, context);                          \
                                                                                          \
         try {
 
@@ -62,26 +62,24 @@
 #define ASYNC_END(...)                                                                                                                      \
     };                                                                                                                                      \
                                                                                                                                             \
-    v8::Global<v8::Promise::Resolver> __Resolver(isolate, _Resolver);                                                                       \
-    auto _After_work = [CAPTURE(__VA_ARGS__) isolate, __Resolver = std::move(__Resolver)](std::future<decltype(_Work())> _Future) -> void { \
+    auto _After_work = [CAPTURE(__VA_ARGS__) isolate, resolver](std::future<decltype(_Work())> _Future) -> void { \
         v8::HandleScope _Scope(isolate);                                                                                                    \
 		auto context = isolate->GetEnteredContext();                                                                                        \
                                                                                                                                             \
-        auto _Resolver = __Resolver.Get(isolate);                                                                                           \
         try {                                                                                                                               \
 
 #define ASYNC_RESULT \
     _Future.get()
 
-#define METHOD_RETURN(value)                                          \
-                no::check_result(_Resolver->Resolve(context, value)); \
-            REPORT_ERROR;                                             \
-        };                                                            \
-                                                                      \
-        uv::queue_work(std::move(_Work), std::move(_After_work));     \
-    REPORT_ERROR;                                                     \
-                                                                      \
-    return _Resolver;                                                 \
+#define METHOD_RETURN(result)                                     \
+                resolver->resolve(result);                        \
+            REPORT_ERROR;                                         \
+        };                                                        \
+                                                                  \
+        uv::queue_work(std::move(_Work), std::move(_After_work)); \
+    REPORT_ERROR;                                                 \
+                                                                  \
+    return resolver->value();                                     \
 }
 
 // clang-format on
@@ -391,12 +389,6 @@ v8::Local<v8::Value> client::remove_simple_auth_provider(const v8::FunctionCallb
     _simple_auth_provider.remove(args[0].As<v8::Function>());
     return v8::Local<v8::Value>();
 }
-
-struct task_data {
-    v8::Isolate*                  isolate;
-    std::shared_ptr<no::resolver> resolver;
-    std::future<void>             future;
-};
 
 v8::Local<v8::Value> client::add_to_changelist(const v8::FunctionCallbackInfo<v8::Value>& args) {
     auto isolate = args.GetIsolate();

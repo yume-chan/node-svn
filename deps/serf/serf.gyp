@@ -31,22 +31,19 @@
                 ]
             ],
             "defines": [
+                "OPENSSL_NO_OCSP",
                 "OPENSSL_NO_DEPRECATED",
-                "SERF_NO_SSL_BIO_WRAPPERS",
-                "SERF_NO_SSL_X509_STORE_WRAPPERS",
                 "SERF_HAVE_SSL_LOCKING_CALLBACKS",
-                "SERF_HAVE_OPENSSL_ALPN"
+                "SERF_HAVE_OPENSSL_ALPN",
+                "SERF_HAVE_OSSL_HANDSHAKE_STATE",
+                "SERF_HAVE_OPENSSL_MALLOC_INIT"
             ],
             "dependencies": [
                 "../apr/apr.gyp:apr"
             ],
             "direct_dependent_settings": {
                 "defines": [
-                    "OPENSSL_NO_DEPRECATED",
-                    "SERF_NO_SSL_BIO_WRAPPERS",
-                    "SERF_NO_SSL_X509_STORE_WRAPPERS",
-                    "SERF_HAVE_SSL_LOCKING_CALLBACKS",
-                    "SERF_HAVE_OPENSSL_ALPN"
+                    "OPENSSL_NO_DEPRECATED"
                 ],
                 "include_dirs": [
                     "serf"

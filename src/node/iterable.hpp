@@ -138,6 +138,8 @@ class iterable : public std::enable_shared_from_this<iterable> {
             check_result(resolver->Reject(context, value));
         }
 
+        _isolate->RunMicrotasks();
+
         return _consume_promise.get_future();
     }
 

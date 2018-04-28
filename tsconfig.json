@@ -4,6 +4,10 @@
         "lib": [
             "esnext",
             "esnext.asynciterable"
-        ]
-    }
+        ],
+        "allowJs": true
+    },
+    "include": [
+        "scripts/**/*"
+    ]
 }
