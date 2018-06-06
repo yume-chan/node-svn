@@ -1,8 +1,8 @@
 # node-svn
 
-[![Maintenance](https://img.shields.io/maintenance/yes/2018.svg)]()
+[![Maintenance](https://img.shields.io/maintenance/no/2018.svg)]()
 
-**Work In Progress**
+**Currently I'm busy working and have no time to maintenance this project**
 
 Wrap Subversion (SVN) to Node Native Addon
 
